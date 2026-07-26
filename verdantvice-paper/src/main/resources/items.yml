@@ -1,0 +1,19 @@
+# Materials are vanilla fallbacks; custom-model-data is optional.
+seed: { material: WHEAT_SEEDS, custom-model-data: 12001 }
+planting-pot: { material: DECORATED_POT, custom-model-data: 12002 }
+watering-can: { material: GLASS_BOTTLE, custom-model-data: 12003, durability: 64 }
+plant-scanner: { material: CLOCK, custom-model-data: 12004, durability: 128 }
+cleaning-kit: { material: BRUSH, custom-model-data: 12005, durability: 32 }
+treatment-spray: { material: HONEY_BOTTLE, custom-model-data: 12006, durability: 32 }
+nutrient-pack: { material: BONE_MEAL, custom-model-data: 12007, durability: 8 }
+repair-kit: { material: IRON_NUGGET, custom-model-data: 12008, durability: 16 }
+drying-rack: { material: BARREL, custom-model-data: 12009 }
+curing-container: { material: CHISELED_BOOKSHELF, custom-model-data: 12010 }
+grinder: { material: STONECUTTER, custom-model-data: 12011 }
+farm-manager-table: { material: LECTERN, custom-model-data: 12012 }
+selection-wand: { material: BLAZE_ROD, custom-model-data: 12013 }
+rolling-paper: { material: PAPER, custom-model-data: 12014 }
+filter: { material: STICK, custom-model-data: 12015 }
+package: { material: BUNDLE, custom-model-data: 12016 }
+joint: { material: STICK, custom-model-data: 12017 }
+maximum-lore-lines: 20

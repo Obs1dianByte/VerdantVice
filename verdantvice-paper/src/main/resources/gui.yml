@@ -1,0 +1,24 @@
+# Inventory slot positions. Values outside the inventory are rejected.
+main:
+  size: 54
+  my-farm: 10
+  plants: 12
+  workers: 14
+  strains: 16
+  genetics: 20
+  contracts: 22
+  market: 24
+  skills: 30
+  guide: 32
+  settings: 34
+navigation:
+  previous: 45
+  back: 49
+  next: 53
+decoration-material: BLACK_STAINED_GLASS_PANE
+page-size: 36
+rolling:
+  timing-window-ticks: 8
+  total-rounds: 5
+mixing:
+  maximum-batches: 4

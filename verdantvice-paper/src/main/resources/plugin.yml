@@ -1,0 +1,70 @@
+name: VerdantVice
+version: '${version}'
+main: com.verdantvice.VerdantVicePlugin
+description: Fictional plant, production, market, and plantation simulation for Paper.
+api-version: '1.21.4'
+authors: [VerdantVice]
+website: https://example.invalid/verdantvice
+load: POSTWORLD
+softdepend:
+  - Vault
+  - PlaceholderAPI
+  - WorldGuard
+  - GriefPrevention
+  - Lands
+  - ItemsAdder
+  - Oraxen
+  - LuckPerms
+commands:
+  verdantvice:
+    description: Opens VerdantVice or executes a subcommand.
+    usage: /<command> [help|guide|profile|skills|strains|recipes|market|contracts|genetics|farm|workers|language|notifications|resourcepack|admin]
+    aliases: [vv]
+    permission: verdantvice.use
+permissions:
+  verdantvice.use:
+    default: true
+  verdantvice.guide:
+    default: true
+  verdantvice.plant:
+    default: true
+  verdantvice.harvest:
+    default: true
+  verdantvice.process:
+    default: true
+  verdantvice.trade:
+    default: true
+  verdantvice.genetics:
+    default: true
+  verdantvice.farm.create:
+    default: true
+  verdantvice.farm.manage:
+    default: true
+  verdantvice.farm.member:
+    default: true
+  verdantvice.worker.hire:
+    default: true
+  verdantvice.worker.manage:
+    default: true
+  verdantvice.language:
+    default: true
+  verdantvice.resourcepack:
+    default: true
+  verdantvice.admin:
+    default: op
+    children:
+      verdantvice.admin.reload: true
+      verdantvice.admin.give: true
+      verdantvice.admin.inspect: true
+      verdantvice.admin.debug: true
+      verdantvice.admin.database: true
+  verdantvice.admin.reload:
+    default: op
+  verdantvice.admin.give:
+    default: op
+  verdantvice.admin.inspect:
+    default: op
+  verdantvice.admin.debug:
+    default: op
+  verdantvice.admin.database:
+    default: op

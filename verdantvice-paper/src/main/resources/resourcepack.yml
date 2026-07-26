@@ -1,0 +1,8 @@
+# Set URL and SHA-1 after hosting the optional pack.
+enabled: false
+send-on-join: false
+required: false
+url: ""
+sha1: ""
+prompt-key: resourcepack.prompt
+fallback-without-pack: true

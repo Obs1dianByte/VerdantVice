@@ -1,0 +1,17 @@
+# Contract generation and rewards.
+enabled: true
+offers-per-herbalist: 5
+refresh-hours: 24
+minimum-deadline-hours: 6
+maximum-deadline-hours: 72
+reward-multiplier: 1.25
+reputation-per-contract: 5
+maximum-active-per-player: 8
+types:
+  - STRAIN_DELIVERY
+  - QUALITY_DELIVERY
+  - MULTI_STRAIN
+  - EARLY_DELIVERY
+  - CURED_PRODUCT
+  - GENETIC_DELIVERY
+  - BULK_ORDER

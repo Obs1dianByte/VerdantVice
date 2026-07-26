@@ -1,0 +1,21 @@
+# Market prices are clamped and sales have diminishing returns.
+update-minutes: 30
+history-days: 30
+minimum-multiplier: 0.45
+maximum-multiplier: 2.25
+demand-reversion: 0.08
+supply-impact: 0.015
+demand-impact: 0.020
+repeat-sale-penalty: 0.025
+minimum-repeat-multiplier: 0.35
+events:
+  chance-per-update: 0.15
+  duration-minutes: 120
+  multiplier-min: 0.75
+  multiplier-max: 1.40
+  types:
+    - HIGH_DEMAND
+    - OVERSUPPLY
+    - RARE_SEED_SHORTAGE
+    - PREMIUM_PRODUCT_WEEK
+    - MARKET_INSPECTION

@@ -1,0 +1,38 @@
+# Worker AI is a deterministic state machine updated at a bounded interval.
+max-plants-per-worker: 10
+task-reservation-seconds: 45
+path-retry-count: 3
+path-timeout-seconds: 30
+schedule:
+  # Vanilla world ticks: 0 is 06:00, 6000 is noon.
+  wake-up: 0
+  work-start: 1000
+  break-start: 6000
+  break-end: 7000
+  work-end: 12000
+  sleep: 16000
+salary:
+  emeralds-per-minecraft-day: 4
+  warning-days: 1
+  slowdown-days: 2
+  refusal-days: 3
+  leave-chance-per-extra-day: 0.08
+morale:
+  paid: 4.0
+  has-bed: 1.5
+  has-food: 1.0
+  safe: 1.0
+  unpaid: -12.0
+  overloaded: -4.0
+  blocked: -3.0
+  night-work: -2.0
+priorities:
+  SAVE_DYING_PLANTS: 100
+  TREAT_DISEASE: 90
+  WATER: 80
+  HARVEST: 70
+  LOAD_DRYING_RACK: 60
+  UNLOAD_DRYING_RACK: 55
+  PLANT: 45
+  PACKAGE: 35
+  CLEAN: 25

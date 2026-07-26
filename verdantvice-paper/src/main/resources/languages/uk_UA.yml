@@ -1,0 +1,230 @@
+meta: { locale: "uk_UA", language-name: "Українська", revision: "1" }
+prefix: "<dark_green><bold>VerdantVice</bold></dark_green> <dark_gray>»</dark_gray>"
+common: { enabled: "<green>Увімкнено</green>", disabled: "<red>Вимкнено</red>", yes: "<green>Так</green>", no: "<red>Ні</red>", none: "<gray>Немає</gray>", unknown: "<gray>Невідомо</gray>", not-applicable: "<gray>Не застосовується</gray>", loading: "<yellow>Завантаження…</yellow>", calculating: "<yellow>Обчислення…</yellow>", level: "<gray>Рівень:</gray> <white><level></white>", amount: "<gray>Кількість:</gray> <white><amount></white>", price: "<gray>Ціна:</gray> <white><price></white>", owner: "<gray>Власник:</gray> <white><owner></white>", status: "<gray>Стан:</gray> <white><status></white>", duration: "<gray>Тривалість:</gray> <white><duration></white>", page: "<gray>Сторінка <page>/<pages></gray>", seconds: "<seconds> с", minutes: "<minutes> хв", emeralds: "<amount> смарагдів", confirm: "<green>Підтвердити</green>", cancel: "<red>Скасувати</red>", close: "<red>Закрити</red>", back: "<yellow>Назад</yellow>", next-page: "<green>Наступна сторінка</green>", previous-page: "<yellow>Попередня сторінка</yellow>", refresh: "<aqua>Оновити</aqua>", search: "<aqua>Шукати</aqua>", sort: "<aqua>Сортувати</aqua>" }
+errors: { no-permission: "<red>У тебе немає дозволу.</red>", player-only: "<red>Дія доступна лише гравцеві.</red>", console-only: "<red>Дія доступна лише з консолі.</red>", invalid-usage: "<red>Неправильне використання.</red> <white><usage></white>", invalid-number: "<red><value> — неправильне число.</red>", invalid-uuid: "<red><value> — неправильний UUID.</red>", invalid-player: "<red>Гравця <player> не знайдено.</red>", player-offline: "<red>Гравець <player> не в мережі.</red>", invalid-locale: "<red>Мова <locale> не підтримується.</red>", not-ready: "<yellow>VerdantVice ще запускається.</yellow>", shutting-down: "<red>VerdantVice вимикається; нові дії заблоковано.</red>", database-unavailable: "<red>База недоступна. Предмети не змінено.</red>", database-conflict: "<yellow>Дані змінилися. Відкрий меню знову.</yellow>", internal: "<red>Неочікувана помилка.</red> <gray>Код: <error_id></gray>", cooldown: "<yellow>Зачекай <time>.</yellow>", busy: "<yellow>Об'єкт уже використовується.</yellow>", canceled: "<yellow>Дію скасовано.</yellow>", inventory-full: "<red>Інвентар повний. Результат очікує доставки.</red>", world-unavailable: "<red>Потрібний світ недоступний.</red>", chunk-unavailable: "<red>Ділянку не завантажено. Підійди ближче.</red>", target-not-found: "<red>Правильної цілі не знайдено.</red>", invalid-item: "<red>Це не предмет VerdantVice.</red>", invalid-signature: "<red>Предмет не пройшов перевірку й ізольований.</red>", duplicate-item: "<red>Цей ID уже використано. Копію відхилено.</red>", item-locked: "<yellow>Предмет зарезервовано іншим процесом.</yellow>", wrong-owner: "<red>Ти не власник цього предмета.</red>", wrong-item-state: "<red>Предмет не можна використати на цій стадії.</red>", insufficient-items: "<red>Бракує потрібних предметів.</red>", insufficient-emeralds: "<red>Бракує <amount> смарагдів.</red>", limit-reached: "<red>Досягнуто ліміту <limit>.</red>", invalid-name: "<red>Назву заборонено. Використай 3–24 доречні символи.</red>", protected-region: "<red>На цій захищеній ділянці обладнання недоступне.</red>", farm-permission: "<red>Твоя роль цього не дозволяє.</red>", configuration-invalid: "<red>Файл <file> помилковий; діють попередні значення.</red>", restart-required: "<yellow>Потрібен перезапуск сервера.</yellow>", unsafe-reload: "<red>Цю частину не можна безпечно перезавантажити.</red>", operation-expired: "<yellow>Операція спливла; предмети повернуто.</yellow>", strong-effect-active: "<red>Дочекайся завершення сильного ефекту.</red>", no-space: "<red>Тут замало місця.</red>", too-far: "<red>Ти надто далеко.</red>" }
+success: { reload: "<green>Безпечні налаштування й переклади оновлено.</green>", save: "<green>Дані поставлено в чергу збереження.</green>", language: "<green>Обрана мова: <language>.</green>", item-given: "<green><player> отримав <amount> × <item>.</green>", seed-given: "<green><player> отримав насіння <strain>.</green>", plant-created: "<green>Рослину <plant_id> створено.</green>", plant-removed: "<green>Рослину <plant_id> безпечно видалено.</green>", stage-set: "<green>Стадію змінено на <stage>.</green>", quality-set: "<green>Якість партії: <quality>.</green>", herbalist-spawned: "<green>Травника <herbalist> створено.</green>", worker-hired: "<green><worker> приєднався до <farm>.</green>", farm-created: "<green>Плантацію <farm> створено.</green>", farm-deleted: "<green>Плантацію <farm> видалено.</green>", invitation-sent: "<green>Запрошення для <player> надіслано.</green>", member-removed: "<green><player> вилучено з плантації.</green>", notification-settings: "<green>Сповіщення оновлено.</green>", resourcepack-sent: "<green>Запит пакета ресурсів надіслано.</green>", database-migrated: "<green>Базу оновлено до <version>.</green>", debug-created: "<green>Звіт створено: <path></green>", player-reset: "<green>Дані <player> скинуто.</green>", contract-created: "<green>Контракт <contract_id> створено.</green>", market-updated: "<green>Ринок оновлено.</green>" }
+commands:
+  root: { description: "Відкриває VerdantVice або довідку.", usage: "/vv [підкоманда]" }
+  help: { description: "Показує доступні команди.", usage: "/vv help [сторінка]" }
+  guide: { description: "Відкриває посібник.", usage: "/vv guide" }
+  profile: { description: "Показує профіль.", usage: "/vv profile [гравець]" }
+  skills: { description: "Відкриває чотири дерева навичок.", usage: "/vv skills" }
+  strains: { description: "Показує відкриті вигадані сорти.", usage: "/vv strains [сорт]" }
+  recipes: { description: "Показує відкриті рецепти.", usage: "/vv recipes" }
+  market: { description: "Показує попит і ціни.", usage: "/vv market [сорт]" }
+  contracts: { description: "Відкриває контракти.", usage: "/vv contracts" }
+  farm:
+    description: "Відкриває керування плантацією."
+    usage: "/vv farm"
+    create: { description: "Створює плантацію у вибраній зоні.", usage: "/vv farm create <назва>" }
+    delete: { description: "Видаляє плантацію після підтвердження.", usage: "/vv farm delete <назва>" }
+    invite: { description: "Запрошує гравця.", usage: "/vv farm invite <гравець>" }
+    remove: { description: "Вилучає учасника.", usage: "/vv farm remove <гравець>" }
+  workers: { description: "Відкриває керування працівниками.", usage: "/vv workers" }
+  language: { description: "Обирає мову.", usage: "/vv language <pl_PL|en_US|de_DE|es_ES|cs_CZ|uk_UA>" }
+  notifications: { description: "Налаштовує сповіщення.", usage: "/vv notifications" }
+  resourcepack: { description: "Запитує додатковий пакет ресурсів.", usage: "/vv resourcepack" }
+  genetics: { description: "Creates a custom line from two signed seeds.", usage: "/vv genetics <name>" }
+  admin:
+    description: "Адміністративні засоби VerdantVice."
+    usage: "/vv admin <підкоманда>"
+    reload: { description: "Оновлює безпечні налаштування.", usage: "/vv admin reload" }
+    save: { description: "Зберігає дані з черги.", usage: "/vv admin save" }
+    give: { description: "Видає зареєстрований предмет.", usage: "/vv admin give <гравець> <предмет> [кількість]" }
+    seed: { description: "Видає підписане насіння.", usage: "/vv admin seed <гравець> <сорт> [клас]" }
+    plant: { description: "Створює рослину на станції.", usage: "/vv admin plant <сорт>" }
+    setstage: { description: "Змінює стадію рослини.", usage: "/vv admin setstage <стадія>" }
+    setquality: { description: "Змінює якість партії.", usage: "/vv admin setquality <клас>" }
+    spawnherbalist: { description: "Створює травника.", usage: "/vv admin spawnherbalist [рівень]" }
+    hireworker: { description: "Наймає травника.", usage: "/vv admin hireworker <плантація>" }
+    removeplant: { description: "Безпечно видаляє рослину.", usage: "/vv admin removeplant" }
+    inspect: { description: "Перевіряє об'єкт і реєстр.", usage: "/vv admin inspect" }
+    market: { description: "Перевіряє або змінює ринок.", usage: "/vv admin market <show|set|event> ..." }
+    contract: { description: "Створює або перевіряє контракт.", usage: "/vv admin contract <create|inspect> ..." }
+    resetplayer: { description: "Скидає дані гравця.", usage: "/vv admin resetplayer <гравець> confirm" }
+    migrate: { description: "Запускає міграції.", usage: "/vv admin migrate" }
+    database: { description: "Показує стан бази.", usage: "/vv admin database" }
+    debug: { description: "Створює очищений звіт.", usage: "/vv admin debug" }
+    performance: { description: "Показує метрики швидкодії.", usage: "/vv admin performance" }
+gui:
+  main:
+    title: "<dark_green><bold>VerdantVice</bold></dark_green>"
+    my-farm: { name: "<green>Моя плантація</green>", description: "<gray>Огляд, обладнання, права й поліпшення.</gray>" }
+    plants: { name: "<green>Рослини</green>", description: "<gray>Ріст, догляд і вікна збору.</gray>" }
+    workers: { name: "<gold>Працівники</gold>", description: "<gray>Завдання, мораль, графік і зарплати.</gray>" }
+    strains: { name: "<light_purple>Сорти</light_purple>", description: "<gray>Вигадані сорти та відкриття.</gray>" }
+    genetics: { name: "<aqua>Генетика</aqua>", description: "<gray>Профілі, схрещення й власні лінії.</gray>" }
+    contracts: { name: "<yellow>Контракти</yellow>", description: "<gray>Поставки, строки й нагороди.</gray>" }
+    market: { name: "<green>Ринок</green>", description: "<gray>Попит, події та ціни.</gray>" }
+    skills: { name: "<blue>Навички</blue>", description: "<gray>Садівник, Генетик, Виробник і Торговець.</gray>" }
+    guide: { name: "<gold>Посібник</gold>", description: "<gray>Книги та навчання механікам.</gray>" }
+    settings: { name: "<white>Налаштування</white>", description: "<gray>Мова, сповіщення й ресурси.</gray>" }
+  farm:
+    title: "<dark_green>Плантація: <farm></dark_green>"
+    overview: { name: "<green>Огляд</green>", description: "<gray>Рівень, ліміти, прибуток і проблеми.</gray>" }
+    plants: { name: "<green>Рослини</green>", description: "<gray><count> активних, <sick> хворих, <ready> готових.</gray>" }
+    workers: { name: "<gold>Працівники</gold>", description: "<gray><count> найнято; мораль <morale>.</gray>" }
+    storages: { name: "<yellow>Сховища</yellow>", description: "<gray>Прив'язані спеціальні скрині.</gray>" }
+    drying: { name: "<gold>Сушіння</gold>", description: "<gray>Місткість, стан і процеси.</gray>" }
+    curing: { name: "<light_purple>Витримка</light_purple>", description: "<gray>Контейнери та поліпшення якості.</gray>" }
+    priorities: { name: "<aqua>Пріоритети</aqua>", description: "<gray>Порядок завдань.</gray>" }
+    permissions: { name: "<blue>Права</blue>", description: "<gray>Ролі й доступ учасників.</gray>" }
+    salary: { name: "<green>Зарплата</green>", description: "<gray>Скриня виплат і борги.</gray>" }
+    statistics: { name: "<white>Статистика</white>", description: "<gray>Виробництво, якість і продажі.</gray>" }
+    notifications: { name: "<yellow>Сповіщення</yellow>", description: "<gray>Обери попередження плантації.</gray>" }
+    upgrade: { name: "<green>Поліпшити</green>", description: "<gray>Збільшує ліміти.</gray>" }
+    delete: { name: "<red>Видалити</red>", description: "<gray>Потрібні підтвердження й вільні процеси.</gray>" }
+    income: "<gray>Недавній прибуток:</gray> <green><income></green>"
+    missing-tools: "<gray>Бракує інструментів:</gray> <red><count></red>"
+    recent-problems: "<gray>Недавні проблеми:</gray> <white><count></white>"
+  plants: { title: "<green>Рослини</green>", details-title: "<green><strain></green> <dark_gray>•</dark_gray> <stage>", filter-all: "<white>Усі рослини</white>", filter-needs-care: "<yellow>Потребують догляду</yellow>", filter-ready: "<green>Готові до збору</green>", exact-health: "<gray>Здоров'я:</gray> <health>", hydration: "<gray>Зволоження:</gray> <hydration>", nutrition: "<gray>Живлення:</gray> <nutrition>", stress: "<gray>Стрес:</gray> <stress>", cleanliness: "<gray>Чистота:</gray> <cleanliness>", conditions: "<gray>Проблеми:</gray> <conditions>", quality-potential: "<gray>Потенціал якості:</gray> <quality>", yield-potential: "<gray>Потенціал врожаю:</gray> <yield>", harvest-window: "<gray>Вікно збору:</gray> <window>", genetics: "<gray>Генетика:</gray> <genetics>", approximate-ready: "<gray>Орієнтовна готовність:</gray> <time>", novice-summary: "<gray>Загальний стан:</gray> <condition>" }
+  workers: { title: "<gold>Працівники</gold>", details-title: "<gold><worker></gold>", tasks: "<gray>Завдання</gray>", schedule: "<gray>Графік</gray>", salary: "<gray>Зарплата</gray>", morale: "<gray>Мораль:</gray> <morale>", specialization: "<gray>Спеціалізація:</gray> <specialization>", experience: "<gray>Досвід:</gray> <xp>", current-task: "<gray>Поточне завдання:</gray> <task>", unpaid-days: "<gray>Днів без виплати:</gray> <days>", assign: "<green>Призначити</green>", transfer: "<yellow>Перевести</yellow>", dismiss: "<red>Звільнити</red>" }
+  strains: { title: "<light_purple>Каталог сортів</light_purple>", undiscovered: "<dark_gray>Не відкритий сорт</dark_gray>", rarity: "<gray>Рідкість:</gray> <rarity>", growth-time: "<gray>Час росту:</gray> <time>", difficulty: "<gray>Складність:</gray> <difficulty>", base-yield: "<gray>Базовий урожай:</gray> <yield>", resistance: "<gray>Стійкість:</gray> <resistance>", effects-hidden: "<gray>Ефекти приховано до відкриття.</gray>" }
+  genetics: { title: "<aqua>Генетична лабораторія</aqua>", profiles: "<aqua>Генетичні профілі</aqua>", crossing: "<light_purple>Схрестити дві лінії</light_purple>", custom-lines: "<green>Мої лінії</green>", parent-a: "<gray>Батько A:</gray> <parent>", parent-b: "<gray>Батько B:</gray> <parent>", stability: "<gray>Стабільність:</gray> <stability>", generation: "<gray>Покоління:</gray> <generation>", create-line: "<green>Створити лінію</green>", enter-name: "<yellow>Введи назву в чаті.</yellow>" }
+  processing: { drying-title: "<gold>Сушарка</gold>", curing-title: "<light_purple>Контейнер витримки</light_purple>", grinder-title: "<gray>Подрібнювач</gray>", mixing-title: "<aqua>Змішування сортів</aqua>", rolling-title: "<green>Майстерня згортання</green>", input-slot: "<yellow>Вхід</yellow>", output-slot: "<green>Вихід</green>", progress: "<gray>Прогрес:</gray> <progress>", start: "<green>Почати</green>", stop: "<red>Зупинити</red>", capacity: "<gray>Місткість:</gray> <used>/<total>", condition: "<gray>Стан:</gray> <condition>", add-batch: "<green>Додати партію</green>", remove-batch: "<yellow>Вийняти партію</yellow>", mixture-ratio: "<gray><strain>:</gray> <white><ratio>%</white>", rolling-instruction: "<yellow>Натисни <target> у зеленій зоні.</yellow>", rolling-round: "<gray>Крок <round>/<total>:</gray> <step>" }
+  trade: { title: "<dark_green>Травник <herbalist></dark_green>", buy: "<green>Купити припаси</green>", sell: "<gold>Продати продукт</gold>", reputation: "<gray>Репутація:</gray> <reputation>", daily-limit: "<gray>Денний ліміт:</gray> <used>/<limit>", demand: "<gray>Попит:</gray> <demand>", final-price: "<gray>Кінцева ціна:</gray> <price>", confirm-buy: "<green>Підтвердити купівлю</green>", confirm-sell: "<green>Підтвердити продаж</green>" }
+  contracts: { title: "<yellow>Контракти</yellow>", available: "<green>Доступні</green>", active: "<yellow>Активні</yellow>", completed: "<aqua>Виконані</aqua>", failed: "<red>Провалені</red>", deadline: "<gray>Строк:</gray> <deadline>", requirements: "<gray>Вимоги:</gray> <requirements>", reward: "<gray>Нагорода:</gray> <reward>", accept: "<green>Прийняти</green>", deliver: "<yellow>Доставити</yellow>", claim: "<green>Забрати нагороду</green>" }
+  market: { title: "<green>Ринок Verdant</green>", strain: "<gray>Сорт:</gray> <strain>", current-price: "<gray>Поточна ціна:</gray> <price>", trend-up: "<green>Зростає</green>", trend-stable: "<yellow>Стабільна</yellow>", trend-down: "<red>Падає</red>", supply: "<gray>Пропозиція:</gray> <supply>", demand: "<gray>Попит:</gray> <demand>", active-event: "<gray>Подія:</gray> <event>" }
+  skills: { title: "<blue>Навички</blue>", points: "<gray>Вільні очки:</gray> <points>", progress: "<gray>Прогрес:</gray> <current>/<required>", unlock: "<green>Відкрити</green>", locked: "<red>Потрібен рівень <level></red>" }
+  settings: { title: "<white>Налаштування</white>", language: "<aqua>Мова</aqua>", notifications: "<yellow>Сповіщення</yellow>", resourcepack: "<green>Пакет ресурсів</green>", auto-detect: "<gray>Автовизначення мови:</gray> <state>" }
+item:
+  seed: { name: "<green>Насіння <strain></green>", description: "<gray>Підписане насіння з унікальною вигаданою генетикою.</gray>" }
+  planting_pot: { name: "<green>Горщик для вирощування</green>", description: "<gray>Створює захищену станцію.</gray>" }
+  watering_can: { name: "<aqua>Лійка</aqua>", description: "<gray>Підвищує зволоження; надлишок шкодить.</gray>" }
+  plant_scanner: { name: "<aqua>Сканер рослин</aqua>", description: "<gray>Показує дані за навичкою.</gray>" }
+  cleaning_kit: { name: "<white>Набір для чищення</white>", description: "<gray>Підвищує чистоту.</gray>" }
+  treatment_spray: { name: "<yellow>Лікувальний спрей</yellow>", description: "<gray>Лікує сумісні вигадані проблеми.</gray>" }
+  nutrient_pack: { name: "<gold>Пакет живлення</gold>", description: "<gray>Відновлює ігрове живлення.</gray>" }
+  repair_kit: { name: "<gray>Ремонтний набір</gray>", description: "<gray>Ремонтує обладнання.</gray>" }
+  drying_rack: { name: "<gold>Сушарка</gold>", description: "<gray>Сушить свіжі партії за часом.</gray>" }
+  curing_container: { name: "<light_purple>Контейнер витримки</light_purple>", description: "<gray>Додатково поліпшує суху партію.</gray>" }
+  grinder: { name: "<gray>Подрібнювач Verdant</gray>", description: "<gray>Створює відстежуваний подрібнений продукт.</gray>" }
+  farm_manager_table: { name: "<dark_green>Стіл керування</dark_green>", description: "<gray>Створює та керує плантацією.</gray>" }
+  selection_wand: { name: "<gold>Жезл виділення</gold>", description: "<gray>Позначає два кути регіону.</gray>" }
+  rolling_paper: { name: "<white>Папір для згортання</white>", description: "<gray>Вигаданий компонент мінігри.</gray>" }
+  filter: { name: "<yellow>Фільтр</yellow>", description: "<gray>Потрібний компонент мінігри.</gray>" }
+  cosmetic_additive: { name: "<light_purple>Косметична добавка</light_purple>", description: "<gray>Необов'язкова ігрова прикраса.</gray>" }
+  package: { name: "<gold>Пакунок продукту</gold>", description: "<gray>Захищене пакування однієї партії.</gray>" }
+  plantation_contract: { name: "<gold>Контракт плантації</gold>", description: "<gray>Дозволяє найняти Експерта Verdant.</gray>" }
+  fresh_batch: { name: "<green>Свіжа партія • <strain></green>", description: "<gray>Маса: <weight> • Потенціал: <quality></gray>" }
+  dry_batch: { name: "<gold>Суха партія • <strain></gold>", description: "<gray>Суха маса: <weight> • Клас: <quality></gray>" }
+  cured_batch: { name: "<light_purple>Витримана партія • <strain></light_purple>", description: "<gray>Витримка: <duration> • Клас: <quality></gray>" }
+  ground_product: { name: "<yellow>Подрібнений продукт • <strain></yellow>", description: "<gray>Матеріал партії <batch_id>.</gray>" }
+  mixture: { name: "<aqua>Суміш Verdant</aqua>", description: "<gray>Суміш <components> вигаданих сортів.</gray>" }
+  joint: { name: "<green>Згорток Verdant • <quality></green>", description: "<gray>Результат мінігри з партії <batch_id>.</gray>" }
+  basics_book: { name: "<gold>Основи VerdantVice</gold>", description: "<gray>Повний вступ у 16 кроках.</gray>" }
+  plant_health_book: { name: "<green>Здоров'я та догляд</green>", description: "<gray>Розширений посібник станів.</gray>" }
+  strain_guide_book: { name: "<light_purple>Посібник сортів</light_purple>", description: "<gray>Властивості та рідкість.</gray>" }
+  drying_curing_book: { name: "<gold>Сушіння та витримка</gold>", description: "<gray>Розширені часові процеси.</gray>" }
+  genetics_book: { name: "<aqua>Розширена генетика</aqua>", description: "<gray>Профілі, схрещення й стабільність.</gray>" }
+  farm_management_book: { name: "<dark_green>Керування плантацією</dark_green>", description: "<gray>Працівники, сховища, мораль і зарплати.</gray>" }
+  perfect_batch_book: { name: "<yellow>Таємниці ідеальної партії</yellow>", description: "<gray>Чинники ігрової якості.</gray>" }
+  guide_book: { name: "<gold>Основи VerdantVice</gold>", description: "<gray>Локалізований посібник із 16 кроків.</gray>" }
+  advanced_book: { name: "<aqua>Розширений посібник Verdant</aqua>", description: "<gray>Підписана фахова книга.</gray>" }
+  lore: { strain: "<gray>Сорт:</gray> <white><strain></white>", quality: "<gray>Якість:</gray> <white><quality></white>" }
+plant:
+  stages: { seed: "Насіння", sprout: "Паросток", seedling: "Саджанець", vegetative: "Ріст", maturing: "Дозрівання", ready: "Готова", overripe: "Перестигла", spoiled: "Зіпсована" }
+  conditions:
+    dry-soil: { name: "Сухий ґрунт", description: "Низьке зволоження зменшує ріст і здоров'я." }
+    overwatering: { name: "Перелив", description: "Надлишок води підвищує стрес." }
+    low-light: { name: "Мало світла", description: "Станція має менше ігрового світла, ніж потрібно." }
+    excessive-light: { name: "Забагато світла", description: "Поточне світло спричиняє стрес." }
+    dirty-station: { name: "Брудна станція", description: "Бруд підвищує ризик проблем." }
+    broken-equipment: { name: "Зламане обладнання", description: "Станцію треба відремонтувати." }
+    fictional-pests: { name: "Кліщі Verdant", description: "Вигадані шкідники знижують здоров'я й урожай." }
+    root-stress: { name: "Стрес коренів", description: "Ігрова проблема нестабільного догляду." }
+    growth-lock: { name: "Блокування росту", description: "Ріст чекає на розв'язання проблеми." }
+    unstable-genetics: { name: "Нестабільна генетика", description: "Збільшує шанс випадкових проблем." }
+    fictional-mold: { name: "Світна пліснява", description: "Вигадане забруднення, яке треба лікувати." }
+    strong-smell: { name: "Сильний аромат", description: "Вмикає частинки та сповіщення." }
+  overall: { excellent: "<green>Відмінний</green>", good: "<green>Добрий</green>", fair: "<yellow>Задовільний</yellow>", poor: "<gold>Поганий</gold>", critical: "<red>Критичний</red>" }
+  harvest-timing: { too-early: "Надто рано", early: "Рано", optimal: "Оптимально", perfect: "Ідеально", late: "Пізно", overripe: "Перестигла" }
+  interaction: { planted: "<green>Посаджено <strain>.</green>", watered: "<aqua>Зволоження: <hydration>.</aqua>", cleaned: "<green>Чистота: <cleanliness>.</green>", treated: "<green><condition> вилікувано.</green>", repaired: "<green>Стан: <condition>.</green>", harvested: "<green>Зібрано <weight> сорту <strain> у час <timing>.</green>", not-ready: "<yellow>Можна зібрати, але час: <timing>.</yellow>" }
+rarity: { common: "<white>Звичайна</white>", uncommon: "<green>Незвичайна</green>", rare: "<light_purple>Рідкісна</light_purple>", legendary: "<gold>Легендарна</gold>" }
+genetics:
+  grades: { damaged: "<dark_red>Пошкоджена</dark_red>", poor: "<red>Слабка</red>", common: "<white>Звичайна</white>", good: "<green>Добра</green>", exceptional: "<aqua>Виняткова</aqua>", perfect: "<light_purple>Ідеальна</light_purple>", legendary: "<gold>Легендарна</gold>" }
+  traits: { yield-modifier: "Урожай", growth-speed-modifier: "Швидкість росту", resistance-modifier: "Стійкість", quality-modifier: "Якість", smell-modifier: "Аромат", stability-modifier: "Стабільність", negative-effect-modifier: "Ризик негативних ефектів" }
+  crossing: { success: "<green>Лінію <line> створено з <parent_a> і <parent_b>.</green>", failed: "<red>Схрещення не дало придатного насіння.</red>", name-prompt: "<yellow>Введи назву або <white>скасувати</white>.</yellow>" }
+quality:
+  grades: { spoiled: "<dark_red>Зіпсована</dark_red>", very-poor: "<red>Дуже слабка</red>", street: "<gold>Вулична</gold>", common: "<white>Звичайна</white>", good: "<green>Добра</green>", premium: "<aqua>Преміальна</aqua>", top-shelf: "<light_purple>Найвища</light_purple>", perfect-batch: "<yellow>Ідеальна партія</yellow>", verdant-grade: "<dark_green><bold>Клас Verdant</bold></dark_green>" }
+  factors: { genetics: "Генетика", care: "Догляд", health: "Здоров'я", harvest-timing: "Час збору", cleanliness: "Чистота", drying: "Сушіння", curing: "Витримка", skill: "Навичка гравця", worker: "Навичка працівника", contamination: "Забруднення" }
+drying: { stages: { fresh: "Свіжа", wet: "Мокра", damp: "Волога", partially-dry: "Частково суха", almost-ready: "Майже готова", ready: "Готова", overdried: "Пересушена", ruined: "Знищена" }, loaded: "<green>Партію <batch_id> завантажено.</green>", unloaded: "<green>Суху партію <batch_id> повернуто.</green>", completed: "<gold>Партію <batch_id> висушено.</gold>", interrupted: "<yellow>Сушіння завершено раніше.</yellow>", rack-full: "<red>Сушарка повна.</red>", needs-cleaning: "<yellow>Спершу очисти сушарку.</yellow>" }
+curing: { stages: { fresh: "Не почато", developing: "Розвивається", balanced: "Збалансована", ready: "Готова", extended: "Подовжена", degraded: "Погіршена", ruined: "Знищена" }, loaded: "<green>Партію <batch_id> вкладено на витримку.</green>", completed: "<light_purple>Партію <batch_id> витримано.</light_purple>", interrupted: "<yellow>Витримку завершено раніше.</yellow>", container-full: "<red>Контейнер повний.</red>" }
+rolling: { results: { failed: "<dark_red>Невдача</dark_red>", spilled: "<red>Розсипано</red>", crooked: "<gold>Криво</gold>", loose: "<yellow>Вільно</yellow>", normal: "<white>Нормально</white>", good: "<green>Добре</green>", perfect: "<light_purple>Ідеально</light_purple>", overfilled: "<red>Переповнено</red>" }, steps: { place-paper: "Поклади папір", add-filter: "Додай фільтр", add-product: "Додай продукт", distribute: "Розподіли наповнення", finish-roll: "Заверши згорток" }, complete: "<green>Мінігру завершено:</green> <result>", aborted: "<yellow>Мінігру безпечно завершено; матеріали повернуто.</yellow>" }
+herbalist: { title: "<dark_green>Травник</dark_green>", created: "<green>Цей фермер став травником Verdant.</green>", evaluated-normal: "<gray>Цей фермер не травник.</gray>", village-limit: "<yellow>У поселенні вже максимум травників.</yellow>", reputation-up: "<green>Репутація зросла на <amount>.</green>", tiers: { novice: "Новачок", apprentice: "Учень", journeyman: "Підмайстер", expert: "Експерт", master: "Майстер", verdant-expert: "Експерт Verdant" }, specializations: { seeds: "Продавець насіння", tools: "Постачальник обладнання", buyer: "Покупець якості", contracts: "Посередник контрактів" }, hire: { unavailable: "<red>Найняти можна лише Експерта Verdant.</red>", already-employed: "<red>Травник уже працює.</red>", contract-required: "<yellow>Потрібен чинний контракт.</yellow>", signed: "<green><worker> підписав контракт для <farm>.</green>", dismissed: "<yellow><worker> звільнений.</yellow>" } }
+trade: { authentic-only: "<red>Приймаються лише справжні зареєстровані партії.</red>", dry-only: "<red>Купують лише правильно сухі або витримані партії.</red>", quality-too-low: "<red>Потрібен клас не нижче <quality>.</red>", strain-not-wanted: "<yellow>На цей сорт зараз немає попиту.</yellow>", daily-limit: "<red>Денний ліміт вичерпано.</red>", server-budget: "<yellow>Денний бюджет смарагдів вичерпано.</yellow>", purchase-complete: "<green>Куплено <item> за <price>.</green>", sale-complete: "<green>Продано <item> за <price>.</green>", price-changed: "<yellow>Ціна змінилася з <old_price> на <new_price>.</yellow>" }
+farm:
+  roles: { owner: "Власник", manager: "Керівник", grower: "Садівник", worker-manager: "Бригадир", member: "Учасник", visitor: "Відвідувач" }
+  permissions: { plant: "Садити", water: "Поливати", harvest: "Збирати", use-storage: "Користуватися сховищами", use-processing: "Користуватися обладнанням", manage-workers: "Керувати працівниками", manage-members: "Керувати учасниками", manage-settings: "Змінювати налаштування", upgrade: "Поліпшувати плантацію" }
+  storages: { seed-storage: "Сховище насіння", tool-storage: "Сховище інструментів", fresh-harvest-storage: "Сховище свіжого врожаю", dry-product-storage: "Сховище сухого продукту", packaged-product-storage: "Сховище пакунків", salary-storage: "Скриня зарплати", water-storage: "Сховище води", general-storage: "Загальне сховище" }
+  selection: { first-point: "<green>Перший кут: <position>.</green>", second-point: "<green>Другий кут: <position>.</green>", overlap: "<red>Регіон перетинає <farm>.</red>", too-large: "<red>Регіон перевищує ліміт <limit>.</red>", expired: "<yellow>Виділення спливло.</yellow>" }
+  storage: { linked: "<green>Скриню прив'язано як <type>.</green>", unlinked: "<yellow>Прив'язку знято.</yellow>", already-linked: "<red>Скриню вже призначено.</red>", protected: "<red>Прив'язане сховище не можна зламати чи пересунути.</red>" }
+  delete-warning: "<red>Спершу владнай рослини та заблоковані партії.</red>"
+worker:
+  states: { idle: "Бездіяльний", resting: "Відпочиває", searching-task: "Шукає завдання", reserving-task: "Резервує завдання", walking-to-storage: "Іде до сховища", collecting-resource: "Забирає ресурс", walking-to-target: "Іде до цілі", inspecting-plant: "Оглядає рослину", watering: "Поливає", treating: "Лікує", planting: "Садить", harvesting: "Збирає", moving-batch: "Переносить партію", loading-dryer: "Завантажує сушарку", unloading-dryer: "Розвантажує сушарку", packaging: "Пакує", returning-home: "Повертається", sleeping: "Спить", waiting-for-payment: "Чекає зарплату", blocked: "Заблокований" }
+  specializations: { grower: { name: "Садівник", description: "Швидший догляд і менше помилок поливу." }, harvester: { name: "Збирач", description: "Точніший збір і менші втрати." }, drying-master: { name: "Майстер сушіння", description: "Безпечніше сушіння й бонус якості." }, geneticist: { name: "Генетик", description: "Розпізнає риси й береже рідкісне насіння." }, packager: { name: "Пакувальник", description: "Швидше пакує з меншими втратами." }, foreman: { name: "Бригадир", description: "Краще розподіляє завдання." } }
+  priorities: { save-dying-plants: "Рятувати критичні рослини", treat-disease: "Лікувати проблеми", water: "Поливати", harvest: "Збирати", load-drying-rack: "Завантажувати сушарку", unload-drying-rack: "Розвантажувати сушарку", plant: "Садити", package: "Пакувати", clean: "Чистити" }
+  salary: { paid: "<green><worker> отримав <amount> смарагдів за день <day>.</green>", missing-one: "<yellow><worker> сьогодні без зарплати; мораль знизилась.</yellow>", missing-two: "<gold><worker> два дні без зарплати й працює повільніше.</gold>", missing-three: "<red><worker> після трьох днів відмовляється від завдань.</red>", left: "<red><worker> покинув <farm> через несплату.</red>", chest-empty: "<red>У скрині зарплати замало смарагдів.</red>" }
+  morale: { excellent: "<green>Відмінна</green>", good: "<green>Добра</green>", neutral: "<yellow>Нейтральна</yellow>", low: "<gold>Низька</gold>", critical: "<red>Критична</red>" }
+  task: { reserved: "<gray><worker> зарезервував <task>.</gray>", completed: "<green><worker> виконав <task>.</green>", failed: "<red><worker> не виконав <task>: <reason>.</red>", blocked: "<red><worker> застряг біля <position>.</red>", no-path: "Немає безпечного шляху", missing-resource: "Бракує ресурсу", target-unavailable: "Ціль недоступна", reservation-expired: "Резервація спливла" }
+market:
+  trends: { crashing: "Різко падає", falling: "Падає", stable: "Стабільна", rising: "Зростає", surging: "Різко зростає" }
+  events: { high-demand-night-widow: { name: "Високий попит на Night Widow", description: "Закупівельна ціна тимчасово вища." }, berry-fog-oversupply: { name: "Надлишок Berry Fog", description: "Великі поставки знизили ціну." }, rare-seed-shortage: { name: "Дефіцит рідкісного насіння", description: "Рідкісне насіння дорожче." }, premium-product-week: { name: "Тиждень преміального продукту", description: "Якісні партії мають бонус." }, market-inspection: { name: "Перевірка ринку", description: "Суворіші ліміти й перевірки." } }
+  changed: "<yellow>Ринок:</yellow> <strain> тепер коштує <price> (<trend>)."
+contracts:
+  types: { strain-delivery: "Поставка сорту", quality-delivery: "Поставка якості", mixed-delivery: "Поставка кількох сортів", timed-delivery: "Термінова поставка", cured-product: "Витриманий продукт", genetic-delivery: "Генетична вимога", wholesale: "Гуртове замовлення" }
+  statuses: { offered: "Запропонований", active: "Активний", completed: "Виконаний", claimed: "Нагороду забрано", failed: "Провалений", expired: "Сплив", canceled: "Скасований" }
+  accepted: "<green>Контракт <contract_id> прийнято. Строк: <deadline>.</green>"
+  progress: "<yellow>Прогрес: <current>/<required>.</yellow>"
+  completed: "<green>Контракт <contract_id> виконано.</green>"
+  claimed: "<green>Отримано <reward> за <contract_id>.</green>"
+  expired: "<red>Контракт <contract_id> сплив.</red>"
+  already-claimed: "<red>Нагороду вже забрано.</red>"
+  item-not-required: "<yellow>Предмет не відповідає вимогам.</yellow>"
+skills:
+  trees: { grower: { name: "Садівник", description: "Точніший огляд, догляд і збір." }, geneticist: { name: "Генетик", description: "Відкриває риси й стабілізує схрещення." }, producer: { name: "Виробник", description: "Зменшує втрати обробки." }, trader: { name: "Торговець", description: "Поліпшує ціни, контракти й інформацію." } }
+  level-up: "<green><tree> досяг рівня <level>.</green>"
+  maximum: "<gold><tree> досяг максимуму.</gold>"
+  experience-gained: "<aqua>+<amount> досвіду: <tree></aqua>"
+  book-required: "<yellow>Потрібен відповідний розширений посібник.</yellow>"
+effects:
+  positive: { speed: "Легкий крок", haste: "Швидкі руки", night-vision: "Зір Verdant", resistance: "Міцний захист", regeneration: "Коротке відновлення", stress-relief: "Спокійна зосередженість", particles: "Аура Verdant", altered-sounds: "Відлуння саду" }
+  negative: { hunger: "Раптовий голод", slowness: "Важкі кроки", weakness: "Згасання сили", nausea: "Обертовий зір", darkness: "Темний зір", cough: "Вигаданий кашель", false-footsteps: "Примарні кроки", disorientation: "Дезорієнтація", messages: "Блукаючі думки", green-out: "Green out" }
+  started: "<light_purple>Ефекти <product> почалися на <duration>.</light_purple>"
+  ended: "<gray>Ефекти VerdantVice завершилися.</gray>"
+  tolerance-up: "<yellow>Толерантність зросла до <tolerance>.</yellow>"
+  tolerance-decay: "<green>Толерантність знизилася до <tolerance>.</green>"
+  green-out: "<red>Ефект був надто сильним і безпечно припинений.</red>"
+notifications:
+  channels: { chat: "Чат", action-bar: "Панель дій", boss-bar: "Панель боса", title: "Заголовок", sound: "Звук", join-summary: "Підсумок входу" }
+  types: { plant-ready: "<green><strain> готова на <farm>.</green>", plant-disease: "<red><strain> має <condition> на <farm>.</red>", plant-water: "<aqua><strain> потребує води на <farm>.</aqua>", drying-complete: "<gold>Сушіння <batch_id> завершено.</gold>", curing-complete: "<light_purple>Витримку <batch_id> завершено.</light_purple>", salary-missing: "<red><worker> не отримав зарплату.</red>", worker-blocked: "<red><worker> застряг під час <task>.</red>", contract-complete: "<green>Нагорода за <contract_id> готова.</green>", market-change: "<yellow>Подія ринку: <event>.</yellow>" }
+  join-summary: "<green>Нових сповіщень: <count>.</green>"
+  enabled: "<green>Сповіщення <type> через <channel> увімкнено.</green>"
+  disabled: "<yellow>Сповіщення <type> вимкнено.</yellow>"
+resourcepack: { prompt: "<green>VerdantVice пропонує додаткові моделі й звуки.</green>", required-prompt: "<yellow>Сервер вимагає пакет VerdantVice.</yellow>", sending: "<yellow>Надсилання запиту…</yellow>", accepted: "<green>Пакет прийнято.</green>", loaded: "<green>Пакет VerdantVice завантажено.</green>", declined: "<yellow>Пакет відхилено; лишається vanilla-вигляд.</yellow>", failed: "<red>Не вдалося завантажити. Перевір URL і хеш.</red>", unavailable: "<red>URL пакета не налаштовано.</red>" }
+book:
+  basics:
+    title: "Основи VerdantVice"
+    author: "VerdantVice"
+    page_1: "<dark_green><bold>1. Насіння</bold></dark_green><newline><newline>Знайди перевіреного травника. Вищі рівні дають рідкісні вигадані сорти; насіння має підпис і генетику."
+    page_2: "<dark_green><bold>2. Посадка</bold></dark_green><newline><newline>Постав горщик із дозволом і використай чинне насіння. Перевіряються ліміти, відстань і регіон."
+    page_3: "<dark_green><bold>3. Огляд</bold></dark_green><newline><newline>Порожня рука дає підсумок, сканер — дані за навичкою й книгами."
+    page_4: "<dark_green><bold>4. Полив</bold></dark_green><newline><newline>Зволоження — вигаданий показник; шкодять нестача й надлишок."
+    page_5: "<dark_green><bold>5. Проблеми</bold></dark_green><newline><newline>Застосуй правильне чищення, лікування, живлення або ремонт. Штрафи зростають поступово."
+    page_6: "<dark_green><bold>6. Збір</bold></dark_green><newline><newline>Найкраще вікно дає масу та якість і створює підписану партію."
+    page_7: "<dark_green><bold>7. Сушіння</bold></dark_green><newline><newline>Поклади свіжу партію в чисту сушарку й дістань на стадії Готова."
+    page_8: "<dark_green><bold>8. Витримка</bold></dark_green><newline><newline>Додаткова витримка поліпшує якість, але занедбання її знижує."
+    page_9: "<dark_green><bold>9. Якість</bold></dark_green><newline><newline>Якість утворюють генетика, догляд, збір, чистота, обробка, навички й забруднення."
+    page_10: "<dark_green><bold>10. Подрібнення</bold></dark_green><newline><newline>Подрібнювач обробляє суху партію та зберігає походження."
+    page_11: "<dark_green><bold>11. Змішування</bold></dark_green><newline><newline>Змішуй партії в точних частках із сумою 100 %."
+    page_12: "<dark_green><bold>12. Згортання</bold></dark_green><newline><newline>Використай папір, фільтр і продукт та дотримуйся порядку мінігри."
+    page_13: "<dark_green><bold>13. Продаж</bold></dark_green><newline><newline>Продаються лише справжні партії; ціну визначають якість, попит і репутація."
+    page_14: "<dark_green><bold>14. Плантація</bold></dark_green><newline><newline>Познач два кути й використай стіл керування. Регіони не перетинаються."
+    page_15: "<dark_green><bold>15. Найм</bold></dark_green><newline><newline>Розвинь Експерта Verdant, отримай контракт і підготуй ліжко, шлях, їжу та зарплату."
+    page_16: "<dark_green><bold>16. Праця й зарплата</bold></dark_green><newline><newline>Працівники мають графік; виплата, відпочинок, безпека й навантаження визначають мораль."
+  plant_health: { title: "Здоров'я та догляд", author: "VerdantVice", page_1: "<green><bold>Показники</bold></green><newline><newline>Здоров'я, вода, живлення, світло, стрес і чистота — ігрові значення.", page_2: "<green><bold>Баланс</bold></green><newline><newline>Кожен сорт має уподобання; тримай значення в межах сканера.", page_3: "<green><bold>Відновлення</bold></green><newline><newline>Чисть, ремонтуй і лікуй правильну проблему. Втрачений потенціал не завжди повертається." }
+  strain_guide: { title: "Посібник сортів", author: "VerdantVice", page_1: "<light_purple><bold>Сорти</bold></light_purple><newline><newline>Рідкість, ріст, урожай, стійкість, вода, світло й стрес утворюють стиль гри.", page_2: "<light_purple><bold>Риси</bold></light_purple><newline><newline>Базові значення змінює генетичний профіль насіння.", page_3: "<light_purple><bold>Лінії</bold></light_purple><newline><newline>Схрещення зберігає батьків, покоління, риси, кольори й стабільність." }
+  drying_curing: { title: "Сушіння та витримка", author: "VerdantVice", page_1: "<gold><bold>Підготовка</bold></gold><newline><newline>Перевір місткість, чистоту й стан обладнання.", page_2: "<gold><bold>Час</bold></gold><newline><newline>Стадії йдуть за часовими мітками, за дозволом і без чанка.", page_3: "<gold><bold>Результат</bold></gold><newline><newline>Готова — безпечна стадія; затримка псує, правильна витримка поліпшує." }
+  advanced_genetics: { title: "Розширена генетика", author: "VerdantVice", page_1: "<aqua><bold>Класи</bold></aqua><newline><newline>Клас підсумовує сім незалежних модифікаторів.", page_2: "<aqua><bold>Схрещення</bold></aqua><newline><newline>Гра зважує риси, додає відхилення й записує батьків.", page_3: "<aqua><bold>Стабільність</bold></aqua><newline><newline>Стабільність обмежує випадковість; назва не змінює підписані риси." }
+  farm_management: { title: "Керування плантацією", author: "VerdantVice", page_1: "<dark_green><bold>Ролі</bold></dark_green><newline><newline>Давай учасникам лише потрібні дозволи.", page_2: "<dark_green><bold>Сховища</bold></dark_green><newline><newline>Прив'язуй скрині за типом і бережи рідкісне насіння.", page_3: "<dark_green><bold>Люди</bold></dark_green><newline><newline>Ліжко, їжа, шлях, відпочинок і зарплата підтримують мораль." }
+  perfect_batch: { title: "Таємниці ідеальної партії", author: "VerdantVice", page_1: "<yellow><bold>Без скорочень</bold></yellow><newline><newline>Генетика не стирає поганий догляд чи забруднення.", page_2: "<yellow><bold>Потенціал</bold></yellow><newline><newline>Підтримуй здоров'я й чистоту та збирай у правильне вікно.", page_3: "<yellow><bold>Відстеження</bold></yellow><newline><newline>Кожна зміна зберігає втрати й походження; копія lore не змінює якість." }

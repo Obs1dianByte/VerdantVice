@@ -1,0 +1,18 @@
+# Fictional inheritance ranges used by the game.
+mutation-chance: 0.08
+cross-stability-penalty: 0.07
+name:
+  minimum-length: 3
+  maximum-length: 24
+  blocked-words:
+    - admin
+    - moderator
+    - owner
+classes:
+  DAMAGED: { min: 0.00, max: 0.20 }
+  POOR: { min: 0.20, max: 0.35 }
+  COMMON: { min: 0.35, max: 0.55 }
+  GOOD: { min: 0.55, max: 0.72 }
+  EXCEPTIONAL: { min: 0.72, max: 0.86 }
+  PERFECT: { min: 0.86, max: 0.96 }
+  LEGENDARY: { min: 0.96, max: 1.00 }

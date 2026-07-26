@@ -1,0 +1,69 @@
+{
+  "model": {
+    "type": "minecraft:range_dispatch",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "entries": [
+      {
+        "threshold": 12101,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed"
+        }
+      },
+      {
+        "threshold": 12102,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout"
+        }
+      },
+      {
+        "threshold": 12103,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling"
+        }
+      },
+      {
+        "threshold": 12104,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative"
+        }
+      },
+      {
+        "threshold": 12105,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready"
+        }
+      },
+      {
+        "threshold": 12106,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready"
+        }
+      },
+      {
+        "threshold": 12107,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe"
+        }
+      },
+      {
+        "threshold": 12108,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "minecraft:item/amethyst_shard"
+    }
+  }
+}

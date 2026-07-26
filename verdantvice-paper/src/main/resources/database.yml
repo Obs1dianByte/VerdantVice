@@ -1,0 +1,28 @@
+# Changing database type or connection details requires a server restart.
+type: SQLITE # SQLITE, MYSQL, or MARIADB
+sqlite:
+  file: data/verdantvice.db
+  backup-on-start: true
+  backup-interval-hours: 12
+mysql:
+  host: localhost
+  port: 3306
+  database: verdantvice
+  username: verdantvice
+  password: change-me
+  parameters: useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=UTC
+mariadb:
+  host: localhost
+  port: 3306
+  database: verdantvice
+  username: verdantvice
+  password: change-me
+  parameters: useUnicode=true&characterEncoding=utf8&useSSL=false
+pool:
+  minimum-idle: 1
+  maximum-size: 8
+  connection-timeout-millis: 10000
+  max-lifetime-millis: 1800000
+retry:
+  attempts: 3
+  initial-delay-millis: 200

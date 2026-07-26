@@ -1,0 +1,20 @@
+{
+  "plant_ready": {
+    "sounds": [
+      "minecraft:block/azalea_leaves/place1"
+    ],
+    "subtitle": "subtitles.verdantvice.plant_ready"
+  },
+  "tool": {
+    "sounds": [
+      "minecraft:item/brush/brushing/generic1"
+    ],
+    "subtitle": "subtitles.verdantvice.tool"
+  },
+  "process_complete": {
+    "sounds": [
+      "minecraft:block/amethyst_block/chime"
+    ],
+    "subtitle": "subtitles.verdantvice.process_complete"
+  }
+}

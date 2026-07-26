@@ -1,0 +1,37 @@
+# VerdantVice main configuration. Durations are deliberately fictional game values.
+default-language: pl_PL
+auto-detect-client-language: true
+debug: false
+
+limits:
+  plants-per-player: 64
+  farms-per-player: 2
+  minimum-station-distance: 2.0
+
+performance:
+  plant-update-seconds: 30
+  plants-per-cycle: 100
+  worker-update-ticks: 20
+  database-save-seconds: 60
+  offline-growth: true
+  unloaded-chunk-growth: true
+  max-plants-per-chunk: 32
+  max-workers-per-farm: 5
+  emergency-worker-teleport: false
+  emergency-worker-teleport-seconds: 300
+  max-displays-per-chunk: 48
+
+security:
+  require-signed-items: true
+  reservation-timeout-seconds: 30
+  interaction-cooldown-millis: 250
+
+modules:
+  plants: true
+  processing: true
+  effects: true
+  herbalists: true
+  farms: true
+  workers: true
+  market: true
+  contracts: true

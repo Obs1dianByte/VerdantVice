@@ -1,0 +1,16 @@
+package com.verdantvice.plant;
+
+public enum PlantProblem {
+    DRY_SOIL,
+    OVERWATERING,
+    LOW_LIGHT,
+    EXCESSIVE_LIGHT,
+    DIRTY_STATION,
+    BROKEN_EQUIPMENT,
+    FICTIONAL_PESTS,
+    ROOT_STRESS,
+    GROWTH_LOCK,
+    UNSTABLE_GENETICS,
+    FICTIONAL_MOLD,
+    STRONG_SMELL
+}

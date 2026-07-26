@@ -1,0 +1,17 @@
+# Players may override each notification category.
+join-summary: true
+channels:
+  PLANT_READY: ACTION_BAR
+  DISEASE: CHAT
+  LOW_WATER: ACTION_BAR
+  DRYING_COMPLETE: CHAT
+  CURING_COMPLETE: CHAT
+  UNPAID_WORKER: TITLE
+  BLOCKED_WORKER: CHAT
+  CONTRACT_COMPLETE: TITLE
+  MARKET_CHANGE: BOSS_BAR
+sounds:
+  enabled: true
+  success: ENTITY_PLAYER_LEVELUP
+  warning: BLOCK_NOTE_BLOCK_BASS
+  error: ENTITY_VILLAGER_NO

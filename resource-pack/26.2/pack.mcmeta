@@ -1,0 +1,13 @@
+{
+  "pack": {
+    "description": "VerdantVice optional fictional botanical models",
+    "min_format": [
+      88,
+      0
+    ],
+    "max_format": [
+      88,
+      0
+    ]
+  }
+}

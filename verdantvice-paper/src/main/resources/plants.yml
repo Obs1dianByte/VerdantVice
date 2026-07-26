@@ -1,0 +1,43 @@
+# All rates are abstract simulation values and are not real cultivation advice.
+growth:
+  base-health-loss-per-hour: 0.15
+  hydration-loss-per-hour: 3.0
+  nutrition-loss-per-hour: 1.0
+  stress-recovery-per-hour: 0.75
+  minimum-health-for-growth: 15.0
+  optimal-hydration-min: 35.0
+  optimal-hydration-max: 80.0
+  overripe-hours: 12
+  spoiled-hours: 30
+care:
+  watering-can-hydration: 28.0
+  nutrient-pack-nutrition: 24.0
+  cleaning-kit-cleanliness: 35.0
+  treatment-spray-disease-reduction: 45.0
+  repair-kit-condition: 40.0
+problems:
+  chance-per-update: 0.025
+  minimum-seconds-between-problems: 300
+  enabled:
+    - DRY_SOIL
+    - OVERWATERING
+    - LOW_LIGHT
+    - EXCESSIVE_LIGHT
+    - DIRTY_STATION
+    - BROKEN_EQUIPMENT
+    - FICTIONAL_PESTS
+    - ROOT_STRESS
+    - GROWTH_LOCK
+    - UNSTABLE_GENETICS
+    - FICTIONAL_MOLD
+    - STRONG_SMELL
+display:
+  material-by-stage:
+    SEED: WHEAT_SEEDS
+    SPROUT: SMALL_DRIPLEAF
+    SEEDLING: AZALEA
+    VEGETATIVE: FLOWERING_AZALEA
+    MATURING: SPORE_BLOSSOM
+    READY: PITCHER_PLANT
+    OVERRIPE: WITHER_ROSE
+    SPOILED: DEAD_BUSH

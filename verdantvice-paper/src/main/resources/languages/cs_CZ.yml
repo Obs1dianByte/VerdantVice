@@ -1,0 +1,389 @@
+meta: { locale: "cs_CZ", language-name: "Čeština", revision: "1" }
+prefix: "<dark_green><bold>VerdantVice</bold></dark_green> <dark_gray>»</dark_gray>"
+common:
+  enabled: "<green>Zapnuto</green>"
+  disabled: "<red>Vypnuto</red>"
+  yes: "<green>Ano</green>"
+  no: "<red>Ne</red>"
+  none: "<gray>Nic</gray>"
+  unknown: "<gray>Neznámé</gray>"
+  not-applicable: "<gray>Nevztahuje se</gray>"
+  loading: "<yellow>Načítání…</yellow>"
+  calculating: "<yellow>Výpočet…</yellow>"
+  level: "<gray>Úroveň:</gray> <white><level></white>"
+  amount: "<gray>Množství:</gray> <white><amount></white>"
+  price: "<gray>Cena:</gray> <white><price></white>"
+  owner: "<gray>Vlastník:</gray> <white><owner></white>"
+  status: "<gray>Stav:</gray> <white><status></white>"
+  duration: "<gray>Doba:</gray> <white><duration></white>"
+  page: "<gray>Strana <page>/<pages></gray>"
+  seconds: "<seconds> s"
+  minutes: "<minutes> min"
+  emeralds: "<amount> smaragdů"
+  confirm: "<green>Potvrdit</green>"
+  cancel: "<red>Zrušit</red>"
+  close: "<red>Zavřít</red>"
+  back: "<yellow>Zpět</yellow>"
+  next-page: "<green>Další strana</green>"
+  previous-page: "<yellow>Předchozí strana</yellow>"
+  refresh: "<aqua>Obnovit</aqua>"
+  search: "<aqua>Hledat</aqua>"
+  sort: "<aqua>Seřadit</aqua>"
+errors:
+  no-permission: "<red>K tomu nemáš oprávnění.</red>"
+  player-only: "<red>Tato akce je pouze pro hráče.</red>"
+  console-only: "<red>Tato akce je pouze pro konzoli.</red>"
+  invalid-usage: "<red>Nesprávné použití.</red> <gray>Zkus:</gray> <white><usage></white>"
+  invalid-number: "<red><value> není platné číslo.</red>"
+  invalid-uuid: "<red><value> není platné UUID.</red>"
+  invalid-player: "<red>Hráč <player> nebyl nalezen.</red>"
+  player-offline: "<red>Hráč <player> je offline.</red>"
+  invalid-locale: "<red>Nepodporovaný jazyk: <locale>.</red>"
+  not-ready: "<yellow>VerdantVice se ještě spouští.</yellow>"
+  shutting-down: "<red>VerdantVice se vypíná; nové akce jsou blokovány.</red>"
+  database-unavailable: "<red>Databáze není dostupná. Žádný předmět se nezměnil.</red>"
+  database-conflict: "<yellow>Data se změnila. Otevři nabídku znovu.</yellow>"
+  internal: "<red>Nastala neočekávaná chyba.</red> <gray>Kód: <error_id></gray>"
+  cooldown: "<yellow>Před dalším použitím počkej <time>.</yellow>"
+  busy: "<yellow>Tento objekt už někdo používá.</yellow>"
+  canceled: "<yellow>Akce byla zrušena.</yellow>"
+  inventory-full: "<red>Inventář je plný. Výsledek čeká k doručení.</red>"
+  world-unavailable: "<red>Požadovaný svět není dostupný.</red>"
+  chunk-unavailable: "<red>Oblast není načtená. Přibliž se.</red>"
+  target-not-found: "<red>Nebyl nalezen platný cíl.</red>"
+  invalid-item: "<red>Toto není platný předmět VerdantVice.</red>"
+  invalid-signature: "<red>Předmět neprošel ověřením a byl izolován.</red>"
+  duplicate-item: "<red>Toto ID už bylo použito. Kopie byla odmítnuta.</red>"
+  item-locked: "<yellow>Předmět je rezervován jiným procesem.</yellow>"
+  wrong-owner: "<red>Nejsi vlastníkem tohoto předmětu.</red>"
+  wrong-item-state: "<red>Předmět nelze v této fázi použít.</red>"
+  insufficient-items: "<red>Nemáš všechny potřebné předměty.</red>"
+  insufficient-emeralds: "<red>Chybí ti <amount> smaragdů.</red>"
+  limit-reached: "<red>Dosáhl jsi limitu <limit>.</red>"
+  invalid-name: "<red>Název není povolen. Použij 3–24 vhodných znaků.</red>"
+  protected-region: "<red>V této chráněné oblasti zařízení použít nemůžeš.</red>"
+  farm-permission: "<red>Tvá role na farmě tuto akci nepovoluje.</red>"
+  configuration-invalid: "<red>Konfigurace <file> je chybná; zůstávají předchozí hodnoty.</red>"
+  restart-required: "<yellow>Tato změna vyžaduje restart serveru.</yellow>"
+  unsafe-reload: "<red>Tuto část nelze bezpečně znovu načíst.</red>"
+  operation-expired: "<yellow>Operace vypršela a předměty byly vráceny.</yellow>"
+  strong-effect-active: "<red>Během silného účinku nelze použít další silný produkt.</red>"
+  no-space: "<red>Není zde dost volného místa.</red>"
+  too-far: "<red>Jsi příliš daleko.</red>"
+success:
+  reload: "<green>Bezpečná nastavení, překlady a katalogy byly načteny.</green>"
+  save: "<green>Změněná data byla zařazena k uložení.</green>"
+  language: "<green>Tvůj jazyk je nyní <language>.</green>"
+  item-given: "<green><player> získal <amount> × <item>.</green>"
+  seed-given: "<green><player> získal semeno <strain>.</green>"
+  plant-created: "<green>Rostlina <plant_id> byla vytvořena.</green>"
+  plant-removed: "<green>Rostlina <plant_id> byla bezpečně odstraněna.</green>"
+  stage-set: "<green>Fáze nastavena na <stage>.</green>"
+  quality-set: "<green>Kvalita várky nastavena na <quality>.</green>"
+  herbalist-spawned: "<green>Bylinkář <herbalist> byl vytvořen.</green>"
+  worker-hired: "<green><worker> nastoupil na farmu <farm>.</green>"
+  farm-created: "<green>Farma <farm> byla vytvořena.</green>"
+  farm-deleted: "<green>Farma <farm> byla bezpečně odstraněna.</green>"
+  invitation-sent: "<green>Pozvánka pro <player> byla odeslána.</green>"
+  member-removed: "<green><player> byl z farmy odebrán.</green>"
+  notification-settings: "<green>Nastavení upozornění bylo změněno.</green>"
+  resourcepack-sent: "<green>Žádost o balíček zdrojů byla odeslána.</green>"
+  database-migrated: "<green>Databáze byla migrována na verzi <version>.</green>"
+  debug-created: "<green>Diagnostika vytvořena: <path></green>"
+  player-reset: "<green>Data hráče <player> byla resetována.</green>"
+  contract-created: "<green>Zakázka <contract_id> byla vytvořena.</green>"
+  market-updated: "<green>Trh byl aktualizován.</green>"
+commands:
+  root: { description: "Otevře VerdantVice nebo nápovědu.", usage: "/vv [podpříkaz]" }
+  help: { description: "Ukáže dostupné příkazy.", usage: "/vv help [strana]" }
+  guide: { description: "Otevře herní průvodce.", usage: "/vv guide" }
+  profile: { description: "Ukáže profil VerdantVice.", usage: "/vv profile [hráč]" }
+  skills: { description: "Otevře čtyři stromy dovedností.", usage: "/vv skills" }
+  strains: { description: "Ukáže objevené fiktivní odrůdy.", usage: "/vv strains [odrůda]" }
+  recipes: { description: "Ukáže odemčené recepty.", usage: "/vv recipes" }
+  market: { description: "Ukáže poptávku a ceny.", usage: "/vv market [odrůda]" }
+  contracts: { description: "Otevře zakázky.", usage: "/vv contracts" }
+  farm:
+    description: "Otevře správu farmy."
+    usage: "/vv farm"
+    create: { description: "Vytvoří farmu ve výběru.", usage: "/vv farm create <název>" }
+    delete: { description: "Po potvrzení farmu odstraní.", usage: "/vv farm delete <název>" }
+    invite: { description: "Pozve hráče na farmu.", usage: "/vv farm invite <hráč>" }
+    remove: { description: "Odebere člena farmy.", usage: "/vv farm remove <hráč>" }
+  workers: { description: "Otevře správu pracovníků.", usage: "/vv workers" }
+  language: { description: "Zvolí podporovaný jazyk.", usage: "/vv language <pl_PL|en_US|de_DE|es_ES|cs_CZ|uk_UA>" }
+  notifications: { description: "Nastaví témata a kanály upozornění.", usage: "/vv notifications" }
+  resourcepack: { description: "Vyžádá volitelný balíček zdrojů.", usage: "/vv resourcepack" }
+  genetics: { description: "Vytvori vlastni linii ze dvou naseni.", usage: "/vv genetics <nazev>" }
+  admin:
+    description: "Nástroje správce VerdantVice."
+    usage: "/vv admin <podpříkaz>"
+    reload: { description: "Načte bezpečná nastavení.", usage: "/vv admin reload" }
+    save: { description: "Uloží čekající data.", usage: "/vv admin save" }
+    give: { description: "Předá registrovaný předmět.", usage: "/vv admin give <hráč> <předmět> [počet]" }
+    seed: { description: "Předá podepsané semeno.", usage: "/vv admin seed <hráč> <odrůda> [třída]" }
+    plant: { description: "Vytvoří rostlinu na cílové stanici.", usage: "/vv admin plant <odrůda>" }
+    setstage: { description: "Změní fázi cílové rostliny.", usage: "/vv admin setstage <fáze>" }
+    setquality: { description: "Změní kvalitu držené várky.", usage: "/vv admin setquality <třída>" }
+    spawnherbalist: { description: "Vytvoří bylinkáře.", usage: "/vv admin spawnherbalist [úroveň]" }
+    hireworker: { description: "Najme cílového bylinkáře.", usage: "/vv admin hireworker <farma>" }
+    removeplant: { description: "Bezpečně odstraní cílovou rostlinu.", usage: "/vv admin removeplant" }
+    inspect: { description: "Prověří objekt a registr.", usage: "/vv admin inspect" }
+    market: { description: "Prověří nebo změní trh.", usage: "/vv admin market <show|set|event> ..." }
+    contract: { description: "Vytvoří nebo prověří zakázku.", usage: "/vv admin contract <create|inspect> ..." }
+    resetplayer: { description: "Resetuje data hráče.", usage: "/vv admin resetplayer <hráč> confirm" }
+    migrate: { description: "Spustí migrace databáze.", usage: "/vv admin migrate" }
+    database: { description: "Ukáže stav databáze.", usage: "/vv admin database" }
+    debug: { description: "Vytvoří očištěnou diagnostiku.", usage: "/vv admin debug" }
+    performance: { description: "Ukáže výkonové metriky.", usage: "/vv admin performance" }
+gui:
+  main:
+    title: "<dark_green><bold>VerdantVice</bold></dark_green>"
+    my-farm: { name: "<green>Moje farma</green>", description: "<gray>Přehled, zařízení, práva a vylepšení.</gray>" }
+    plants: { name: "<green>Rostliny</green>", description: "<gray>Růst, péče a sklizňová okna.</gray>" }
+    workers: { name: "<gold>Pracovníci</gold>", description: "<gray>Úkoly, morálka, rozvrh a mzdy.</gray>" }
+    strains: { name: "<light_purple>Odrůdy</light_purple>", description: "<gray>Fiktivní odrůdy a objevy.</gray>" }
+    genetics: { name: "<aqua>Genetika</aqua>", description: "<gray>Profily, křížení a vlastní linie.</gray>" }
+    contracts: { name: "<yellow>Zakázky</yellow>", description: "<gray>Dodávky, termíny a odměny.</gray>" }
+    market: { name: "<green>Trh</green>", description: "<gray>Poptávka, události a ceny.</gray>" }
+    skills: { name: "<blue>Dovednosti</blue>", description: "<gray>Pěstitel, Genetik, Výrobce a Obchodník.</gray>" }
+    guide: { name: "<gold>Průvodce</gold>", description: "<gray>Knihy a návody k mechanikám.</gray>" }
+    settings: { name: "<white>Nastavení</white>", description: "<gray>Jazyk, upozornění a balíček zdrojů.</gray>" }
+  farm:
+    title: "<dark_green>Farma: <farm></dark_green>"
+    overview: { name: "<green>Přehled farmy</green>", description: "<gray>Úroveň, limity, příjem a problémy.</gray>" }
+    plants: { name: "<green>Rostliny</green>", description: "<gray><count> aktivních, <sick> nemocných, <ready> připravených.</gray>" }
+    workers: { name: "<gold>Pracovníci</gold>", description: "<gray><count> zaměstnaných; morálka <morale>.</gray>" }
+    storages: { name: "<yellow>Sklady</yellow>", description: "<gray>Propojené specializované truhly.</gray>" }
+    drying: { name: "<gold>Sušení</gold>", description: "<gray>Kapacita, stav a aktivní procesy.</gray>" }
+    curing: { name: "<light_purple>Zrání</light_purple>", description: "<gray>Nádoby a volitelné zlepšení.</gray>" }
+    priorities: { name: "<aqua>Priority</aqua>", description: "<gray>Pořadí pracovních úkolů.</gray>" }
+    permissions: { name: "<blue>Oprávnění</blue>", description: "<gray>Role a přístup členů.</gray>" }
+    salary: { name: "<green>Mzdy</green>", description: "<gray>Mzdová truhla a dluhy.</gray>" }
+    statistics: { name: "<white>Statistiky</white>", description: "<gray>Výroba, kvalita, prodej a výkon.</gray>" }
+    notifications: { name: "<yellow>Upozornění</yellow>", description: "<gray>Zvol upozornění farmy.</gray>" }
+    upgrade: { name: "<green>Vylepšit farmu</green>", description: "<gray>Zvýší limity farmy.</gray>" }
+    delete: { name: "<red>Odstranit farmu</red>", description: "<gray>Vyžaduje potvrzení a žádné blokované procesy.</gray>" }
+    income: "<gray>Nedávný příjem:</gray> <green><income></green>"
+    missing-tools: "<gray>Chybějící nástroje:</gray> <red><count></red>"
+    recent-problems: "<gray>Nedávné problémy:</gray> <white><count></white>"
+  plants:
+    title: "<green>Rostliny</green>"
+    details-title: "<green><strain></green> <dark_gray>•</dark_gray> <stage>"
+    filter-all: "<white>Všechny rostliny</white>"
+    filter-needs-care: "<yellow>Potřebují péči</yellow>"
+    filter-ready: "<green>Připravené ke sklizni</green>"
+    exact-health: "<gray>Zdraví:</gray> <health>"
+    hydration: "<gray>Zálivka:</gray> <hydration>"
+    nutrition: "<gray>Výživa:</gray> <nutrition>"
+    stress: "<gray>Stres:</gray> <stress>"
+    cleanliness: "<gray>Čistota:</gray> <cleanliness>"
+    conditions: "<gray>Problémy:</gray> <conditions>"
+    quality-potential: "<gray>Potenciál kvality:</gray> <quality>"
+    yield-potential: "<gray>Potenciál výnosu:</gray> <yield>"
+    harvest-window: "<gray>Sklizňové okno:</gray> <window>"
+    genetics: "<gray>Genetika:</gray> <genetics>"
+    approximate-ready: "<gray>Odhad připravenosti:</gray> <time>"
+    novice-summary: "<gray>Celkový stav:</gray> <condition>"
+  workers:
+    title: "<gold>Pracovníci</gold>"
+    details-title: "<gold><worker></gold>"
+    tasks: "<gray>Úkoly</gray>"
+    schedule: "<gray>Rozvrh</gray>"
+    salary: "<gray>Mzda</gray>"
+    morale: "<gray>Morálka:</gray> <morale>"
+    specialization: "<gray>Specializace:</gray> <specialization>"
+    experience: "<gray>Zkušenost:</gray> <xp>"
+    current-task: "<gray>Aktuální úkol:</gray> <task>"
+    unpaid-days: "<gray>Nezaplacené dny:</gray> <days>"
+    assign: "<green>Přiřadit farmě</green>"
+    transfer: "<yellow>Přesunout</yellow>"
+    dismiss: "<red>Propustit</red>"
+  strains: { title: "<light_purple>Katalog odrůd</light_purple>", undiscovered: "<dark_gray>Neobjevená odrůda</dark_gray>", rarity: "<gray>Vzácnost:</gray> <rarity>", growth-time: "<gray>Doba růstu:</gray> <time>", difficulty: "<gray>Obtížnost:</gray> <difficulty>", base-yield: "<gray>Základní výnos:</gray> <yield>", resistance: "<gray>Odolnost:</gray> <resistance>", effects-hidden: "<gray>Účinky jsou skryté do objevení.</gray>" }
+  genetics: { title: "<aqua>Genetická laboratoř</aqua>", profiles: "<aqua>Genetické profily</aqua>", crossing: "<light_purple>Zkřížit dvě linie</light_purple>", custom-lines: "<green>Moje linie</green>", parent-a: "<gray>Rodič A:</gray> <parent>", parent-b: "<gray>Rodič B:</gray> <parent>", stability: "<gray>Stabilita:</gray> <stability>", generation: "<gray>Generace:</gray> <generation>", create-line: "<green>Vytvořit linii</green>", enter-name: "<yellow>Napiš název linie do chatu.</yellow>" }
+  processing: { drying-title: "<gold>Sušák</gold>", curing-title: "<light_purple>Zrací nádoba</light_purple>", grinder-title: "<gray>Drtič</gray>", mixing-title: "<aqua>Míchání odrůd</aqua>", rolling-title: "<green>Balicí dílna</green>", input-slot: "<yellow>Vstup</yellow>", output-slot: "<green>Výstup</green>", progress: "<gray>Postup:</gray> <progress>", start: "<green>Spustit</green>", stop: "<red>Zastavit</red>", capacity: "<gray>Kapacita:</gray> <used>/<total>", condition: "<gray>Stav zařízení:</gray> <condition>", add-batch: "<green>Přidat várku</green>", remove-batch: "<yellow>Odebrat várku</yellow>", mixture-ratio: "<gray><strain>:</gray> <white><ratio>%</white>", rolling-instruction: "<yellow>Klikni na <target> v zelené zóně.</yellow>", rolling-round: "<gray>Krok <round>/<total>:</gray> <step>" }
+  trade: { title: "<dark_green>Bylinkář <herbalist></dark_green>", buy: "<green>Koupit zásoby</green>", sell: "<gold>Prodat produkt</gold>", reputation: "<gray>Tvá pověst:</gray> <reputation>", daily-limit: "<gray>Denní limit:</gray> <used>/<limit>", demand: "<gray>Poptávka:</gray> <demand>", final-price: "<gray>Konečná cena:</gray> <price>", confirm-buy: "<green>Potvrdit nákup</green>", confirm-sell: "<green>Potvrdit prodej</green>" }
+  contracts: { title: "<yellow>Zakázky</yellow>", available: "<green>Dostupné</green>", active: "<yellow>Aktivní</yellow>", completed: "<aqua>Dokončené</aqua>", failed: "<red>Neúspěšné</red>", deadline: "<gray>Termín:</gray> <deadline>", requirements: "<gray>Požadavky:</gray> <requirements>", reward: "<gray>Odměna:</gray> <reward>", accept: "<green>Přijmout</green>", deliver: "<yellow>Dodat předměty</yellow>", claim: "<green>Vyzvednout odměnu</green>" }
+  market: { title: "<green>Trh Verdant</green>", strain: "<gray>Odrůda:</gray> <strain>", current-price: "<gray>Aktuální cena:</gray> <price>", trend-up: "<green>Roste</green>", trend-stable: "<yellow>Stabilní</yellow>", trend-down: "<red>Klesá</red>", supply: "<gray>Nabídka:</gray> <supply>", demand: "<gray>Poptávka:</gray> <demand>", active-event: "<gray>Událost:</gray> <event>" }
+  skills: { title: "<blue>Dovednosti</blue>", points: "<gray>Volné body:</gray> <points>", progress: "<gray>Postup:</gray> <current>/<required>", unlock: "<green>Odemknout</green>", locked: "<red>Vyžaduje úroveň <level></red>" }
+  settings: { title: "<white>Nastavení</white>", language: "<aqua>Jazyk</aqua>", notifications: "<yellow>Upozornění</yellow>", resourcepack: "<green>Balíček zdrojů</green>", auto-detect: "<gray>Automatická detekce:</gray> <state>" }
+item:
+  seed: { name: "<green>Semeno <strain></green>", description: "<gray>Podepsané semeno s unikátní fiktivní genetikou.</gray>" }
+  planting_pot: { name: "<green>Pěstební květináč</green>", description: "<gray>Vytvoří chráněnou stanici.</gray>" }
+  watering_can: { name: "<aqua>Konvička</aqua>", description: "<gray>Doplňuje zálivku; přebytek škodí.</gray>" }
+  plant_scanner: { name: "<aqua>Skener rostlin</aqua>", description: "<gray>Ukáže údaje podle dovednosti.</gray>" }
+  cleaning_kit: { name: "<white>Čisticí sada</white>", description: "<gray>Zvýší čistotu a sníží kontaminaci.</gray>" }
+  treatment_spray: { name: "<yellow>Léčebný sprej</yellow>", description: "<gray>Léčí kompatibilní fiktivní problémy.</gray>" }
+  nutrient_pack: { name: "<gold>Balíček výživy</gold>", description: "<gray>Doplní herní výživu.</gray>" }
+  repair_kit: { name: "<gray>Opravná sada</gray>", description: "<gray>Opravuje vybavení VerdantVice.</gray>" }
+  drying_rack: { name: "<gold>Sušák</gold>", description: "<gray>Časově suší čerstvé várky.</gray>" }
+  curing_container: { name: "<light_purple>Zrací nádoba</light_purple>", description: "<gray>Volitelně zlepší suchou várku.</gray>" }
+  grinder: { name: "<gray>Drtič Verdant</gray>", description: "<gray>Vytvoří dohledatelný drcený produkt.</gray>" }
+  farm_manager_table: { name: "<dark_green>Stůl správce farmy</dark_green>", description: "<gray>Vytváří a spravuje farmu.</gray>" }
+  selection_wand: { name: "<gold>Hůlka výběru farmy</gold>", description: "<gray>Označí dva rohy regionu.</gray>" }
+  rolling_paper: { name: "<white>Balicí papír</white>", description: "<gray>Fiktivní součást minihry.</gray>" }
+  filter: { name: "<yellow>Filtr</yellow>", description: "<gray>Povinná součást minihry.</gray>" }
+  cosmetic_additive: { name: "<light_purple>Kosmetická přísada</light_purple>", description: "<gray>Volitelná herní ozdoba.</gray>" }
+  package: { name: "<gold>Balení produktu</gold>", description: "<gray>Ověřené balení jedné várky.</gray>" }
+  plantation_contract: { name: "<gold>Farmářská smlouva</gold>", description: "<gray>Umožní najmout Experta Verdant.</gray>" }
+  fresh_batch: { name: "<green>Čerstvá várka • <strain></green>", description: "<gray>Hmotnost: <weight> • Potenciál: <quality></gray>" }
+  dry_batch: { name: "<gold>Suchá várka • <strain></gold>", description: "<gray>Suchá hmotnost: <weight> • Třída: <quality></gray>" }
+  cured_batch: { name: "<light_purple>Vyzrálá várka • <strain></light_purple>", description: "<gray>Zrání: <duration> • Třída: <quality></gray>" }
+  ground_product: { name: "<yellow>Drcený produkt • <strain></yellow>", description: "<gray>Materiál z várky <batch_id>.</gray>" }
+  mixture: { name: "<aqua>Směs Verdant</aqua>", description: "<gray>Směs <components> fiktivních odrůd.</gray>" }
+  joint: { name: "<green>Rolka Verdant • <quality></green>", description: "<gray>Výsledek minihry z várky <batch_id>.</gray>" }
+  basics_book: { name: "<gold>Základy VerdantVice</gold>", description: "<gray>Úplný průvodce v 16 krocích.</gray>" }
+  plant_health_book: { name: "<green>Zdraví a péče</green>", description: "<gray>Pokročilá příručka stavů rostlin.</gray>" }
+  strain_guide_book: { name: "<light_purple>Průvodce odrůdami</light_purple>", description: "<gray>Vlastnosti a vzácnosti odrůd.</gray>" }
+  drying_curing_book: { name: "<gold>Sušení a zrání</gold>", description: "<gray>Pokročilé časové procesy.</gray>" }
+  genetics_book: { name: "<aqua>Pokročilá genetika</aqua>", description: "<gray>Profily, křížení a stabilita.</gray>" }
+  farm_management_book: { name: "<dark_green>Správa farmy</dark_green>", description: "<gray>Pracovníci, sklady, priority a mzdy.</gray>" }
+  perfect_batch_book: { name: "<yellow>Tajemství dokonalé várky</yellow>", description: "<gray>Faktory herní kvality.</gray>" }
+  guide_book: { name: "<gold>Základy VerdantVice</gold>", description: "<gray>Lokalizovaný průvodce 16 kroky.</gray>" }
+  advanced_book: { name: "<aqua>Pokročilý průvodce Verdant</aqua>", description: "<gray>Podepsaná odborná kniha.</gray>" }
+  lore: { strain: "<gray>Odrůda:</gray> <white><strain></white>", quality: "<gray>Kvalita:</gray> <white><quality></white>" }
+plant:
+  stages: { seed: "Semeno", sprout: "Klíček", seedling: "Sazenice", vegetative: "Růst", maturing: "Dozrávání", ready: "Připravená", overripe: "Přezrálá", spoiled: "Zkažená" }
+  conditions:
+    dry-soil: { name: "Suchá půda", description: "Nízká zálivka postupně snižuje růst a zdraví." }
+    overwatering: { name: "Přelití", description: "Přebytek vody zvyšuje stres." }
+    low-light: { name: "Málo světla", description: "Stanice má méně herního světla, než odrůda chce." }
+    excessive-light: { name: "Příliš světla", description: "Aktuální světlo odrůdu stresuje." }
+    dirty-station: { name: "Špinavá stanice", description: "Špína zvyšuje riziko problémů." }
+    broken-equipment: { name: "Rozbité vybavení", description: "Stanice potřebuje opravu." }
+    fictional-pests: { name: "Roztoči Verdant", description: "Fiktivní škůdci snižují zdraví a výnos." }
+    root-stress: { name: "Stres kořenů", description: "Herní problém z nestabilní péče." }
+    growth-lock: { name: "Blokace růstu", description: "Růst čeká na vyřešení problému." }
+    unstable-genetics: { name: "Nestabilní genetika", description: "Zvyšuje šanci náhodných problémů." }
+    fictional-mold: { name: "Svítivá plíseň", description: "Fiktivní kontaminace vyžadující léčbu." }
+    strong-smell: { name: "Silná vůně", description: "Spouští částice a upozornění." }
+  overall: { excellent: "<green>Výborný</green>", good: "<green>Dobrý</green>", fair: "<yellow>Průměrný</yellow>", poor: "<gold>Špatný</gold>", critical: "<red>Kritický</red>" }
+  harvest-timing: { too-early: "Příliš brzy", early: "Brzy", optimal: "Optimálně", perfect: "Dokonale", late: "Pozdě", overripe: "Přezrálá" }
+  interaction: { planted: "<green>Zasadil jsi <strain>.</green>", watered: "<aqua>Zálivka zvýšena na <hydration>.</aqua>", cleaned: "<green>Čistota zvýšena na <cleanliness>.</green>", treated: "<green><condition> byl ošetřen.</green>", repaired: "<green>Stav zvýšen na <condition>.</green>", harvested: "<green>Sklizeno <weight> odrůdy <strain> v čase <timing>.</green>", not-ready: "<yellow>Lze sklidit, ale čas je <timing>.</yellow>" }
+rarity: { common: "<white>Běžná</white>", uncommon: "<green>Neobvyklá</green>", rare: "<light_purple>Vzácná</light_purple>", legendary: "<gold>Legendární</gold>" }
+genetics:
+  grades: { damaged: "<dark_red>Poškozená</dark_red>", poor: "<red>Slabá</red>", common: "<white>Běžná</white>", good: "<green>Dobrá</green>", exceptional: "<aqua>Výjimečná</aqua>", perfect: "<light_purple>Dokonalá</light_purple>", legendary: "<gold>Legendární</gold>" }
+  traits: { yield-modifier: "Výnos", growth-speed-modifier: "Rychlost růstu", resistance-modifier: "Odolnost", quality-modifier: "Kvalita", smell-modifier: "Vůně", stability-modifier: "Stabilita", negative-effect-modifier: "Riziko záporných účinků" }
+  crossing: { success: "<green>Linie <line> vznikla z <parent_a> a <parent_b>.</green>", failed: "<red>Křížení nevytvořilo použitelné semeno.</red>", name-prompt: "<yellow>Napiš název nebo <white>zrušit</white>.</yellow>" }
+quality:
+  grades: { spoiled: "<dark_red>Zkažená</dark_red>", very-poor: "<red>Velmi slabá</red>", street: "<gold>Pouliční</gold>", common: "<white>Běžná</white>", good: "<green>Dobrá</green>", premium: "<aqua>Prémiová</aqua>", top-shelf: "<light_purple>Špičková</light_purple>", perfect-batch: "<yellow>Dokonalá várka</yellow>", verdant-grade: "<dark_green><bold>Třída Verdant</bold></dark_green>" }
+  factors: { genetics: "Genetika", care: "Péče", health: "Zdraví", harvest-timing: "Čas sklizně", cleanliness: "Čistota", drying: "Sušení", curing: "Zrání", skill: "Dovednost hráče", worker: "Dovednost pracovníka", contamination: "Kontaminace" }
+drying:
+  stages: { fresh: "Čerstvá", wet: "Mokrá", damp: "Vlhká", partially-dry: "Částečně suchá", almost-ready: "Téměř hotová", ready: "Hotová", overdried: "Přesušená", ruined: "Zničená" }
+  loaded: "<green>Várka <batch_id> byla vložena do sušáku.</green>"
+  unloaded: "<green>Suchá várka <batch_id> byla vrácena.</green>"
+  completed: "<gold>Várka <batch_id> doschla.</gold>"
+  interrupted: "<yellow>Sušení bylo ukončeno dříve.</yellow>"
+  rack-full: "<red>Sušák je plný.</red>"
+  needs-cleaning: "<yellow>Před další várkou sušák vyčisti.</yellow>"
+curing:
+  stages: { fresh: "Nezahájeno", developing: "Vyvíjí se", balanced: "Vyvážená", ready: "Hotová", extended: "Prodloužená", degraded: "Zhoršená", ruined: "Zničená" }
+  loaded: "<green>Várka <batch_id> byla vložena do zrací nádoby.</green>"
+  completed: "<light_purple>Várka <batch_id> dozrála.</light_purple>"
+  interrupted: "<yellow>Zrání bylo ukončeno dříve.</yellow>"
+  container-full: "<red>Zrací nádoba je plná.</red>"
+rolling:
+  results: { failed: "<dark_red>Neúspěch</dark_red>", spilled: "<red>Rozsypané</red>", crooked: "<gold>Křivé</gold>", loose: "<yellow>Volné</yellow>", normal: "<white>Normální</white>", good: "<green>Dobré</green>", perfect: "<light_purple>Dokonalé</light_purple>", overfilled: "<red>Přeplněné</red>" }
+  steps: { place-paper: "Polož papír", add-filter: "Přidej filtr", add-product: "Přidej drcený produkt", distribute: "Rozlož náplň", finish-roll: "Dokonči rolku" }
+  complete: "<green>Minihra dokončena:</green> <result>"
+  aborted: "<yellow>Minihra skončila bezpečně; suroviny byly vráceny.</yellow>"
+herbalist:
+  title: "<dark_green>Bylinkář</dark_green>"
+  created: "<green>Tento farmář objevil obchod bylinkáře.</green>"
+  evaluated-normal: "<gray>Tento farmář není bylinkář.</gray>"
+  village-limit: "<yellow>Osada už má maximum bylinkářů.</yellow>"
+  reputation-up: "<green>Pověst vzrostla o <amount>.</green>"
+  tiers: { novice: "Nováček", apprentice: "Učeň", journeyman: "Tovaryš", expert: "Expert", master: "Mistr", verdant-expert: "Expert Verdant" }
+  specializations: { seeds: "Prodejce semen", tools: "Dodavatel vybavení", buyer: "Výkupce kvality", contracts: "Zprostředkovatel zakázek" }
+  hire: { unavailable: "<red>Najmout lze jen Experta Verdant.</red>", already-employed: "<red>Bylinkář už pracuje.</red>", contract-required: "<yellow>Potřebuješ platnou smlouvu.</yellow>", signed: "<green><worker> podepsal smlouvu pro <farm>.</green>", dismissed: "<yellow><worker> byl propuštěn.</yellow>" }
+trade: { authentic-only: "<red>Přijímány jsou jen pravé registrované várky.</red>", dry-only: "<red>Výkup je jen pro správně suché nebo vyzrálé várky.</red>", quality-too-low: "<red>Je potřeba alespoň <quality>.</red>", strain-not-wanted: "<yellow>Po této odrůdě nyní není poptávka.</yellow>", daily-limit: "<red>Denní limit byl vyčerpán.</red>", server-budget: "<yellow>Denní rozpočet smaragdů je vyčerpán.</yellow>", purchase-complete: "<green>Koupeno <item> za <price>.</green>", sale-complete: "<green>Prodáno <item> za <price>.</green>", price-changed: "<yellow>Cena se změnila z <old_price> na <new_price>.</yellow>" }
+farm:
+  roles: { owner: "Vlastník", manager: "Správce", grower: "Pěstitel", worker-manager: "Vedoucí", member: "Člen", visitor: "Návštěvník" }
+  permissions: { plant: "Sázet", water: "Zalévat", harvest: "Sklízet", use-storage: "Používat sklady", use-processing: "Používat zařízení", manage-workers: "Spravovat pracovníky", manage-members: "Spravovat členy", manage-settings: "Měnit nastavení", upgrade: "Vylepšovat farmu" }
+  storages: { seed-storage: "Sklad semen", tool-storage: "Sklad nástrojů", fresh-harvest-storage: "Sklad čerstvé sklizně", dry-product-storage: "Sklad suchých produktů", packaged-product-storage: "Sklad balení", salary-storage: "Mzdová truhla", water-storage: "Sklad vody", general-storage: "Obecný sklad" }
+  selection: { first-point: "<green>První roh: <position>.</green>", second-point: "<green>Druhý roh: <position>.</green>", overlap: "<red>Region se překrývá s <farm>.</red>", too-large: "<red>Region překračuje limit <limit>.</red>", expired: "<yellow>Výběr vypršel.</yellow>" }
+  storage: { linked: "<green>Truhla propojena jako <type>.</green>", unlinked: "<yellow>Propojení odstraněno.</yellow>", already-linked: "<red>Truhla už je přiřazena.</red>", protected: "<red>Propojený sklad nelze zničit ani přesunout.</red>" }
+  delete-warning: "<red>Nejprve vyřeš rostliny a blokované várky.</red>"
+worker:
+  states: { idle: "Nečinný", resting: "Odpočívá", searching-task: "Hledá úkol", reserving-task: "Rezervuje úkol", walking-to-storage: "Jde do skladu", collecting-resource: "Vyzvedává zdroj", walking-to-target: "Jde k cíli", inspecting-plant: "Kontroluje rostlinu", watering: "Zalévá", treating: "Ošetřuje", planting: "Sází", harvesting: "Sklízí", moving-batch: "Přenáší várku", loading-dryer: "Plní sušák", unloading-dryer: "Vyprazdňuje sušák", packaging: "Balí", returning-home: "Vrací se", sleeping: "Spí", waiting-for-payment: "Čeká na mzdu", blocked: "Zablokovaný" }
+  specializations:
+    grower: { name: "Pěstitel", description: "Rychlejší péče a méně chyb zálivky." }
+    harvester: { name: "Sklízeč", description: "Přesnější sklizeň a menší ztráty." }
+    drying-master: { name: "Mistr sušení", description: "Bezpečnější sušení a bonus kvality." }
+    geneticist: { name: "Genetik", description: "Rozpozná rysy a chrání vzácná semena." }
+    packager: { name: "Balič", description: "Rychlejší balení s menší ztrátou." }
+    foreman: { name: "Předák", description: "Lépe rozděluje úkoly." }
+  priorities: { save-dying-plants: "Zachránit kritické rostliny", treat-disease: "Léčit problémy", water: "Zalévat", harvest: "Sklízet", load-drying-rack: "Naplnit sušák", unload-drying-rack: "Vyprázdnit sušák", plant: "Sázet", package: "Balit", clean: "Čistit" }
+  salary: { paid: "<green><worker> dostal <amount> smaragdů za den <day>.</green>", missing-one: "<yellow><worker> dnes nedostal mzdu; morálka klesla.</yellow>", missing-two: "<gold><worker> je dva dny bez mzdy a pracuje pomaleji.</gold>", missing-three: "<red><worker> po třech dnech odmítá úkoly.</red>", left: "<red><worker> opustil <farm> kvůli neplacení.</red>", chest-empty: "<red>V mzdové truhle není dost smaragdů.</red>" }
+  morale: { excellent: "<green>Výborná</green>", good: "<green>Dobrá</green>", neutral: "<yellow>Neutrální</yellow>", low: "<gold>Nízká</gold>", critical: "<red>Kritická</red>" }
+  task: { reserved: "<gray><worker> rezervoval <task>.</gray>", completed: "<green><worker> dokončil <task>.</green>", failed: "<red><worker> nezvládl <task>: <reason>.</red>", blocked: "<red><worker> uvízl u <position>.</red>", no-path: "Žádná bezpečná cesta", missing-resource: "Chybí zdroj", target-unavailable: "Cíl není dostupný", reservation-expired: "Rezervace vypršela" }
+market:
+  trends: { crashing: "Prudce klesá", falling: "Klesá", stable: "Stabilní", rising: "Roste", surging: "Prudce roste" }
+  events:
+    high-demand-night-widow: { name: "Vysoká poptávka po Night Widow", description: "Výkupní cena je dočasně vyšší." }
+    berry-fog-oversupply: { name: "Přebytek Berry Fog", description: "Velké dodávky snížily cenu." }
+    rare-seed-shortage: { name: "Nedostatek vzácných semen", description: "Vzácná semena jsou dražší." }
+    premium-product-week: { name: "Týden prémiových produktů", description: "Kvalitní várky mají bonus." }
+    market-inspection: { name: "Tržní kontrola", description: "Přísnější limity a ověřování." }
+  changed: "<yellow>Změna trhu:</yellow> <strain> nyní stojí <price> (<trend>)."
+contracts:
+  types: { strain-delivery: "Dodávka odrůdy", quality-delivery: "Dodávka kvality", mixed-delivery: "Dodávka více odrůd", timed-delivery: "Včasná dodávka", cured-product: "Vyzrálý produkt", genetic-delivery: "Genetický požadavek", wholesale: "Velkoobjemová zakázka" }
+  statuses: { offered: "Nabídnutá", active: "Aktivní", completed: "Dokončená", claimed: "Odměna vyzvednuta", failed: "Neúspěšná", expired: "Vypršela", canceled: "Zrušena" }
+  accepted: "<green>Zakázka <contract_id> přijata. Termín: <deadline>.</green>"
+  progress: "<yellow>Postup: <current>/<required>.</yellow>"
+  completed: "<green>Zakázka <contract_id> je hotová.</green>"
+  claimed: "<green>Získal jsi <reward> za <contract_id>.</green>"
+  expired: "<red>Zakázka <contract_id> vypršela.</red>"
+  already-claimed: "<red>Odměna už byla vyzvednuta.</red>"
+  item-not-required: "<yellow>Předmět nesplňuje požadavky.</yellow>"
+skills:
+  trees:
+    grower: { name: "Pěstitel", description: "Přesnější kontrola, péče a sklizeň." }
+    geneticist: { name: "Genetik", description: "Odhaluje rysy a stabilizuje křížení." }
+    producer: { name: "Výrobce", description: "Snižuje ztráty při zpracování." }
+    trader: { name: "Obchodník", description: "Zlepšuje ceny, zakázky a informace." }
+  level-up: "<green><tree> dosáhl úrovně <level>.</green>"
+  maximum: "<gold><tree> dosáhl maxima.</gold>"
+  experience-gained: "<aqua>+<amount> zkušenosti: <tree></aqua>"
+  book-required: "<yellow>Potřebuješ příslušnou pokročilou knihu.</yellow>"
+effects:
+  positive: { speed: "Lehký krok", haste: "Rychlé ruce", night-vision: "Zrak Verdant", resistance: "Pevná obrana", regeneration: "Krátká obnova", stress-relief: "Klidné soustředění", particles: "Aura Verdant", altered-sounds: "Ozvěna zahrady" }
+  negative: { hunger: "Náhlý hlad", slowness: "Těžké kroky", weakness: "Slábnoucí síla", nausea: "Točivý obraz", darkness: "Temný zrak", cough: "Fiktivní kašel", false-footsteps: "Přízračné kroky", disorientation: "Dezorientace", messages: "Toulavé myšlenky", green-out: "Green out" }
+  started: "<light_purple>Účinky <product> začínají na <duration>.</light_purple>"
+  ended: "<gray>Účinky VerdantVice skončily.</gray>"
+  tolerance-up: "<yellow>Tolerance vzrostla na <tolerance>.</yellow>"
+  tolerance-decay: "<green>Tolerance klesla na <tolerance>.</green>"
+  green-out: "<red>Účinek byl příliš silný a bezpečně skončil.</red>"
+notifications:
+  channels: { chat: "Chat", action-bar: "Akční lišta", boss-bar: "Boss lišta", title: "Titulek", sound: "Zvuk", join-summary: "Souhrn po připojení" }
+  types: { plant-ready: "<green><strain> je na <farm> připravena.</green>", plant-disease: "<red><strain> má na <farm> problém <condition>.</red>", plant-water: "<aqua><strain> potřebuje na <farm> vodu.</aqua>", drying-complete: "<gold>Sušení várky <batch_id> skončilo.</gold>", curing-complete: "<light_purple>Zrání várky <batch_id> skončilo.</light_purple>", salary-missing: "<red><worker> nedostal mzdu.</red>", worker-blocked: "<red><worker> uvízl při <task>.</red>", contract-complete: "<green>Zakázka <contract_id> čeká k vyzvednutí.</green>", market-change: "<yellow>Událost trhu: <event>.</yellow>" }
+  join-summary: "<green>Máš <count> nových upozornění.</green>"
+  enabled: "<green>Upozornění <type> přes <channel> zapnuta.</green>"
+  disabled: "<yellow>Upozornění <type> vypnuta.</yellow>"
+resourcepack: { prompt: "<green>VerdantVice nabízí volitelné modely a zvuky.</green>", required-prompt: "<yellow>Server vyžaduje balíček VerdantVice.</yellow>", sending: "<yellow>Odesílání žádosti…</yellow>", accepted: "<green>Balíček přijat.</green>", loaded: "<green>Balíček VerdantVice načten.</green>", declined: "<yellow>Balíček byl odmítnut; zůstává vanilla vzhled.</yellow>", failed: "<red>Stažení selhalo. Zkontroluj URL a hash.</red>", unavailable: "<red>URL balíčku není nastavena.</red>" }
+book:
+  basics:
+    title: "Základy VerdantVice"
+    author: "VerdantVice"
+    page_1: "<dark_green><bold>1. Semena</bold></dark_green><newline><newline>Najdi ověřeného bylinkáře. Vyšší úrovně nabízí vzácnější fiktivní odrůdy; každé semeno má podpis a genetiku."
+    page_2: "<dark_green><bold>2. Sázení</bold></dark_green><newline><newline>Umísti květináč s oprávněním a použij platné semeno. Kontrolují se limity, odstup a region."
+    page_3: "<dark_green><bold>3. Kontrola</bold></dark_green><newline><newline>Prázdná ruka ukáže souhrn, skener údaje podle dovednosti a knih."
+    page_4: "<dark_green><bold>4. Zálivka</bold></dark_green><newline><newline>Zálivka je fiktivní ukazatel; škodí její nedostatek i přebytek."
+    page_5: "<dark_green><bold>5. Problémy</bold></dark_green><newline><newline>Použij správné čištění, léčbu, výživu nebo opravu. Postihy rostou postupně."
+    page_6: "<dark_green><bold>6. Sklizeň</bold></dark_green><newline><newline>Vybrané okno dává nejlepší hmotnost a kvalitu a vytvoří podepsanou várku."
+    page_7: "<dark_green><bold>7. Sušení</bold></dark_green><newline><newline>Čerstvou várku vlož do čistého sušáku a vyjmi ve fázi Hotová."
+    page_8: "<dark_green><bold>8. Zrání</bold></dark_green><newline><newline>Volitelné zrání může zlepšit kvalitu, ale zanedbání ji sníží."
+    page_9: "<dark_green><bold>9. Kvalita</bold></dark_green><newline><newline>Kvalitu tvoří genetika, péče, sklizeň, čistota, zpracování, dovednosti a kontaminace."
+    page_10: "<dark_green><bold>10. Drcení</bold></dark_green><newline><newline>Drtič zpracuje suchou várku a zachová její původ."
+    page_11: "<dark_green><bold>11. Míchání</bold></dark_green><newline><newline>Směšuj várky v přesných poměrech se součtem 100 %."
+    page_12: "<dark_green><bold>12. Balení</bold></dark_green><newline><newline>Použij papír, filtr a produkt a dodrž pořadí minihry."
+    page_13: "<dark_green><bold>13. Prodej</bold></dark_green><newline><newline>Prodávat lze jen pravé várky; cenu určuje kvalita, poptávka a pověst."
+    page_14: "<dark_green><bold>14. Farma</bold></dark_green><newline><newline>Označ dva rohy a použij stůl správce. Regiony se nesmí překrývat."
+    page_15: "<dark_green><bold>15. Najímání</bold></dark_green><newline><newline>Vytrénuj Experta Verdant, získej smlouvu a připrav lůžko, cestu, jídlo a mzdu."
+    page_16: "<dark_green><bold>16. Práce a mzdy</bold></dark_green><newline><newline>Pracovníci plní rozvrh; mzda, odpočinek, bezpečí a zátěž určují morálku."
+  plant_health: { title: "Zdraví a péče", author: "VerdantVice", page_1: "<green><bold>Ukazatele</bold></green><newline><newline>Zdraví, zálivka, výživa, světlo, stres a čistota jsou herní hodnoty.", page_2: "<green><bold>Rovnováha</bold></green><newline><newline>Každá odrůda má jiné preference; drž hodnoty v rozsahu skeneru.", page_3: "<green><bold>Obnova</bold></green><newline><newline>Čisti, opravuj a léč správný problém. Ztracený potenciál se nemusí vrátit." }
+  strain_guide: { title: "Průvodce odrůdami", author: "VerdantVice", page_1: "<light_purple><bold>Odrůdy</bold></light_purple><newline><newline>Vzácnost, růst, výnos, odolnost, voda, světlo a stres tvoří herní styl.", page_2: "<light_purple><bold>Rysy</bold></light_purple><newline><newline>Základní hodnoty mění genetický profil semena.", page_3: "<light_purple><bold>Linie</bold></light_purple><newline><newline>Křížení ukládá rodiče, generaci, rysy, barvy a stabilitu." }
+  drying_curing: { title: "Sušení a zrání", author: "VerdantVice", page_1: "<gold><bold>Příprava</bold></gold><newline><newline>Zkontroluj kapacitu, čistotu a stav zařízení.", page_2: "<gold><bold>Čas</bold></gold><newline><newline>Fáze postupují podle časových značek, volitelně i bez chunku.", page_3: "<gold><bold>Výsledek</bold></gold><newline><newline>Hotová je bezpečná fáze; prodlení ničí a správné zrání zlepšuje." }
+  advanced_genetics: { title: "Pokročilá genetika", author: "VerdantVice", page_1: "<aqua><bold>Třídy</bold></aqua><newline><newline>Třída shrnuje sedm nezávislých modifikátorů.", page_2: "<aqua><bold>Křížení</bold></aqua><newline><newline>Hra váží rysy, přidá odchylku a uloží rodiče.", page_3: "<aqua><bold>Stabilita</bold></aqua><newline><newline>Stabilita omezuje náhodu; filtrovaný název nemění podepsané rysy." }
+  farm_management: { title: "Správa farmy", author: "VerdantVice", page_1: "<dark_green><bold>Role</bold></dark_green><newline><newline>Členům dej jen potřebná oprávnění.", page_2: "<dark_green><bold>Sklady</bold></dark_green><newline><newline>Propojuj truhly podle typu a chraň vzácná semena.", page_3: "<dark_green><bold>Lidé</bold></dark_green><newline><newline>Lůžko, jídlo, cesta, odpočinek a mzda udržují morálku." }
+  perfect_batch: { title: "Tajemství dokonalé várky", author: "VerdantVice", page_1: "<yellow><bold>Bez zkratky</bold></yellow><newline><newline>Genetika nevymaže špatnou péči ani kontaminaci.", page_2: "<yellow><bold>Potenciál</bold></yellow><newline><newline>Udržuj zdraví a čistotu a sklízej ve správném okně.", page_3: "<yellow><bold>Dohledatelnost</bold></yellow><newline><newline>Každá změna ukládá ztrátu a původ; kopie lore kvalitu nezmění." }

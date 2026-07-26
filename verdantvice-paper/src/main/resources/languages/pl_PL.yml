@@ -1,0 +1,1017 @@
+meta:
+  locale: "pl_PL"
+  language-name: "Polski"
+  revision: "1"
+
+prefix: "<dark_green><bold>VerdantVice</bold></dark_green> <dark_gray>»</dark_gray>"
+
+common:
+  enabled: "<green>Włączone</green>"
+  disabled: "<red>Wyłączone</red>"
+  yes: "<green>Tak</green>"
+  no: "<red>Nie</red>"
+  none: "<gray>Brak</gray>"
+  unknown: "<gray>Nieznane</gray>"
+  not-applicable: "<gray>Nie dotyczy</gray>"
+  loading: "<yellow>Wczytywanie…</yellow>"
+  calculating: "<yellow>Obliczanie…</yellow>"
+  level: "<gray>Poziom:</gray> <white><level></white>"
+  amount: "<gray>Ilość:</gray> <white><amount></white>"
+  price: "<gray>Cena:</gray> <white><price></white>"
+  owner: "<gray>Właściciel:</gray> <white><owner></white>"
+  status: "<gray>Stan:</gray> <white><status></white>"
+  duration: "<gray>Czas:</gray> <white><duration></white>"
+  page: "<gray>Strona <page>/<pages></gray>"
+  seconds: "<seconds> s"
+  minutes: "<minutes> min"
+  emeralds: "<amount> szmaragdów"
+  confirm: "<green>Potwierdź</green>"
+  cancel: "<red>Anuluj</red>"
+  close: "<red>Zamknij</red>"
+  back: "<yellow>Wróć</yellow>"
+  next-page: "<green>Następna strona</green>"
+  previous-page: "<yellow>Poprzednia strona</yellow>"
+  refresh: "<aqua>Odśwież</aqua>"
+  search: "<aqua>Szukaj</aqua>"
+  sort: "<aqua>Sortuj</aqua>"
+
+errors:
+  no-permission: "<red>Nie masz uprawnień do tej czynności.</red>"
+  player-only: "<red>Ta czynność jest dostępna tylko dla gracza.</red>"
+  console-only: "<red>Ta czynność jest dostępna tylko z konsoli.</red>"
+  invalid-usage: "<red>Niepoprawne użycie.</red> <gray>Spróbuj:</gray> <white><usage></white>"
+  invalid-number: "<red><value> nie jest poprawną liczbą.</red>"
+  invalid-uuid: "<red><value> nie jest poprawnym UUID.</red>"
+  invalid-player: "<red>Nie znaleziono gracza <player>.</red>"
+  player-offline: "<red>Gracz <player> jest offline.</red>"
+  invalid-locale: "<red>Nieobsługiwany język: <locale>.</red>"
+  not-ready: "<yellow>VerdantVice nadal się uruchamia. Spróbuj ponownie za chwilę.</yellow>"
+  shutting-down: "<red>VerdantVice jest wyłączany; nowe czynności są tymczasowo zablokowane.</red>"
+  database-unavailable: "<red>Baza danych jest niedostępna. Żaden przedmiot nie został zmieniony.</red>"
+  database-conflict: "<yellow>Dane zmieniły się podczas operacji. Otwórz menu ponownie i spróbuj jeszcze raz.</yellow>"
+  internal: "<red>Wystąpił nieoczekiwany błąd.</red> <gray>Identyfikator: <error_id></gray>"
+  cooldown: "<yellow>Odczekaj <time>, zanim użyjesz tego ponownie.</yellow>"
+  busy: "<yellow>Ten obiekt jest już używany przez kogoś innego.</yellow>"
+  canceled: "<yellow>Czynność została anulowana.</yellow>"
+  inventory-full: "<red>Twój ekwipunek jest pełny. Wynik trafił do oczekujących dostaw.</red>"
+  world-unavailable: "<red>Wymagany świat jest obecnie niedostępny.</red>"
+  chunk-unavailable: "<red>Ten obszar nie jest wczytany. Podejdź bliżej i spróbuj ponownie.</red>"
+  target-not-found: "<red>Nie znaleziono poprawnego celu.</red>"
+  invalid-item: "<red>To nie jest poprawny przedmiot VerdantVice.</red>"
+  invalid-signature: "<red>Przedmiot nie przeszedł kontroli autentyczności i został odizolowany.</red>"
+  duplicate-item: "<red>Ten identyfikator przedmiotu został już użyty. Kopia została odrzucona.</red>"
+  item-locked: "<yellow>Ten przedmiot jest zarezerwowany przez inny proces.</yellow>"
+  wrong-owner: "<red>Nie jesteś właścicielem tego przedmiotu.</red>"
+  wrong-item-state: "<red>Nie można użyć tego przedmiotu na obecnym etapie obróbki.</red>"
+  insufficient-items: "<red>Nie masz wszystkich wymaganych przedmiotów.</red>"
+  insufficient-emeralds: "<red>Brakuje ci <amount> szmaragdów.</red>"
+  limit-reached: "<red>Osiągnięto limit: <limit>.</red>"
+  invalid-name: "<red>Ta nazwa jest niedozwolona. Użyj 3–24 stosownych znaków.</red>"
+  protected-region: "<red>Nie możesz używać wyposażenia VerdantVice na tym chronionym obszarze.</red>"
+  farm-permission: "<red>Twoja rola na plantacji nie pozwala na tę czynność.</red>"
+  configuration-invalid: "<red>Konfiguracja <file> jest niepoprawna. Nadal obowiązują poprzednie bezpieczne wartości.</red>"
+  restart-required: "<yellow>Ta zmiana wymaga restartu serwera.</yellow>"
+  unsafe-reload: "<red>Tej części nie można bezpiecznie przeładować. Zrestartuj serwer.</red>"
+  operation-expired: "<yellow>Operacja wygasła, a zarezerwowane przedmioty zostały zwrócone.</yellow>"
+  strong-effect-active: "<red>Nie możesz użyć kolejnego silnego produktu, dopóki trwa obecny efekt.</red>"
+  no-space: "<red>W tym miejscu brakuje wolnej przestrzeni.</red>"
+  too-far: "<red>Jesteś za daleko.</red>"
+
+success:
+  reload: "<green>Przeładowano bezpieczne ustawienia, tłumaczenia i katalogi.</green>"
+  save: "<green>Wszystkie zmienione dane dodano do kolejki zapisu.</green>"
+  language: "<green>Wybrany język: <language>.</green>"
+  item-given: "<green>Przekazano <amount> × <item> graczowi <player>.</green>"
+  seed-given: "<green>Przekazano nasiono <strain> graczowi <player>.</green>"
+  plant-created: "<green>Utworzono roślinę <plant_id>.</green>"
+  plant-removed: "<green>Bezpiecznie usunięto roślinę <plant_id>.</green>"
+  stage-set: "<green>Ustawiono etap rośliny: <stage>.</green>"
+  quality-set: "<green>Ustawiono jakość partii: <quality>.</green>"
+  herbalist-spawned: "<green>Utworzono zielarza <herbalist>.</green>"
+  worker-hired: "<green><worker> dołączył do plantacji <farm>.</green>"
+  farm-created: "<green>Utworzono plantację <farm>.</green>"
+  farm-deleted: "<green>Bezpiecznie usunięto plantację <farm>.</green>"
+  invitation-sent: "<green>Wysłano zaproszenie do gracza <player>.</green>"
+  member-removed: "<green>Usunięto gracza <player> z plantacji.</green>"
+  notification-settings: "<green>Zaktualizowano ustawienia powiadomień.</green>"
+  resourcepack-sent: "<green>Wysłano prośbę o pobranie paczki zasobów.</green>"
+  database-migrated: "<green>Zakończono migracje bazy danych do wersji <version>.</green>"
+  debug-created: "<green>Utworzono raport diagnostyczny: <path></green>"
+  player-reset: "<green>Zresetowano dane VerdantVice gracza <player>.</green>"
+  contract-created: "<green>Utworzono kontrakt <contract_id>.</green>"
+  market-updated: "<green>Zaktualizowano stan rynku.</green>"
+
+commands:
+  root:
+    description: "Otwiera VerdantVice lub wyświetla pomoc komend."
+    usage: "/vv [podkomenda]"
+  help:
+    description: "Pokazuje dostępne komendy."
+    usage: "/vv help [strona]"
+  guide:
+    description: "Otwiera przewodnik po grze."
+    usage: "/vv guide"
+  profile:
+    description: "Wyświetla profil VerdantVice."
+    usage: "/vv profile [gracz]"
+  skills:
+    description: "Otwiera cztery drzewka umiejętności."
+    usage: "/vv skills"
+  strains:
+    description: "Pokazuje odkryte fikcyjne odmiany."
+    usage: "/vv strains [odmiana]"
+  recipes:
+    description: "Wyświetla odblokowane receptury obróbki."
+    usage: "/vv recipes"
+  market:
+    description: "Pokazuje bieżący popyt i ceny."
+    usage: "/vv market [odmiana]"
+  contracts:
+    description: "Otwiera twoje kontrakty."
+    usage: "/vv contracts"
+  farm:
+    description: "Otwiera zarządzanie plantacją."
+    usage: "/vv farm"
+    create:
+      description: "Tworzy plantację w zaznaczonym regionie."
+      usage: "/vv farm create <nazwa>"
+    delete:
+      description: "Bezpiecznie usuwa plantację po potwierdzeniu."
+      usage: "/vv farm delete <nazwa>"
+    invite:
+      description: "Zaprasza gracza do plantacji."
+      usage: "/vv farm invite <gracz>"
+    remove:
+      description: "Usuwa członka plantacji."
+      usage: "/vv farm remove <gracz>"
+  workers:
+    description: "Otwiera zarządzanie pracownikami."
+    usage: "/vv workers"
+  language:
+    description: "Wybiera obsługiwany język."
+    usage: "/vv language <pl_PL|en_US|de_DE|es_ES|cs_CZ|uk_UA>"
+  notifications:
+    description: "Ustawia kanały i rodzaje powiadomień."
+    usage: "/vv notifications"
+  resourcepack:
+    description: "Ponownie proponuje opcjonalną paczkę zasobów."
+    usage: "/vv resourcepack"
+  genetics: { description: "Tworzy wlasna linie z dwoch podpisanych nasion.", usage: "/vv genetics <nazwa>" }
+  admin:
+    description: "Narzędzia administracyjne VerdantVice."
+    usage: "/vv admin <podkomenda>"
+    reload:
+      description: "Przeładowuje bezpieczne ustawienia i katalogi."
+      usage: "/vv admin reload"
+    save:
+      description: "Zapisuje dane oczekujące w kolejce."
+      usage: "/vv admin save"
+    give:
+      description: "Przekazuje zarejestrowany customowy przedmiot."
+      usage: "/vv admin give <gracz> <przedmiot> [ilość]"
+    seed:
+      description: "Przekazuje podpisane nasiono z wygenerowaną genetyką."
+      usage: "/vv admin seed <gracz> <odmiana> [klasa]"
+    plant:
+      description: "Tworzy roślinę na wskazanym stanowisku."
+      usage: "/vv admin plant <odmiana>"
+    setstage:
+      description: "Zmienia etap wskazanej rośliny."
+      usage: "/vv admin setstage <etap>"
+    setquality:
+      description: "Zmienia jakość trzymanej partii."
+      usage: "/vv admin setquality <klasa>"
+    spawnherbalist:
+      description: "Przywołuje zarejestrowanego zielarza."
+      usage: "/vv admin spawnherbalist [poziom]"
+    hireworker:
+      description: "Zatrudnia wskazanego zielarza na plantacji."
+      usage: "/vv admin hireworker <plantacja>"
+    removeplant:
+      description: "Bezpiecznie usuwa wskazaną roślinę."
+      usage: "/vv admin removeplant"
+    inspect:
+      description: "Sprawdza obiekt VerdantVice i jego stan w rejestrze."
+      usage: "/vv admin inspect"
+    market:
+      description: "Sprawdza lub zmienia notowanie bądź wydarzenie rynkowe."
+      usage: "/vv admin market <show|set|event> ..."
+    contract:
+      description: "Tworzy lub sprawdza kontrakt."
+      usage: "/vv admin contract <create|inspect> ..."
+    resetplayer:
+      description: "Resetuje dane gracza po potwierdzeniu."
+      usage: "/vv admin resetplayer <gracz> confirm"
+    migrate:
+      description: "Uruchamia oczekujące migracje bazy."
+      usage: "/vv admin migrate"
+    database:
+      description: "Pokazuje stan bazy danych i kolejki."
+      usage: "/vv admin database"
+    debug:
+      description: "Tworzy zanonimizowany raport diagnostyczny."
+      usage: "/vv admin debug"
+    performance:
+      description: "Pokazuje parametry schedulerów, cache i kolejek."
+      usage: "/vv admin performance"
+
+gui:
+  main:
+    title: "<dark_green><bold>VerdantVice</bold></dark_green>"
+    my-farm:
+      name: "<green>Moja plantacja</green>"
+      description: "<gray>Podsumowanie, urządzenia, uprawnienia i ulepszenia.</gray>"
+    plants:
+      name: "<green>Rośliny</green>"
+      description: "<gray>Wzrost, potrzeby pielęgnacyjne i okna zbioru.</gray>"
+    workers:
+      name: "<gold>Pracownicy</gold>"
+      description: "<gray>Zadania, morale, grafik i pensje.</gray>"
+    strains:
+      name: "<light_purple>Odmiany</light_purple>"
+      description: "<gray>Fikcyjne odmiany i dokonane odkrycia.</gray>"
+    genetics:
+      name: "<aqua>Genetyka</aqua>"
+      description: "<gray>Profile, krzyżówki i własne linie.</gray>"
+    contracts:
+      name: "<yellow>Kontrakty</yellow>"
+      description: "<gray>Dostawy, terminy i nagrody.</gray>"
+    market:
+      name: "<green>Rynek</green>"
+      description: "<gray>Popyt, wydarzenia i aktualne notowania.</gray>"
+    skills:
+      name: "<blue>Umiejętności</blue>"
+      description: "<gray>Hodowca, Genetyk, Producent i Handlarz.</gray>"
+    guide:
+      name: "<gold>Przewodnik</gold>"
+      description: "<gray>Książki i samouczki mechanik gry.</gray>"
+    settings:
+      name: "<white>Ustawienia</white>"
+      description: "<gray>Język, powiadomienia i paczka zasobów.</gray>"
+  farm:
+    title: "<dark_green>Plantacja: <farm></dark_green>"
+    overview:
+      name: "<green>Podsumowanie plantacji</green>"
+      description: "<gray>Poziom, limity, przychód i ostatnie problemy.</gray>"
+    plants:
+      name: "<green>Rośliny</green>"
+      description: "<gray>Aktywne: <count>, wymagające opieki: <sick>, gotowe: <ready>.</gray>"
+    workers:
+      name: "<gold>Pracownicy</gold>"
+      description: "<gray>Zatrudnieni: <count>; średnie morale: <morale>.</gray>"
+    storages:
+      name: "<yellow>Magazyny</yellow>"
+      description: "<gray>Przypisuj i sprawdzaj dedykowane skrzynie.</gray>"
+    drying:
+      name: "<gold>Suszenie</gold>"
+      description: "<gray>Pojemność, stan stojaków i aktywne procesy.</gray>"
+    curing:
+      name: "<light_purple>Dojrzewanie</light_purple>"
+      description: "<gray>Pojemniki i opcjonalne ulepszanie jakości.</gray>"
+    priorities:
+      name: "<aqua>Priorytety</aqua>"
+      description: "<gray>Ustal kolejność zadań pracowników.</gray>"
+    permissions:
+      name: "<blue>Uprawnienia</blue>"
+      description: "<gray>Role i dostęp członków.</gray>"
+    salary:
+      name: "<green>Pensje</green>"
+      description: "<gray>Skrzynia wypłat, stawka i zaległe dni.</gray>"
+    statistics:
+      name: "<white>Statystyki</white>"
+      description: "<gray>Produkcja, jakość, sprzedaż i wydajność załogi.</gray>"
+    notifications:
+      name: "<yellow>Powiadomienia</yellow>"
+      description: "<gray>Wybierz otrzymywane alarmy z plantacji.</gray>"
+    upgrade:
+      name: "<green>Ulepsz plantację</green>"
+      description: "<gray>Zwiększ limity roślin, pracowników i urządzeń.</gray>"
+    delete:
+      name: "<red>Usuń plantację</red>"
+      description: "<gray>Wymaga potwierdzenia i zakończenia zablokowanych procesów.</gray>"
+    income: "<gray>Ostatni przychód:</gray> <green><income></green>"
+    missing-tools: "<gray>Brakujące narzędzia:</gray> <red><count></red>"
+    recent-problems: "<gray>Ostatnie problemy:</gray> <white><count></white>"
+  plants:
+    title: "<green>Rośliny</green>"
+    details-title: "<green><strain></green> <dark_gray>•</dark_gray> <stage>"
+    filter-all: "<white>Wszystkie rośliny</white>"
+    filter-needs-care: "<yellow>Wymagają opieki</yellow>"
+    filter-ready: "<green>Gotowe do zbioru</green>"
+    exact-health: "<gray>Zdrowie:</gray> <health>"
+    hydration: "<gray>Nawodnienie:</gray> <hydration>"
+    nutrition: "<gray>Odżywienie:</gray> <nutrition>"
+    stress: "<gray>Stres:</gray> <stress>"
+    cleanliness: "<gray>Czystość:</gray> <cleanliness>"
+    conditions: "<gray>Problemy:</gray> <conditions>"
+    quality-potential: "<gray>Potencjalna jakość:</gray> <quality>"
+    yield-potential: "<gray>Potencjalny plon:</gray> <yield>"
+    harvest-window: "<gray>Okno zbioru:</gray> <window>"
+    genetics: "<gray>Genetyka:</gray> <genetics>"
+    approximate-ready: "<gray>Przybliżona gotowość:</gray> <time>"
+    novice-summary: "<gray>Ogólny stan:</gray> <condition>"
+  workers:
+    title: "<gold>Pracownicy</gold>"
+    details-title: "<gold><worker></gold>"
+    tasks: "<gray>Zadania</gray>"
+    schedule: "<gray>Grafik</gray>"
+    salary: "<gray>Pensja</gray>"
+    morale: "<gray>Morale:</gray> <morale>"
+    specialization: "<gray>Specjalizacja:</gray> <specialization>"
+    experience: "<gray>Doświadczenie:</gray> <xp>"
+    current-task: "<gray>Obecne zadanie:</gray> <task>"
+    unpaid-days: "<gray>Dni bez wypłaty:</gray> <days>"
+    assign: "<green>Przypisz do plantacji</green>"
+    transfer: "<yellow>Przenieś</yellow>"
+    dismiss: "<red>Zwolnij</red>"
+  strains:
+    title: "<light_purple>Katalog odmian</light_purple>"
+    undiscovered: "<dark_gray>Nieodkryta odmiana</dark_gray>"
+    rarity: "<gray>Rzadkość:</gray> <rarity>"
+    growth-time: "<gray>Czas wzrostu:</gray> <time>"
+    difficulty: "<gray>Trudność:</gray> <difficulty>"
+    base-yield: "<gray>Bazowy plon:</gray> <yield>"
+    resistance: "<gray>Odporność:</gray> <resistance>"
+    effects-hidden: "<gray>Efekty pozostaną nieznane do czasu odkrycia.</gray>"
+  genetics:
+    title: "<aqua>Laboratorium genetyczne</aqua>"
+    profiles: "<aqua>Profile genetyczne</aqua>"
+    crossing: "<light_purple>Skrzyżuj dwie linie</light_purple>"
+    custom-lines: "<green>Moje własne linie</green>"
+    parent-a: "<gray>Rodzic A:</gray> <parent>"
+    parent-b: "<gray>Rodzic B:</gray> <parent>"
+    stability: "<gray>Stabilność:</gray> <stability>"
+    generation: "<gray>Pokolenie:</gray> <generation>"
+    create-line: "<green>Utwórz linię genetyczną</green>"
+    enter-name: "<yellow>Wpisz nazwę linii na czacie.</yellow>"
+  processing:
+    drying-title: "<gold>Stojak do suszenia</gold>"
+    curing-title: "<light_purple>Pojemnik dojrzewający</light_purple>"
+    grinder-title: "<gray>Grinder</gray>"
+    mixing-title: "<aqua>Mieszanie odmian</aqua>"
+    rolling-title: "<green>Stanowisko skręcania</green>"
+    input-slot: "<yellow>Wejście</yellow>"
+    output-slot: "<green>Wynik</green>"
+    progress: "<gray>Postęp:</gray> <progress>"
+    start: "<green>Rozpocznij proces</green>"
+    stop: "<red>Zatrzymaj proces</red>"
+    capacity: "<gray>Pojemność:</gray> <used>/<total>"
+    condition: "<gray>Stan urządzenia:</gray> <condition>"
+    add-batch: "<green>Dodaj partię</green>"
+    remove-batch: "<yellow>Wyjmij partię</yellow>"
+    mixture-ratio: "<gray><strain>:</gray> <white><ratio>%</white>"
+    rolling-instruction: "<yellow>Kliknij <target>, gdy znacznik dotrze do zielonego pola.</yellow>"
+    rolling-round: "<gray>Krok <round>/<total>:</gray> <step>"
+  trade:
+    title: "<dark_green>Zielarz <herbalist></dark_green>"
+    buy: "<green>Kup zaopatrzenie</green>"
+    sell: "<gold>Sprzedaj produkt</gold>"
+    reputation: "<gray>Twoja reputacja:</gray> <reputation>"
+    daily-limit: "<gray>Dzienny limit skupu:</gray> <used>/<limit>"
+    demand: "<gray>Popyt:</gray> <demand>"
+    final-price: "<gray>Cena końcowa:</gray> <price>"
+    confirm-buy: "<green>Potwierdź zakup</green>"
+    confirm-sell: "<green>Potwierdź sprzedaż</green>"
+  contracts:
+    title: "<yellow>Kontrakty</yellow>"
+    available: "<green>Dostępne</green>"
+    active: "<yellow>Aktywne</yellow>"
+    completed: "<aqua>Ukończone</aqua>"
+    failed: "<red>Nieudane</red>"
+    deadline: "<gray>Termin:</gray> <deadline>"
+    requirements: "<gray>Wymagania:</gray> <requirements>"
+    reward: "<gray>Nagroda:</gray> <reward>"
+    accept: "<green>Przyjmij kontrakt</green>"
+    deliver: "<yellow>Dostarcz przedmioty</yellow>"
+    claim: "<green>Odbierz nagrodę</green>"
+  market:
+    title: "<green>Rynek Verdant</green>"
+    strain: "<gray>Odmiana:</gray> <strain>"
+    current-price: "<gray>Obecna cena:</gray> <price>"
+    trend-up: "<green>Rośnie</green>"
+    trend-stable: "<yellow>Stabilna</yellow>"
+    trend-down: "<red>Spada</red>"
+    supply: "<gray>Podaż:</gray> <supply>"
+    demand: "<gray>Popyt:</gray> <demand>"
+    active-event: "<gray>Wydarzenie rynkowe:</gray> <event>"
+  skills:
+    title: "<blue>Umiejętności</blue>"
+    points: "<gray>Dostępne punkty:</gray> <points>"
+    progress: "<gray>Postęp:</gray> <current>/<required>"
+    unlock: "<green>Odblokuj</green>"
+    locked: "<red>Wymaga poziomu <level></red>"
+  settings:
+    title: "<white>Ustawienia</white>"
+    language: "<aqua>Język</aqua>"
+    notifications: "<yellow>Powiadomienia</yellow>"
+    resourcepack: "<green>Paczka zasobów</green>"
+    auto-detect: "<gray>Automatyczne wykrywanie języka:</gray> <state>"
+
+item:
+  seed:
+    name: "<green>Nasiono <strain></green>"
+    description: "<gray>Podpisane nasiono z unikalnym fikcyjnym profilem genetycznym.</gray>"
+  planting_pot:
+    name: "<green>Doniczka uprawna</green>"
+    description: "<gray>Postaw ją, aby utworzyć chronione stanowisko uprawne.</gray>"
+  watering_can:
+    name: "<aqua>Konewka</aqua>"
+    description: "<gray>Zwiększa nawodnienie. Nadmierne użycie może przelać roślinę.</gray>"
+  plant_scanner:
+    name: "<aqua>Skaner roślin</aqua>"
+    description: "<gray>Pokazuje szczegóły odblokowane przez umiejętność Hodowcy.</gray>"
+  cleaning_kit:
+    name: "<white>Zestaw czyszczący</white>"
+    description: "<gray>Poprawia czystość stanowiska i obniża ryzyko zanieczyszczenia.</gray>"
+  treatment_spray:
+    name: "<yellow>Oprysk leczniczy</yellow>"
+    description: "<gray>Zwalcza wybrane fikcyjne szkodniki i problemy roślin.</gray>"
+  nutrient_pack:
+    name: "<gold>Pakiet odżywczy</gold>"
+    description: "<gray>Przywraca część fikcyjnego wskaźnika odżywienia stanowiska.</gray>"
+  repair_kit:
+    name: "<gray>Zestaw naprawczy</gray>"
+    description: "<gray>Naprawia wyposażenie VerdantVice o skonfigurowaną wartość.</gray>"
+  drying_rack:
+    name: "<gold>Stojak do suszenia</gold>"
+    description: "<gray>Przetwarza świeże partie z upływem czasu, opcjonalnie bez wczytanego chunka.</gray>"
+  curing_container:
+    name: "<light_purple>Pojemnik dojrzewający</light_purple>"
+    description: "<gray>Opcjonalnie poprawia suchą partię i ogranicza niestabilne cechy.</gray>"
+  grinder:
+    name: "<gray>Grinder Verdant</gray>"
+    description: "<gray>Zamienia suchą lub dojrzałą partię w identyfikowalny zmielony produkt.</gray>"
+  farm_manager_table:
+    name: "<dark_green>Stół zarządcy plantacji</dark_green>"
+    description: "<gray>Tworzy chronioną plantację i otwiera panel zarządzania.</gray>"
+  selection_wand:
+    name: "<gold>Różdżka zaznaczania plantacji</gold>"
+    description: "<gray>Zaznacza dwa narożniki nowego regionu plantacji.</gray>"
+  rolling_paper:
+    name: "<white>Bibułka</white>"
+    description: "<gray>Fikcyjny składnik używany w minigrze skręcania.</gray>"
+  filter:
+    name: "<yellow>Filterek</yellow>"
+    description: "<gray>Wymagany składnik minigry skręcania.</gray>"
+  cosmetic_additive:
+    name: "<light_purple>Dodatek kosmetyczny</light_purple>"
+    description: "<gray>Opcjonalna ozdoba bez znaczenia w prawdziwym świecie.</gray>"
+  package:
+    name: "<gold>Opakowanie produktu</gold>"
+    description: "<gray>Zabezpieczone opakowanie przypisane do jednej zarejestrowanej partii.</gray>"
+  plantation_contract:
+    name: "<gold>Kontrakt plantacyjny</gold>"
+    description: "<gray>Podpisz go, aby zatrudnić uprawnionego Eksperta Verdant.</gray>"
+  fresh_batch:
+    name: "<green>Świeża partia • <strain></green>"
+    description: "<gray>Świeża masa: <weight> • Potencjalna jakość: <quality></gray>"
+  dry_batch:
+    name: "<gold>Sucha partia • <strain></gold>"
+    description: "<gray>Sucha masa: <weight> • Klasa: <quality></gray>"
+  cured_batch:
+    name: "<light_purple>Dojrzała partia • <strain></light_purple>"
+    description: "<gray>Dojrzewanie: <duration> • Klasa: <quality></gray>"
+  ground_product:
+    name: "<yellow>Zmielony produkt • <strain></yellow>"
+    description: "<gray>Produkt z zachowaną historią partii <batch_id>.</gray>"
+  mixture:
+    name: "<aqua>Mieszanka Verdant</aqua>"
+    description: "<gray>Dokładna mieszanka <components> fikcyjnych odmian.</gray>"
+  joint:
+    name: "<green>Skręt Verdant • <quality></green>"
+    description: "<gray>Wynik minigry przypisany do partii <batch_id>.</gray>"
+  basics_book:
+    name: "<gold>Podstawy VerdantVice</gold>"
+    description: "<gray>Pełne, 16-krokowe wprowadzenie do mechanik gry.</gray>"
+  plant_health_book:
+    name: "<green>Zdrowie i pielęgnacja roślin</green>"
+    description: "<gray>Zaawansowany przewodnik po fikcyjnych wskaźnikach stanu roślin.</gray>"
+  strain_guide_book:
+    name: "<light_purple>Przewodnik po odmianach</light_purple>"
+    description: "<gray>Uzupełnienie katalogu cech i rzadkości odmian.</gray>"
+  drying_curing_book:
+    name: "<gold>Suszenie i dojrzewanie</gold>"
+    description: "<gray>Zaawansowany opis procesów czasowych pluginu.</gray>"
+  genetics_book:
+    name: "<aqua>Zaawansowana genetyka</aqua>"
+    description: "<gray>Zasady profili, krzyżowania i stabilności w grze.</gray>"
+  farm_management_book:
+    name: "<dark_green>Zarządzanie plantacją</dark_green>"
+    description: "<gray>Pracownicy, magazyny, priorytety, morale i pensje.</gray>"
+  perfect_batch_book:
+    name: "<yellow>Sekrety idealnej partii</yellow>"
+    description: "<gray>Jak VerdantVice łączy fikcyjne czynniki jakości.</gray>"
+  guide_book:
+    name: "<gold>Podstawy VerdantVice</gold>"
+    description: "<gray>Lokalizowany, 16-krokowy przewodnik po całej podstawowej rozgrywce.</gray>"
+  advanced_book:
+    name: "<aqua>Zaawansowany przewodnik Verdant</aqua>"
+    description: "<gray>Lokalizowana książka specjalistyczna wybierana przez podpisany identyfikator.</gray>"
+  lore:
+    strain: "<gray>Odmiana:</gray> <white><strain></white>"
+    quality: "<gray>Jakość:</gray> <white><quality></white>"
+
+plant:
+  stages:
+    seed: "Nasiono"
+    sprout: "Kiełek"
+    seedling: "Sadzonka"
+    vegetative: "Wzrost"
+    maturing: "Dojrzewanie"
+    ready: "Gotowa"
+    overripe: "Przejrzała"
+    spoiled: "Zepsuta"
+  conditions:
+    dry-soil:
+      name: "Sucha ziemia"
+      description: "Nawodnienie jest niskie, więc wzrost i zdrowie stopniowo spadają."
+    overwatering:
+      name: "Przelanie"
+      description: "Nadmiar wody zwiększa stres i obniża potencjalną jakość."
+    low-light:
+      name: "Za mało światła"
+      description: "Stanowisko ma mniej światła w grze, niż preferuje ta odmiana."
+    excessive-light:
+      name: "Nadmiar światła"
+      description: "Obecny poziom światła w grze stresuje tę odmianę."
+    dirty-station:
+      name: "Brudne stanowisko"
+      description: "Niska czystość zwiększa ryzyko problemów i zanieczyszczeń."
+    broken-equipment:
+      name: "Uszkodzone wyposażenie"
+      description: "Stanowisko wymaga zestawu naprawczego, zanim wznowi normalną pracę."
+    fictional-pests:
+      name: "Roztocza Verdant"
+      description: "Fikcyjne szkodniki powoli obniżają zdrowie i potencjalny plon."
+    root-stress:
+      name: "Stres korzeni"
+      description: "Problem w grze wywoływany przez niestabilne wskaźniki pielęgnacji."
+    growth-lock:
+      name: "Blokada wzrostu"
+      description: "Postęp zatrzymuje się do czasu rozwiązania wskazanego problemu."
+    unstable-genetics:
+      name: "Niestabilna genetyka"
+      description: "Niska stabilność zwiększa szansę losowych problemów w grze."
+    fictional-mold:
+      name: "Świecąca pleśń"
+      description: "Fikcyjne zanieczyszczenie wymagające szybkiego leczenia."
+    strong-smell:
+      name: "Intensywny zapach"
+      description: "Wywołuje cząsteczki i alarmy, ale nie szkodzi roślinie natychmiast."
+  overall:
+    excellent: "<green>Doskonały</green>"
+    good: "<green>Dobry</green>"
+    fair: "<yellow>Przeciętny</yellow>"
+    poor: "<gold>Słaby</gold>"
+    critical: "<red>Krytyczny</red>"
+  harvest-timing:
+    too-early: "Zdecydowanie za wcześnie"
+    early: "Wcześnie"
+    optimal: "Optymalnie"
+    perfect: "Idealnie"
+    late: "Późno"
+    overripe: "Przejrzała"
+  interaction:
+    planted: "<green>Posadzono <strain>.</green>"
+    watered: "<aqua>Nawodnienie wzrosło do <hydration>.</aqua>"
+    cleaned: "<green>Czystość stanowiska wzrosła do <cleanliness>.</green>"
+    treated: "<green>Problem <condition> został wyleczony.</green>"
+    repaired: "<green>Stan urządzenia wzrósł do <condition>.</green>"
+    harvested: "<green>Zebrano <weight> odmiany <strain> w momencie: <timing>.</green>"
+    not-ready: "<yellow>Roślinę można zebrać, ale obecny moment to: <timing>.</yellow>"
+
+rarity:
+  common: "<white>Pospolita</white>"
+  uncommon: "<green>Niepospolita</green>"
+  rare: "<light_purple>Rzadka</light_purple>"
+  legendary: "<gold>Legendarna</gold>"
+
+genetics:
+  grades:
+    damaged: "<dark_red>Uszkodzona</dark_red>"
+    poor: "<red>Słaba</red>"
+    common: "<white>Pospolita</white>"
+    good: "<green>Dobra</green>"
+    exceptional: "<aqua>Wyjątkowa</aqua>"
+    perfect: "<light_purple>Idealna</light_purple>"
+    legendary: "<gold>Legendarna</gold>"
+  traits:
+    yield-modifier: "Plon"
+    growth-speed-modifier: "Szybkość wzrostu"
+    resistance-modifier: "Odporność"
+    quality-modifier: "Jakość"
+    smell-modifier: "Zapach"
+    stability-modifier: "Stabilność"
+    negative-effect-modifier: "Ryzyko negatywnych efektów"
+  crossing:
+    success: "<green>Utworzono linię <line> z rodziców <parent_a> i <parent_b>.</green>"
+    failed: "<red>Krzyżówka była niestabilna i nie dała użytecznego nasiona.</red>"
+    name-prompt: "<yellow>Wpisz nazwę nowej fikcyjnej linii lub napisz <white>anuluj</white>.</yellow>"
+
+quality:
+  grades:
+    spoiled: "<dark_red>Zepsuta</dark_red>"
+    very-poor: "<red>Bardzo słaba</red>"
+    street: "<gold>Uliczna</gold>"
+    common: "<white>Zwyczajna</white>"
+    good: "<green>Dobra</green>"
+    premium: "<aqua>Premium</aqua>"
+    top-shelf: "<light_purple>Najwyższa półka</light_purple>"
+    perfect-batch: "<yellow>Idealna partia</yellow>"
+    verdant-grade: "<dark_green><bold>Klasa Verdant</bold></dark_green>"
+  factors:
+    genetics: "Genetyka"
+    care: "Pielęgnacja"
+    health: "Zdrowie"
+    harvest-timing: "Moment zbioru"
+    cleanliness: "Czystość"
+    drying: "Suszenie"
+    curing: "Dojrzewanie"
+    skill: "Umiejętności gracza"
+    worker: "Umiejętności pracownika"
+    contamination: "Zanieczyszczenie"
+
+drying:
+  stages:
+    fresh: "Świeża"
+    wet: "Mokra"
+    damp: "Wilgotna"
+    partially-dry: "Częściowo sucha"
+    almost-ready: "Prawie gotowa"
+    ready: "Gotowa"
+    overdried: "Przesuszona"
+    ruined: "Zniszczona"
+  loaded: "<green>Umieszczono partię <batch_id> na stojaku.</green>"
+  unloaded: "<green>Zwrócono suchą partię <batch_id>.</green>"
+  completed: "<gold>Partia <batch_id> zakończyła suszenie.</gold>"
+  interrupted: "<yellow>Suszenie przerwano wcześniej; zachowano obecny wynik.</yellow>"
+  rack-full: "<red>Ten stojak jest pełny.</red>"
+  needs-cleaning: "<yellow>Wyczyść stojak przed dodaniem kolejnej partii.</yellow>"
+
+curing:
+  stages:
+    fresh: "Nierozpoczęte"
+    developing: "Rozwija się"
+    balanced: "Zrównoważona"
+    ready: "Gotowa"
+    extended: "Przedłużone"
+    degraded: "Pogorszona"
+    ruined: "Zniszczona"
+  loaded: "<green>Umieszczono partię <batch_id> w pojemniku dojrzewającym.</green>"
+  completed: "<light_purple>Partia <batch_id> zakończyła dojrzewanie.</light_purple>"
+  interrupted: "<yellow>Dojrzewanie zakończono wcześniej. Zachowano obecną jakość.</yellow>"
+  container-full: "<red>Ten pojemnik dojrzewający jest pełny.</red>"
+
+rolling:
+  results:
+    failed: "<dark_red>Niepowodzenie</dark_red>"
+    spilled: "<red>Rozsypany</red>"
+    crooked: "<gold>Krzywy</gold>"
+    loose: "<yellow>Luźny</yellow>"
+    normal: "<white>Zwykły</white>"
+    good: "<green>Dobry</green>"
+    perfect: "<light_purple>Idealny</light_purple>"
+    overfilled: "<red>Przepełniony</red>"
+  steps:
+    place-paper: "Połóż bibułkę"
+    add-filter: "Ustaw filterek"
+    add-product: "Dodaj zmielony produkt"
+    distribute: "Rozłóż wypełnienie"
+    finish-roll: "Dokończ skręcanie"
+  complete: "<green>Skręcanie zakończone:</green> <result>"
+  aborted: "<yellow>Minigra zakończyła się bezpiecznie; możliwe do odzyskania składniki zwrócono.</yellow>"
+
+herbalist:
+  title: "<dark_green>Zielarz</dark_green>"
+  created: "<green>Ten farmer odkrył profesję zielarza Verdant.</green>"
+  evaluated-normal: "<gray>Ten farmer nie jest zielarzem Verdant.</gray>"
+  village-limit: "<yellow>Ta osada ma już maksymalną liczbę zielarzy.</yellow>"
+  reputation-up: "<green>Reputacja u zielarza wzrosła o <amount>.</green>"
+  tiers:
+    novice: "Nowicjusz"
+    apprentice: "Uczeń"
+    journeyman: "Czeladnik"
+    expert: "Ekspert"
+    master: "Mistrz"
+    verdant-expert: "Ekspert Verdant"
+  specializations:
+    seeds: "Sprzedawca nasion"
+    tools: "Dostawca wyposażenia"
+    buyer: "Kupiec jakościowy"
+    contracts: "Pośrednik kontraktów"
+  hire:
+    unavailable: "<red>Zatrudnić można tylko Eksperta Verdant.</red>"
+    already-employed: "<red>Ten zielarz jest już zatrudniony.</red>"
+    contract-required: "<yellow>Potrzebujesz ważnego Kontraktu plantacyjnego.</yellow>"
+    signed: "<green><worker> podpisał kontrakt dla plantacji <farm>.</green>"
+    dismissed: "<yellow><worker> został zwolniony.</yellow>"
+
+trade:
+  authentic-only: "<red>Zielarz przyjmuje wyłącznie autentyczne, zarejestrowane partie.</red>"
+  dry-only: "<red>Zielarz skupuje tylko poprawnie wysuszone lub dojrzałe partie.</red>"
+  quality-too-low: "<red>Ten kontrakt wymaga co najmniej klasy <quality>.</red>"
+  strain-not-wanted: "<yellow>Obecnie nie ma popytu na tę odmianę.</yellow>"
+  daily-limit: "<red>Osiągnięto dzienny limit handlu.</red>"
+  server-budget: "<yellow>Wyczerpano dzienny budżet szmaragdów rynku.</yellow>"
+  purchase-complete: "<green>Kupiono <item> za <price>.</green>"
+  sale-complete: "<green>Sprzedano <item> za <price>.</green>"
+  price-changed: "<yellow>Notowanie zmieniło się z <old_price> na <new_price>; sprawdź transakcję.</yellow>"
+
+farm:
+  roles:
+    owner: "Właściciel"
+    manager: "Zarządca"
+    grower: "Hodowca"
+    worker-manager: "Kierownik pracowników"
+    member: "Członek"
+    visitor: "Gość"
+  permissions:
+    plant: "Sadzenie nasion"
+    water: "Podlewanie roślin"
+    harvest: "Zbieranie plonów"
+    use-storage: "Korzystanie z magazynów"
+    use-processing: "Korzystanie z urządzeń"
+    manage-workers: "Zarządzanie pracownikami"
+    manage-members: "Zarządzanie członkami"
+    manage-settings: "Zmiana ustawień plantacji"
+    upgrade: "Ulepszanie plantacji"
+  storages:
+    seed-storage: "Magazyn nasion"
+    tool-storage: "Magazyn narzędzi"
+    fresh-harvest-storage: "Magazyn świeżych zbiorów"
+    dry-product-storage: "Magazyn suchych produktów"
+    packaged-product-storage: "Magazyn zapakowanych produktów"
+    salary-storage: "Skrzynia pensji"
+    water-storage: "Magazyn wody"
+    general-storage: "Magazyn ogólny"
+  selection:
+    first-point: "<green>Wybrano pierwszy narożnik plantacji: <position>.</green>"
+    second-point: "<green>Wybrano drugi narożnik plantacji: <position>.</green>"
+    overlap: "<red>Zaznaczony region nachodzi na plantację <farm>.</red>"
+    too-large: "<red>Zaznaczony region przekracza maksymalny obszar <limit>.</red>"
+    expired: "<yellow>Zaznaczenie plantacji wygasło.</yellow>"
+  storage:
+    linked: "<green>Przypisano skrzynię jako <type>.</green>"
+    unlinked: "<yellow>Usunięto przypisanie magazynu.</yellow>"
+    already-linked: "<red>Ta skrzynia jest już przypisana do plantacji.</red>"
+    protected: "<red>Przypisanych magazynów nie można niszczyć ani przesuwać.</red>"
+  delete-warning: "<red>Ta czynność usuwa członków i powiązania. Najpierw rozwiąż sprawę roślin i zablokowanych partii.</red>"
+
+worker:
+  states:
+    idle: "Bezczynny"
+    resting: "Odpoczywa"
+    searching-task: "Szuka zadania"
+    reserving-task: "Rezerwuje zadanie"
+    walking-to-storage: "Idzie do magazynu"
+    collecting-resource: "Pobiera zasoby"
+    walking-to-target: "Idzie do celu"
+    inspecting-plant: "Sprawdza roślinę"
+    watering: "Podlewa"
+    treating: "Leczy"
+    planting: "Sadzi"
+    harvesting: "Zbiera"
+    moving-batch: "Przenosi partię"
+    loading-dryer: "Ładuje suszarnię"
+    unloading-dryer: "Opróżnia suszarnię"
+    packaging: "Pakuje"
+    returning-home: "Wraca do domu"
+    sleeping: "Śpi"
+    waiting-for-payment: "Czeka na wypłatę"
+    blocked: "Zablokowany"
+  specializations:
+    grower:
+      name: "Hodowca"
+      description: "Szybsza pielęgnacja i mniejsze ryzyko błędu przy podlewaniu."
+    harvester:
+      name: "Zbieracz"
+      description: "Dokładniejszy moment zbioru i mniejsze straty plonu."
+    drying-master:
+      name: "Mistrz suszenia"
+      description: "Bezpieczniejszy załadunek i większy bonus jakości suszenia."
+    geneticist:
+      name: "Genetyk"
+      description: "Rozpoznaje cechy i ostrożnie obchodzi się z dozwolonymi rzadkimi nasionami."
+    packager:
+      name: "Pakowacz"
+      description: "Pakuje szybciej i traci mniej materiału."
+    foreman:
+      name: "Brygadzista"
+      description: "Sprawniej rozdziela zadania i wspiera pobliskich pracowników."
+  priorities:
+    save-dying-plants: "Ratuj umierające rośliny"
+    treat-disease: "Lecz problemy"
+    water: "Podlewaj"
+    harvest: "Zbieraj"
+    load-drying-rack: "Ładuj stojak"
+    unload-drying-rack: "Opróżniaj stojak"
+    plant: "Sadź"
+    package: "Pakuj"
+    clean: "Czyść"
+  salary:
+    paid: "<green><worker> otrzymał <amount> szmaragdów za dzień <day>.</green>"
+    missing-one: "<yellow><worker> nie dostał dziś wypłaty; morale spadło.</yellow>"
+    missing-two: "<gold><worker> nie dostał wypłaty od dwóch dni i pracuje wolniej.</gold>"
+    missing-three: "<red><worker> po trzech dniach bez wypłaty odmawia części zadań.</red>"
+    left: "<red><worker> opuścił plantację <farm> po długim okresie bez wypłaty.</red>"
+    chest-empty: "<red>W skrzyni pensji nie ma wystarczającej liczby szmaragdów.</red>"
+  morale:
+    excellent: "<green>Doskonałe</green>"
+    good: "<green>Dobre</green>"
+    neutral: "<yellow>Neutralne</yellow>"
+    low: "<gold>Niskie</gold>"
+    critical: "<red>Krytyczne</red>"
+  task:
+    reserved: "<gray><worker> zarezerwował zadanie <task>.</gray>"
+    completed: "<green><worker> ukończył zadanie <task>.</green>"
+    failed: "<red><worker> nie ukończył zadania <task>: <reason>.</red>"
+    blocked: "<red><worker> utknął w pobliżu <position>.</red>"
+    no-path: "Brak bezpiecznej trasy"
+    missing-resource: "Brak wymaganego zasobu"
+    target-unavailable: "Cel jest niedostępny"
+    reservation-expired: "Rezerwacja zadania wygasła"
+
+market:
+  trends:
+    crashing: "Gwałtownie spada"
+    falling: "Spada"
+    stable: "Stabilny"
+    rising: "Rośnie"
+    surging: "Gwałtownie rośnie"
+  events:
+    high-demand-night-widow:
+      name: "Wysoki popyt na Night Widow"
+      description: "Ceny skupu Night Widow są chwilowo wyższe."
+    berry-fog-oversupply:
+      name: "Nadpodaż Berry Fog"
+      description: "Duże dostawy obniżyły ceny Berry Fog."
+    rare-seed-shortage:
+      name: "Niedobór rzadkich nasion"
+      description: "Oferty rzadkich nasion są droższe do czasu odbudowy zapasów."
+    premium-product-week:
+      name: "Tydzień produktów premium"
+      description: "Partie wysokiej klasy otrzymują tymczasowy bonus rynkowy."
+    market-inspection:
+      name: "Kontrola rynku"
+      description: "Dzienne limity są niższe, a kontrola autentyczności dokładniejsza."
+  changed: "<yellow>Zmiana na rynku:</yellow> <strain> kosztuje teraz <price> (<trend>)."
+
+contracts:
+  types:
+    strain-delivery: "Dostawa odmiany"
+    quality-delivery: "Dostawa określonej jakości"
+    mixed-delivery: "Dostawa wielu odmian"
+    timed-delivery: "Dostawa terminowa"
+    cured-product: "Produkt po dojrzewaniu"
+    genetic-delivery: "Wymaganie genetyczne"
+    wholesale: "Zamówienie hurtowe"
+  statuses:
+    offered: "Zaproponowany"
+    active: "Aktywny"
+    completed: "Ukończony"
+    claimed: "Nagroda odebrana"
+    failed: "Nieudany"
+    expired: "Wygasły"
+    canceled: "Anulowany"
+  accepted: "<green>Przyjęto kontrakt <contract_id>. Termin: <deadline>.</green>"
+  progress: "<yellow>Postęp kontraktu: <current>/<required>.</yellow>"
+  completed: "<green>Kontrakt <contract_id> ukończony. Nagroda czeka na odbiór.</green>"
+  claimed: "<green>Odebrano <reward> z kontraktu <contract_id>.</green>"
+  expired: "<red>Kontrakt <contract_id> wygasł.</red>"
+  already-claimed: "<red>Nagroda za ten kontrakt została już odebrana.</red>"
+  item-not-required: "<yellow>Ten przedmiot nie spełnia wymagań kontraktu.</yellow>"
+
+skills:
+  trees:
+    grower:
+      name: "Hodowca"
+      description: "Odblokowuje dokładne informacje, sprawniejszą pielęgnację i precyzyjny zbiór."
+    geneticist:
+      name: "Genetyk"
+      description: "Odkrywa cechy i zwiększa stabilność fikcyjnych krzyżówek."
+    producer:
+      name: "Producent"
+      description: "Zmniejsza straty obróbki i ułatwia minigry."
+    trader:
+      name: "Handlarz"
+      description: "Poprawia ceny, kontrakty i zakres informacji o rynku."
+  level-up: "<green>Umiejętność <tree> osiągnęła poziom <level>.</green>"
+  maximum: "<gold>Umiejętność <tree> osiągnęła maksymalny poziom.</gold>"
+  experience-gained: "<aqua>+<amount> doświadczenia: <tree></aqua>"
+  book-required: "<yellow>Aby zobaczyć ten szczegół, potrzebujesz odpowiedniego zaawansowanego przewodnika.</yellow>"
+
+effects:
+  positive:
+    speed: "Lekki krok"
+    haste: "Sprawne dłonie"
+    night-vision: "Wzrok Verdant"
+    resistance: "Pewna osłona"
+    regeneration: "Krótka odnowa"
+    stress-relief: "Spokojne skupienie"
+    particles: "Aura Verdant"
+    altered-sounds: "Echo ogrodu"
+  negative:
+    hunger: "Nagły głód"
+    slowness: "Ciężkie kroki"
+    weakness: "Słabnąca siła"
+    nausea: "Wirujący obraz"
+    darkness: "Przygaszony wzrok"
+    cough: "Fikcyjny kaszel"
+    false-footsteps: "Widmowe kroki"
+    disorientation: "Dezorientacja"
+    messages: "Błądzące myśli"
+    green-out: "Green out"
+  started: "<light_purple>Efekty produktu <product> rozpoczynają się na <duration>.</light_purple>"
+  ended: "<gray>Efekty VerdantVice dobiegły końca.</gray>"
+  tolerance-up: "<yellow>Tolerancja wzrosła do <tolerance>.</yellow>"
+  tolerance-decay: "<green>Po przerwie tolerancja spadła do <tolerance>.</green>"
+  green-out: "<red>Efekty były zbyt silne. Zostały bezpiecznie zatrzymane.</red>"
+
+notifications:
+  channels:
+    chat: "Czat"
+    action-bar: "Pasek akcji"
+    boss-bar: "Pasek bossa"
+    title: "Tytuł"
+    sound: "Dźwięk"
+    join-summary: "Podsumowanie po wejściu"
+  types:
+    plant-ready: "<green><strain> jest gotowa do zbioru na plantacji <farm>.</green>"
+    plant-disease: "<red>U odmiany <strain> wystąpił problem <condition> na plantacji <farm>.</red>"
+    plant-water: "<aqua><strain> potrzebuje wody na plantacji <farm>.</aqua>"
+    drying-complete: "<gold>Zakończono suszenie partii <batch_id>.</gold>"
+    curing-complete: "<light_purple>Zakończono dojrzewanie partii <batch_id>.</light_purple>"
+    salary-missing: "<red>Nie udało się wypłacić pensji pracownikowi <worker>.</red>"
+    worker-blocked: "<red><worker> utknął podczas zadania <task>.</red>"
+    contract-complete: "<green>Możesz odebrać nagrodę za kontrakt <contract_id>.</green>"
+    market-change: "<yellow>Wydarzenie rynkowe: <event>.</yellow>"
+  join-summary: "<green>Masz <count> nowych powiadomień VerdantVice.</green>"
+  enabled: "<green>Włączono powiadomienia <type> przez kanał <channel>.</green>"
+  disabled: "<yellow>Wyłączono powiadomienia <type>.</yellow>"
+
+resourcepack:
+  prompt: "<green>VerdantVice oferuje opcjonalne modele i dźwięki.</green>"
+  required-prompt: "<yellow>Ten serwer wymaga paczki zasobów VerdantVice.</yellow>"
+  sending: "<yellow>Wysyłanie prośby o paczkę zasobów…</yellow>"
+  accepted: "<green>Zaakceptowano paczkę zasobów.</green>"
+  loaded: "<green>Wczytano paczkę zasobów VerdantVice.</green>"
+  declined: "<yellow>Odrzucono opcjonalną paczkę. Nadal możesz korzystać z wyglądu vanilla.</yellow>"
+  failed: "<red>Nie udało się pobrać paczki. Sprawdź skonfigurowany adres i sumę kontrolną.</red>"
+  unavailable: "<red>Nie skonfigurowano adresu paczki zasobów.</red>"
+
+book:
+  basics:
+    title: "Podstawy VerdantVice"
+    author: "VerdantVice"
+    page_1: "<dark_green><bold>1. Zdobywanie nasion</bold></dark_green><newline><newline>Znajdź sprawdzonego farmera-zielarza i otwórz handel Verdant. Najpierw dostępne są podstawowe nasiona, a wyższe poziomy zielarza odblokowują rzadsze fikcyjne odmiany. Każde nasiono ma podpis i własny profil genetyczny."
+    page_2: "<dark_green><bold>2. Sadzenie</bold></dark_green><newline><newline>Postaw Doniczkę uprawną w miejscu, gdzie masz prawo budować i uprawiać. Trzymając poprawne nasiono, użyj pustego stanowiska. Przed posadzeniem sprawdzane są limity, odstępy, właściciel i ochrona regionu."
+    page_3: "<dark_green><bold>3. Kontrola roślin</bold></dark_green><newline><newline>Pusta ręka pokazuje krótkie podsumowanie, a Skaner roślin — szczegóły. Wyższy poziom Hodowcy i przewodniki odsłaniają dokładne zdrowie, nawodnienie, stres, okno zbioru i genetykę."
+    page_4: "<dark_green><bold>4. Podlewanie</bold></dark_green><newline><newline>Użyj Konewki, gdy spada nawodnienie. Woda jest fikcyjnym wskaźnikiem gry: niedobór spowalnia wzrost, a powtarzane podlewanie ponad preferowany zakres może wywołać Przelanie."
+    page_5: "<dark_green><bold>5. Leczenie problemów</bold></dark_green><newline><newline>Sprawdź nazwę problemu, a potem wybierz Zestaw czyszczący, Oprysk, Pakiet odżywczy lub Zestaw naprawczy. Problemy obniżają potencjał stopniowo; nie niszczą od razu zdrowej rośliny."
+    page_6: "<dark_green><bold>6. Zbieranie</bold></dark_green><newline><newline>Moment zbioru mieści się między „Zdecydowanie za wcześnie” a „Przejrzała”. Wyróżnione okno daje najlepszą masę i jakość. Zbiór tworzy jedną zarejestrowaną partię z trwałym pochodzeniem i podpisem."
+    page_7: "<dark_green><bold>7. Suszenie</bold></dark_green><newline><newline>Otwórz czysty Stojak do suszenia i włóż świeżą partię. Plugin bezpiecznie przechowuje ją i oblicza etapy według czasu. Wyjmij ją w pobliżu etapu Gotowa; zbyt długie czekanie prowadzi do przesuszenia lub zniszczenia."
+    page_8: "<dark_green><bold>8. Dojrzewanie</bold></dark_green><newline><newline>Suchą partię można włożyć do Pojemnika dojrzewającego. Ten opcjonalny proces gry może poprawić jakość, wartość i stabilność. Można przerwać go wcześniej, lecz zaniedbany pojemnik z czasem pogorszy partię."
+    page_9: "<dark_green><bold>9. Ocena jakości</bold></dark_green><newline><newline>Końcowa klasa łączy genetykę, pielęgnację, zdrowie, moment zbioru, czystość, obróbkę, umiejętności, pracę NPC i zanieczyszczenie. Skala prowadzi od Zepsutej do Klasy Verdant."
+    page_10: "<dark_green><bold>10. Mielenie</bold></dark_green><newline><newline>Włóż suchą lub dojrzałą partię do Grindera. Poziom i stan urządzenia wpływają na ryzyko straty. Wynik zachowuje pochodzenie partii i przechodzi kontrolę autentyczności w kolejnych menu."
+    page_11: "<dark_green><bold>11. Mieszanie</bold></dark_green><newline><newline>Wybierz maksymalnie tyle zmielonych partii, ile pozwala konfiguracja. Menu pokazuje dokładne proporcje sumujące się do 100%. Nowa podpisana mieszanka zapisuje wszystkie partie wejściowe."
+    page_12: "<dark_green><bold>12. Skręcanie</bold></dark_green><newline><newline>Przygotuj Bibułkę, Filterek oraz zmielony produkt lub mieszankę. Wykonuj kroki GUI i klikaj w polach czasowych. Wynik wpływa na czas efektu, stabilność, wartość i stratę materiału."
+    page_13: "<dark_green><bold>13. Sprzedaż</bold></dark_green><newline><newline>Zielarze skupują tylko autentyczne, odpowiednie partie. Cena zależy od odmiany, klasy, świeżości, popytu, reputacji i dziennego nasycenia. Sprzedanej partii nie można wykorzystać ponownie."
+    page_14: "<dark_green><bold>14. Zakładanie plantacji</bold></dark_green><newline><newline>Różdżką zaznacz dwa narożniki, a następnie postaw lub użyj Stołu zarządcy. Regiony nie mogą na siebie nachodzić. Menu plantacji zarządza urządzeniami, rolami, priorytetami i ulepszeniami."
+    page_15: "<dark_green><bold>15. Zatrudnianie zielarza</bold></dark_green><newline><newline>Rozwiń zielarza do Eksperta Verdant i zdobądź Kontrakt plantacyjny. Podpisz go raz, wybierz plantację z wolnym limitem i zapewnij łóżko, stanowisko, bezpieczną trasę, jedzenie oraz skrzynię pensji."
+    page_16: "<dark_green><bold>16. Pracownicy i pensje</bold></dark_green><newline><newline>Pracownicy rezerwują zadania, chodzą do magazynów i celów oraz przestrzegają grafiku. Zapewnij szmaragdy na każdy dzień Minecrafta. Wypłaty, odpoczynek, bezpieczeństwo, narzędzia i obciążenie kształtują morale."
+  plant_health:
+    title: "Zdrowie i pielęgnacja roślin"
+    author: "VerdantVice"
+    page_1: "<green><bold>Odczyty stanowiska</bold></green><newline><newline>Zdrowie opisuje stan długoterminowy. Nawodnienie, odżywienie, światło, stres i czystość to zmienne wskaźniki gry. Skaner pokazuje je dokładniej wraz z rozwojem wiedzy Hodowcy."
+    page_2: "<green><bold>Zrównoważona opieka</bold></green><newline><newline>Każda fikcyjna odmiana ma własne preferencje. Utrzymuj wartości blisko zakresów skanera; skrajne, powtarzane działania zwiększają stres."
+    page_3: "<green><bold>Problemy i powrót do formy</bold></green><newline><newline>Natężenie problemów rośnie z czasem. Czyść, naprawiaj i lecz tylko zgodny problem. Leczenie zatrzymuje dalsze kary, lecz utracony potencjał nie zawsze wraca."
+  strain_guide:
+    title: "Przewodnik po odmianach"
+    author: "VerdantVice"
+    page_1: "<light_purple><bold>Fikcyjne odmiany</bold></light_purple><newline><newline>Odmiany są definicjami gry. Rzadkość wpływa na dostępność i cenę, a czas, trudność, plon, odporność, zużycie wody, światło i stres kształtują rozgrywkę."
+    page_2: "<light_purple><bold>Odczytywanie cech</bold></light_purple><newline><newline>Wartości bazowe opisują przeciętne nasiono. Profil genetyczny je modyfikuje, dlatego dwa nasiona tej samej odmiany mogą zachowywać się inaczej."
+    page_3: "<light_purple><bold>Odkrycia i własne linie</bold></light_purple><newline><newline>Efekty pozostają ukryte do odkrycia. Krzyżówki tworzą nazwane linie z zapisanymi rodzicami, pokoleniem, cechami, kolorami, efektami i trwałym pochodzeniem."
+  drying_curing:
+    title: "Suszenie i dojrzewanie"
+    author: "VerdantVice"
+    page_1: "<gold><bold>Przygotowanie stojaka</bold></gold><newline><newline>Przed załadunkiem sprawdź pojemność, czystość, stan, stabilność i szybkość. Brudny lub uszkodzony stojak zwiększa fikcyjne ryzyko procesu."
+    page_2: "<gold><bold>Etapy czasowe</bold></gold><newline><newline>Świeża partia przechodzi przez Mokrą, Wilgotną, Częściowo suchą, Prawie gotową i Gotową. Zegar działa również bez wczytanego chunka."
+    page_3: "<gold><bold>Właściwy moment i ulepszanie</bold></gold><newline><newline>Gotowa to bezpieczny etap wyjęcia. Zwłoka niszczy partię. Opcjonalne dojrzewanie daje ograniczony bonus, lecz zaniedbanie może go odwrócić."
+  advanced_genetics:
+    title: "Zaawansowana genetyka"
+    author: "VerdantVice"
+    page_1: "<aqua><bold>Klasy profili</bold></aqua><newline><newline>Profile prowadzą od Uszkodzonego do Legendarnego. Klasa podsumowuje siedem niezależnych modyfikatorów; nie oznacza, że każda cecha jest równie mocna."
+    page_2: "<aqua><bold>Krzyżowanie</bold></aqua><newline><newline>Wybierz dwa profile rodzicielskie. Gra łączy ważone cechy, dodaje wariancję stabilności, zapisuje rodziców i zwiększa pokolenie."
+    page_3: "<aqua><bold>Stabilność i nazwy</bold></aqua><newline><newline>Stabilność ogranicza odchylenia i ryzyko. Nazwy są normalizowane i filtrowane; twórca nie może zmienić rodziców ani podpisanych cech."
+  farm_management:
+    title: "Zarządzanie plantacją"
+    author: "VerdantVice"
+    page_1: "<dark_green><bold>Region i role</bold></dark_green><newline><newline>Plantacja to jeden chroniony prostopadłościan. Przydzielaj tylko potrzebne prawa do sadzenia, magazynów, obróbki, pracowników, ustawień lub ulepszeń."
+    page_2: "<dark_green><bold>Magazyny i priorytety</bold></dark_green><newline><newline>Przypisuj skrzynie według typu. Pracownicy używają tylko przypisanych magazynów. Najpierw ratuj rośliny, ograniczaj odmiany i chroń rzadkie nasiona."
+    page_3: "<dark_green><bold>Ludzie przede wszystkim</bold></dark_green><newline><newline>Zapewnij łóżko, jedzenie, bezpieczne drogi, przerwy, narzędzia i codzienną pensję. Dobre morale usprawnia pracę; zaniedbanie prowadzi do odejścia."
+  perfect_batch:
+    title: "Sekrety idealnej partii"
+    author: "VerdantVice"
+    page_1: "<yellow><bold>Nie ma jednego skrótu</bold></yellow><newline><newline>Jakość łączy wiele fikcyjnych mechanik. Doskonała genetyka nie usuwa skutków złej opieki, zanieczyszczenia ani błędnej obróbki."
+    page_2: "<yellow><bold>Chroń potencjał</bold></yellow><newline><newline>Wybierz stabilny profil, dbaj o zdrowie i czystość, szybko rozwiązuj problemy i zbieraj w najlepszym oknie."
+    page_3: "<yellow><bold>Ostrożna i jawna obróbka</bold></yellow><newline><newline>Konserwuj urządzenia i dobieraj specjalizacje. Każda transformacja zapisuje straty, pochodzenie i autentyczność; skopiowane lore nie zmienia jakości."

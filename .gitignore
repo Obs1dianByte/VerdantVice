@@ -1,0 +1,11 @@
+.gradle/
+.idea/
+*.iml
+**/build/
+run/
+server/
+*.db
+*.db-shm
+*.db-wal
+*.log
+hs_err_pid*

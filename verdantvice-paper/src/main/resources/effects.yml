@@ -1,0 +1,21 @@
+# Potion strengths and durations are Minecraft gameplay values only.
+enabled: true
+strong-effect-lock-seconds: 90
+green-out-threshold: 1.65
+base-duration-seconds: 90
+maximum-duration-seconds: 300
+tolerance-gain-per-use: 3.5
+tolerance-decay-per-real-hour: 0.75
+tolerance:
+  enabled: true
+  maximum-gain-per-use: 8.0
+  potency-reduction-at-maximum: 0.65
+  duration-reduction-at-maximum: 0.50
+  negative-risk-reduction-at-maximum: 0.45
+negative-chance:
+  base: 0.12
+  poor-quality-extra: 0.25
+  instability-extra: 0.20
+safe-limits:
+  maximum-amplifier: 2
+  minimum-health: 4.0

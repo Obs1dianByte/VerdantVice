@@ -1,0 +1,10 @@
+# Every integration is optional and is activated only when its plugin is present.
+vault: true
+placeholderapi: true
+worldguard: true
+griefprevention: true
+lands: true
+itemsadder: true
+oraxen: true
+luckperms: true
+region-protection-fallback: DENY_IF_UNKNOWN

@@ -1,0 +1,19 @@
+# A farmer is rolled once and permanently marked.
+herbalist:
+  conversion-chance: 0.40
+  max-per-village: 3
+  village-radius: 64
+  daily-buy-limit: 64
+  starting-reputation: 0
+  name-format-key: entity.herbalist.name
+levels:
+  NOVICE: 0
+  APPRENTICE: 15
+  JOURNEYMAN: 40
+  EXPERT: 80
+  MASTER: 140
+  VERDANT_EXPERT: 220
+hiring-contract:
+  emeralds: 32
+  books: 1
+  gold-blocks: 1

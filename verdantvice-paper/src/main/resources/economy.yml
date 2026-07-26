@@ -1,0 +1,8 @@
+# EMERALD works without dependencies. VAULT is used only when present and enabled.
+provider: EMERALD
+vault:
+  enabled: false
+buy-price-multiplier: 1.15
+sell-price-multiplier: 0.85
+minimum-transaction-price: 1
+maximum-transaction-price: 4096

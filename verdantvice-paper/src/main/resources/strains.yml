@@ -1,0 +1,218 @@
+# Twelve fictional game varieties. Values are simulation parameters only.
+strains:
+  berry_fog:
+    display-name: Berry Fog
+    rarity: BASIC
+    growth-duration-seconds: 5400
+    difficulty: 24
+    base-yield: 48
+    quality-potential: 55
+    disease-resistance: 62
+    water-consumption: 0.85
+    light-preference: 10
+    stress-sensitivity: 0.75
+    smell-intensity: 45
+    effect-profile: { REGENERATION: 0.35, STRESS_RELIEF: 0.55, PARTICLES: 0.25 }
+    negative-effect-profile: { HUNGER: 0.20, COUGH: 0.10 }
+    seed-price: 3
+    base-market-price: 8
+    visual-model: berry_fog
+    particle-profile: berry
+  concrete_kush:
+    display-name: Concrete Kush
+    rarity: BASIC
+    growth-duration-seconds: 6000
+    difficulty: 28
+    base-yield: 54
+    quality-potential: 52
+    disease-resistance: 68
+    water-consumption: 0.95
+    light-preference: 9
+    stress-sensitivity: 0.65
+    smell-intensity: 58
+    effect-profile: { RESISTANCE: 0.55, STRESS_RELIEF: 0.30 }
+    negative-effect-profile: { SLOWNESS: 0.22, HUNGER: 0.15 }
+    seed-price: 4
+    base-market-price: 9
+    visual-model: concrete_kush
+    particle-profile: ash
+  lemon_static:
+    display-name: Lemon Static
+    rarity: BASIC
+    growth-duration-seconds: 5100
+    difficulty: 32
+    base-yield: 44
+    quality-potential: 60
+    disease-resistance: 52
+    water-consumption: 1.10
+    light-preference: 12
+    stress-sensitivity: 0.90
+    smell-intensity: 65
+    effect-profile: { SPEED: 0.40, HASTE: 0.35, ALTERED_SOUNDS: 0.20 }
+    negative-effect-profile: { DISORIENTATION: 0.15, COUGH: 0.12 }
+    seed-price: 4
+    base-market-price: 10
+    visual-model: lemon_static
+    particle-profile: spark
+  green_alley:
+    display-name: Green Alley
+    rarity: BASIC
+    growth-duration-seconds: 5700
+    difficulty: 20
+    base-yield: 58
+    quality-potential: 48
+    disease-resistance: 72
+    water-consumption: 0.80
+    light-preference: 8
+    stress-sensitivity: 0.55
+    smell-intensity: 38
+    effect-profile: { NIGHT_VISION: 0.30, STRESS_RELIEF: 0.30 }
+    negative-effect-profile: { HUNGER: 0.18 }
+    seed-price: 3
+    base-market-price: 7
+    visual-model: green_alley
+    particle-profile: leaf
+  neon_haze:
+    display-name: Neon Haze
+    rarity: UNCOMMON
+    growth-duration-seconds: 6600
+    difficulty: 45
+    base-yield: 50
+    quality-potential: 68
+    disease-resistance: 58
+    water-consumption: 1.05
+    light-preference: 13
+    stress-sensitivity: 1.00
+    smell-intensity: 72
+    effect-profile: { SPEED: 0.50, NIGHT_VISION: 0.45, PARTICLES: 0.55 }
+    negative-effect-profile: { NAUSEA: 0.16, FALSE_FOOTSTEPS: 0.16 }
+    seed-price: 8
+    base-market-price: 16
+    visual-model: neon_haze
+    particle-profile: neon
+  night_widow:
+    display-name: Night Widow
+    rarity: UNCOMMON
+    growth-duration-seconds: 7200
+    difficulty: 52
+    base-yield: 46
+    quality-potential: 73
+    disease-resistance: 65
+    water-consumption: 0.90
+    light-preference: 7
+    stress-sensitivity: 1.10
+    smell-intensity: 75
+    effect-profile: { NIGHT_VISION: 0.70, RESISTANCE: 0.30, ALTERED_SOUNDS: 0.30 }
+    negative-effect-profile: { DARKNESS: 0.20, WEAKNESS: 0.12 }
+    seed-price: 10
+    base-market-price: 19
+    visual-model: night_widow
+    particle-profile: shadow
+  purple_crash:
+    display-name: Purple Crash
+    rarity: UNCOMMON
+    growth-duration-seconds: 6300
+    difficulty: 48
+    base-yield: 56
+    quality-potential: 66
+    disease-resistance: 50
+    water-consumption: 1.20
+    light-preference: 11
+    stress-sensitivity: 1.15
+    smell-intensity: 78
+    effect-profile: { HASTE: 0.55, REGENERATION: 0.25, PARTICLES: 0.40 }
+    negative-effect-profile: { SLOWNESS: 0.20, NAUSEA: 0.14 }
+    seed-price: 9
+    base-market-price: 18
+    visual-model: purple_crash
+    particle-profile: purple
+  velvet_smoke:
+    display-name: Velvet Smoke
+    rarity: UNCOMMON
+    growth-duration-seconds: 6900
+    difficulty: 42
+    base-yield: 52
+    quality-potential: 70
+    disease-resistance: 61
+    water-consumption: 0.92
+    light-preference: 10
+    stress-sensitivity: 0.85
+    smell-intensity: 70
+    effect-profile: { STRESS_RELIEF: 0.70, RESISTANCE: 0.25 }
+    negative-effect-profile: { HUNGER: 0.24, COUGH: 0.14 }
+    seed-price: 9
+    base-market-price: 17
+    visual-model: velvet_smoke
+    particle-profile: velvet
+  ghost_garden:
+    display-name: Ghost Garden
+    rarity: RARE
+    growth-duration-seconds: 8100
+    difficulty: 67
+    base-yield: 42
+    quality-potential: 84
+    disease-resistance: 76
+    water-consumption: 0.75
+    light-preference: 6
+    stress-sensitivity: 1.20
+    smell-intensity: 82
+    effect-profile: { NIGHT_VISION: 0.75, REGENERATION: 0.40, PARTICLES: 0.75 }
+    negative-effect-profile: { FALSE_FOOTSTEPS: 0.25, DARKNESS: 0.18 }
+    seed-price: 18
+    base-market-price: 34
+    visual-model: ghost_garden
+    particle-profile: ghost
+  royal_static:
+    display-name: Royal Static
+    rarity: RARE
+    growth-duration-seconds: 8400
+    difficulty: 72
+    base-yield: 48
+    quality-potential: 88
+    disease-resistance: 70
+    water-consumption: 1.00
+    light-preference: 12
+    stress-sensitivity: 1.35
+    smell-intensity: 86
+    effect-profile: { SPEED: 0.65, HASTE: 0.60, RESISTANCE: 0.35, PARTICLES: 0.70 }
+    negative-effect-profile: { DISORIENTATION: 0.24, HUNGER: 0.18 }
+    seed-price: 21
+    base-market-price: 39
+    visual-model: royal_static
+    particle-profile: royal
+  black_orchard:
+    display-name: Black Orchard
+    rarity: RARE
+    growth-duration-seconds: 9000
+    difficulty: 76
+    base-yield: 55
+    quality-potential: 86
+    disease-resistance: 80
+    water-consumption: 1.15
+    light-preference: 8
+    stress-sensitivity: 1.25
+    smell-intensity: 91
+    effect-profile: { RESISTANCE: 0.70, STRESS_RELIEF: 0.55, ALTERED_SOUNDS: 0.45 }
+    negative-effect-profile: { WEAKNESS: 0.22, DARKNESS: 0.22 }
+    seed-price: 24
+    base-market-price: 43
+    visual-model: black_orchard
+    particle-profile: black_orchard
+  verdant_vice:
+    display-name: Verdant Vice
+    rarity: LEGENDARY
+    growth-duration-seconds: 10800
+    difficulty: 92
+    base-yield: 62
+    quality-potential: 98
+    disease-resistance: 88
+    water-consumption: 1.30
+    light-preference: 11
+    stress-sensitivity: 1.50
+    smell-intensity: 100
+    effect-profile: { SPEED: 0.75, HASTE: 0.75, NIGHT_VISION: 0.65, RESISTANCE: 0.60, REGENERATION: 0.50, STRESS_RELIEF: 0.85, PARTICLES: 1.00, ALTERED_SOUNDS: 0.75 }
+    negative-effect-profile: { NAUSEA: 0.28, DISORIENTATION: 0.30, GREEN_OUT: 0.18 }
+    seed-price: 64
+    base-market-price: 120
+    visual-model: verdant_vice
+    particle-profile: verdant

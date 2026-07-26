@@ -1,0 +1,12 @@
+package com.verdantvice.farm;
+
+public enum StorageType {
+    SEED_STORAGE,
+    TOOL_STORAGE,
+    FRESH_HARVEST_STORAGE,
+    DRY_PRODUCT_STORAGE,
+    PACKAGED_PRODUCT_STORAGE,
+    SALARY_STORAGE,
+    WATER_STORAGE,
+    GENERAL_STORAGE
+}

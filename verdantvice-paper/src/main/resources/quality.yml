@@ -1,0 +1,48 @@
+# Each weight contributes to the final 0-100 quality score.
+weights:
+  genetics: 0.18
+  care: 0.16
+  health: 0.14
+  harvest-timing: 0.14
+  cleanliness: 0.08
+  drying: 0.12
+  curing: 0.08
+  player-skill: 0.05
+  worker-skill: 0.05
+penalties:
+  contamination: 0.45
+  spoilage: 1.00
+grades:
+  SPOILED: 0
+  VERY_POOR: 10
+  STREET: 20
+  COMMON: 35
+  GOOD: 50
+  PREMIUM: 65
+  TOP_SHELF: 78
+  PERFECT_BATCH: 90
+  VERDANT_GRADE: 97
+
+# Timestamp-based fictional processing values. These are game balance settings.
+processing:
+  offline: true
+  update-seconds: 30
+  drying:
+    duration-minutes: 20
+    rack-capacity: 4
+    cleanliness: 92.0
+    stability: 90.0
+    speed: 1.0
+  curing:
+    duration-minutes: 30
+    container-capacity: 4
+    cleanliness: 94.0
+    stability: 92.0
+  grinding:
+    efficiency: 0.92
+    loss-risk: 0.06
+  mixing:
+    maximum-batches: 4
+  rolling:
+    round-time-ticks: 50
+    green-zone-ticks: 8
