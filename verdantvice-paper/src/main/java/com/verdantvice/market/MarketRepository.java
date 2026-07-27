@@ -41,7 +41,7 @@ public final class MarketRepository {
                     ? "INSERT OR IGNORE"
                     : "INSERT IGNORE";
             for (Strain strain : snapshot) {
-                session.update(insert + """
+                session.update(insert + " " + """
                                 INTO market_state (
                                   strain_id, base_price, current_price, supply, demand,
                                   sales_volume, active_event_json, updated_at, row_version
