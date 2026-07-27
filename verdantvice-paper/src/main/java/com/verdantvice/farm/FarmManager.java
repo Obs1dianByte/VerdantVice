@@ -335,22 +335,61 @@ public final class FarmManager {
     }
 
     private FarmRegion selectedOrDefault(Player player) {
-        Selection selected = selections.get(player.getUniqueId());
-        if (selected != null && selected.first() != null && selected.second() != null) {
-            return FarmRegion.between(selected.first(), selected.second());
+    Selection selected = selections.get(player.getUniqueId());
+
+    if (selected != null && selected.first() != null && selected.second() != null) {
+        FarmRegion selectedRegion = FarmRegion.between(
+                selected.first(),
+                selected.second()
+        );
+
+        World world = plugin.getServer().getWorld(selectedRegion.worldUuid());
+        if (world == null) {
+            throw new IllegalStateException("farm_world_unavailable");
         }
-        Location location = player.getLocation();
-        int radius = 8;
+
+        int minimumY = Math.max(
+                world.getMinHeight(),
+                selectedRegion.minimumY()
+        );
+
+        int maximumY = Math.min(
+                world.getMaxHeight() - 1,
+                selectedRegion.maximumY()
+        );
+
+        if (maximumY - minimumY < 2) {
+            maximumY = Math.min(
+                    world.getMaxHeight() - 1,
+                    minimumY + 16
+            );
+        }
+
         return new FarmRegion(
-                location.getWorld().getUID(),
-                location.getBlockX() - radius,
-                Math.max(location.getWorld().getMinHeight(), location.getBlockY()),
-                location.getBlockZ() - radius,
-                location.getBlockX() + radius,
-                Math.min(location.getWorld().getMaxHeight() - 1, location.getBlockY() + radius * 2),
-                location.getBlockZ() + radius
+                selectedRegion.worldUuid(),
+                selectedRegion.minimumX(),
+                minimumY,
+                selectedRegion.minimumZ(),
+                selectedRegion.maximumX(),
+                maximumY,
+                selectedRegion.maximumZ()
         );
     }
+
+    Location location = player.getLocation();
+    World world = location.getWorld();
+    int radius = 8;
+
+    return new FarmRegion(
+            world.getUID(),
+            location.getBlockX() - radius,
+            Math.max(world.getMinHeight(), location.getBlockY()),
+            location.getBlockZ() - radius,
+            location.getBlockX() + radius,
+            Math.min(world.getMaxHeight() - 1, location.getBlockY() + radius * 2),
+            location.getBlockZ() + radius
+    );
+}
 
     private void validateRegion(FarmRegion region) {
         int width = region.maximumX() - region.minimumX() + 1;
@@ -394,13 +433,47 @@ public final class FarmManager {
     }
 
     private BlockPosition tablePosition(FarmRegion region) {
-        return new BlockPosition(
-                region.worldUuid(),
-                (region.minimumX() + region.maximumX()) / 2,
-                region.minimumY(),
-                (region.minimumZ() + region.maximumZ()) / 2
-        );
+    World world = plugin.getServer().getWorld(region.worldUuid());
+    if (world == null) {
+        throw new IllegalStateException("farm_world_unavailable");
     }
+
+    int centerX = region.minimumX()
+            + (region.maximumX() - region.minimumX()) / 2;
+
+    int centerZ = region.minimumZ()
+            + (region.maximumZ() - region.minimumZ()) / 2;
+
+    int minimumY = Math.max(
+            region.minimumY(),
+            world.getMinHeight() + 1
+    );
+
+    int maximumY = Math.min(
+            region.maximumY(),
+            world.getMaxHeight() - 1
+    );
+
+    for (int y = minimumY; y <= maximumY; y++) {
+        Block candidate = world.getBlockAt(centerX, y, centerZ);
+        Block support = world.getBlockAt(centerX, y - 1, centerZ);
+
+        boolean positionAvailable =
+                candidate.isReplaceable()
+                        || candidate.getType() == Material.LECTERN;
+
+        if (positionAvailable && support.getType().isSolid()) {
+            return new BlockPosition(
+                    region.worldUuid(),
+                    centerX,
+                    y,
+                    centerZ
+            );
+        }
+    }
+
+    throw new IllegalStateException("manager_table_blocked");
+}
 
     private BlockPosition position(Location location) {
         return new BlockPosition(
