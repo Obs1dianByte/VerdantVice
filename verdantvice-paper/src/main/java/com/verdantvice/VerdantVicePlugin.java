@@ -270,8 +270,9 @@ public final class VerdantVicePlugin extends JavaPlugin {
             CompletableFuture<Void> geneticsLoaded = genetics.load();
             CompletableFuture<Void> plantsLoaded = plants.load();
             CompletableFuture<Void> processingLoaded = processing.load();
-            CompletableFuture<Void> herbalistsLoaded = geneticsLoaded.thenCompose(
-                    ignored -> herbalists.start()
+            CompletableFuture<Void> herbalistsLoaded = geneticsLoaded.thenComposeAsync(
+            ignored -> herbalists.start(),
+            task -> Bukkit.getScheduler().runTask(this, task)
             );
             CompletableFuture<Void> workersLoaded = workers.load();
             CompletableFuture.allOf(
