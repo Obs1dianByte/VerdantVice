@@ -172,3 +172,9 @@ przez zespół systemie zgłoszeń.
 - [Paczka zasobów](RESOURCE_PACK.md)
 - [Migracje i aktualizacje](MIGRATION.md)
 - [Rozwiązywanie problemów](TROUBLESHOOTING.md)
+
+### Przepływ partii i języki
+
+Podstawowy przepływ produktu to: zbiór → `FRESH_BATCH` → stojak do suszenia →
+`DRY_BATCH` → sprzedaż u zielarza. Język gracza steruje GUI i wiadomościami,
+a `main.default-language` steruje globalnymi nazwami encji zielarzy.

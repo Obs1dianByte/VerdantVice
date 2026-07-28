@@ -462,29 +462,29 @@ item:
     name: "<light_purple>Dodatek kosmetyczny</light_purple>"
     description: "<gray>Opcjonalna ozdoba bez znaczenia w prawdziwym świecie.</gray>"
   package:
-    name: "<gold>Opakowanie produktu</gold>"
-    description: "<gray>Zabezpieczone opakowanie przypisane do jednej zarejestrowanej partii.</gray>"
+    name: "<gold>Opakowanie produktu • <strain_name></gold>"
+    description: "<gray>Masa: <weight> • Klasa: <quality_grade> • Partia: <batch_id></gray>"
   plantation_contract:
     name: "<gold>Kontrakt plantacyjny</gold>"
     description: "<gray>Podpisz go, aby zatrudnić uprawnionego Eksperta Verdant.</gray>"
   fresh_batch:
-    name: "<green>Świeża partia • <strain></green>"
-    description: "<gray>Świeża masa: <weight> • Potencjalna jakość: <quality></gray>"
+    name: "<green>Świeża partia • <strain_name></green>"
+    description: "<gray>Świeża masa: <fresh_weight> • Jakość: <quality> • Stan: <state></gray>"
   dry_batch:
-    name: "<gold>Sucha partia • <strain></gold>"
-    description: "<gray>Sucha masa: <weight> • Klasa: <quality></gray>"
+    name: "<gold>Sucha partia • <strain_name></gold>"
+    description: "<gray>Sucha masa: <dry_weight> • Klasa: <quality_grade> • Stan: <state></gray>"
   cured_batch:
-    name: "<light_purple>Dojrzała partia • <strain></light_purple>"
-    description: "<gray>Dojrzewanie: <duration> • Klasa: <quality></gray>"
+    name: "<light_purple>Dojrzała partia • <strain_name></light_purple>"
+    description: "<gray>Sucha masa: <dry_weight> • Klasa: <quality_grade> • Dojrzewanie: <duration></gray>"
   ground_product:
-    name: "<yellow>Zmielony produkt • <strain></yellow>"
-    description: "<gray>Produkt z zachowaną historią partii <batch_id>.</gray>"
+    name: "<yellow>Zmielony produkt • <strain_name></yellow>"
+    description: "<gray>Masa: <weight> • Klasa: <quality_grade> • Partia: <batch_id></gray>"
   mixture:
-    name: "<aqua>Mieszanka Verdant</aqua>"
-    description: "<gray>Dokładna mieszanka <components> fikcyjnych odmian.</gray>"
+    name: "<aqua>Mieszanka Verdant • <strain_name></aqua>"
+    description: "<gray>Masa: <weight> • Odmiany: <components> • Stan: <state></gray>"
   joint:
     name: "<green>Skręt Verdant • <quality></green>"
-    description: "<gray>Wynik minigry przypisany do partii <batch_id>.</gray>"
+    description: "<gray>Masa: <weight> • Stan: <state> • Partia: <batch_id></gray>"
   basics_book:
     name: "<gold>Podstawy VerdantVice</gold>"
     description: "<gray>Pełne, 16-krokowe wprowadzenie do mechanik gry.</gray>"
@@ -515,6 +515,26 @@ item:
   lore:
     strain: "<gray>Odmiana:</gray> <white><strain></white>"
     quality: "<gray>Jakość:</gray> <white><quality></white>"
+  states:
+    fresh: "Świeża"
+    drying: "Suszenie"
+    dried: "Sucha"
+    curing: "Dojrzewanie"
+    cured: "Dojrzała"
+    ground: "Zmielona"
+    mixed: "Mieszanka"
+    rolled: "Skręcona"
+    spoiled: "Zepsuta"
+  quality_grades:
+    spoiled: "Zepsuta"
+    very-poor: "Bardzo słaba"
+    street: "Uliczna"
+    common: "Zwykła"
+    good: "Dobra"
+    premium: "Premium"
+    top-shelf: "Najwyższa półka"
+    perfect-batch: "Idealna partia"
+    verdant-grade: "Klasa Verdant"
 
 plant:
   stages:
@@ -722,6 +742,15 @@ trade:
   sale-complete: "<green>Sprzedano <item> za <price>.</green>"
   price-changed: "<yellow>Notowanie zmieniło się z <old_price> na <new_price>; sprawdź transakcję.</yellow>"
 
+  empty-hand: "<red>Trzymaj jedną zarejestrowaną partię w głównej ręce.</red>"
+  invalid-amount: "<red>Możesz sprzedać tylko jedną unikalną partię naraz.</red>"
+  unregistered-item: "<red>Ten podpisany item nie jest zarejestrowany.</red>"
+  already-used: "<red>Ten item partii został już wykorzystany.</red>"
+  item-reserved: "<yellow>Ta partia jest obecnie zarezerwowana przez inną operację.</yellow>"
+  missing-batch: "<red>Partia produktu przypisana do tego itemu już nie istnieje.</red>"
+  batch-state-mismatch: "<red>Typ itemu nie pasuje do zapisanego stanu partii.</red>"
+  fresh-batch-requires-drying: "<red>Świeża partia musi zostać wysuszona przed sprzedażą.</red>"
+  unsupported-batch-state: "<red>Zielarz nie przyjmuje produktu w tym stanie.</red>"
 farm:
   roles:
     owner: "Właściciel"
@@ -974,7 +1003,7 @@ book:
     page_4: "<dark_green><bold>4. Podlewanie</bold></dark_green><newline><newline>Użyj Konewki, gdy spada nawodnienie. Woda jest fikcyjnym wskaźnikiem gry: niedobór spowalnia wzrost, a powtarzane podlewanie ponad preferowany zakres może wywołać Przelanie."
     page_5: "<dark_green><bold>5. Leczenie problemów</bold></dark_green><newline><newline>Sprawdź nazwę problemu, a potem wybierz Zestaw czyszczący, Oprysk, Pakiet odżywczy lub Zestaw naprawczy. Problemy obniżają potencjał stopniowo; nie niszczą od razu zdrowej rośliny."
     page_6: "<dark_green><bold>6. Zbieranie</bold></dark_green><newline><newline>Moment zbioru mieści się między „Zdecydowanie za wcześnie” a „Przejrzała”. Wyróżnione okno daje najlepszą masę i jakość. Zbiór tworzy jedną zarejestrowaną partię z trwałym pochodzeniem i podpisem."
-    page_7: "<dark_green><bold>7. Suszenie</bold></dark_green><newline><newline>Otwórz czysty Stojak do suszenia i włóż świeżą partię. Plugin bezpiecznie przechowuje ją i oblicza etapy według czasu. Wyjmij ją w pobliżu etapu Gotowa; zbyt długie czekanie prowadzi do przesuszenia lub zniszczenia."
+    page_7: "<dark_green><bold>7. Suszenie</bold></dark_green><newline><newline>Otwórz czysty Stojak do suszenia i włóż świeżą partię. Plugin bezpiecznie przechowuje ją i oblicza etapy według czasu. Wyjmij ją w pobliżu etapu Gotowa; zbyt długie czekanie prowadzi do przesuszenia lub zniszczenia. Prawidłowa ścieżka sprzedaży to: zbiór → świeża partia → Stojak do suszenia → sucha partia → sprzedaż u zielarza."
     page_8: "<dark_green><bold>8. Dojrzewanie</bold></dark_green><newline><newline>Suchą partię można włożyć do Pojemnika dojrzewającego. Ten opcjonalny proces gry może poprawić jakość, wartość i stabilność. Można przerwać go wcześniej, lecz zaniedbany pojemnik z czasem pogorszy partię."
     page_9: "<dark_green><bold>9. Ocena jakości</bold></dark_green><newline><newline>Końcowa klasa łączy genetykę, pielęgnację, zdrowie, moment zbioru, czystość, obróbkę, umiejętności, pracę NPC i zanieczyszczenie. Skala prowadzi od Zepsutej do Klasy Verdant."
     page_10: "<dark_green><bold>10. Mielenie</bold></dark_green><newline><newline>Włóż suchą lub dojrzałą partię do Grindera. Poziom i stan urządzenia wpływają na ryzyko straty. Wynik zachowuje pochodzenie partii i przechodzi kontrolę autentyczności w kolejnych menu."

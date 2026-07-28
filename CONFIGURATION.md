@@ -269,6 +269,15 @@ Kontrakty można wyłączyć przez `enabled: false`. Plik określa dopuszczone
 typy, minimalny/maksymalny termin, mnożnik i reputację nagrody oraz limit
 aktywnych kontraktów.
 
+
+### Akceptowane stany sprzedaży
+
+`market.yml` zawiera `trade.accepted-item-types`. Domyślnie zielarz przyjmuje
+`DRY_BATCH`, `CURED_BATCH` i `PACKAGE`. `FRESH_BATCH` można dodać świadomie;
+wtedy cena korzysta z prawdziwej `freshWeight` i mnożnika
+`trade.fresh-price-multiplier`. Podpis, rejestr itemów, właściciel, rekord
+`ProductBatch` i stan partii są nadal sprawdzane przed utworzeniem oferty.
+
 ## `gui.yml`
 
 Rozmiar GUI musi być poprawnym rozmiarem ekwipunku; kod normalizuje go do
@@ -331,6 +340,13 @@ Pliki w `languages/` używają MiniMessage. Łańcuch fallbacku to:
 2. `default-language`;
 3. `en_US`;
 4. czerwony znacznik brakującego klucza.
+
+
+Język gracza steruje GUI, książkami i wiadomościami. `main.default-language`
+steruje globalnymi nazwami encji, takimi jak nazwa zielarza. Bukkitowe
+`customName` jest wspólne dla wszystkich graczy, dlatego nie jest lokalizowane
+osobno dla każdego obserwatora. Bezpieczny reload odświeża nazwy już
+załadowanych, oznaczonych zielarzy.
 
 `en_US.yml` jest wymaganym wzorcem. Każdy inny język musi zawierać wszystkie
 jego klucze tekstowe, inaczej start/reload zakończy się błędem. Placeholdery

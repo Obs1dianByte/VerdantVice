@@ -975,9 +975,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                         player,
                         CustomItemType.FRESH_BATCH,
                         player.getUniqueId(),
-                        batch.batchId(),
-                        plant.strainId(),
-                        batch.qualityScore()))
+                        batch))
                 .thenCompose(item -> repository.delete(
                         plant.uniqueId(),
                         "HARVESTED",

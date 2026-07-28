@@ -462,29 +462,29 @@ item:
     name: "<light_purple>Kosmetischer Zusatz</light_purple>"
     description: "<gray>Optionale optische Ergänzung ohne reale Bedeutung.</gray>"
   package:
-    name: "<gold>Produktpaket</gold>"
-    description: "<gray>Manipulationsgeschützte Verpackung für eine registrierte Charge.</gray>"
+    name: "<gold>Produktpaket • <strain_name></gold>"
+    description: "<gray>Gewicht: <weight> • Klasse: <quality_grade> • Charge: <batch_id></gray>"
   plantation_contract:
     name: "<gold>Farmvertrag</gold>"
     description: "<gray>Unterzeichne ihn, um einen berechtigten Verdant-Experten einzustellen.</gray>"
   fresh_batch:
-    name: "<green>Frische Charge • <strain></green>"
-    description: "<gray>Frischgewicht: <weight> • Qualitätspotenzial: <quality></gray>"
+    name: "<green>Frische Charge • <strain_name></green>"
+    description: "<gray>Frischgewicht: <fresh_weight> • Qualität: <quality> • Zustand: <state></gray>"
   dry_batch:
-    name: "<gold>Trockene Charge • <strain></gold>"
-    description: "<gray>Trockengewicht: <weight> • Klasse: <quality></gray>"
+    name: "<gold>Getrocknete Charge • <strain_name></gold>"
+    description: "<gray>Trockengewicht: <dry_weight> • Klasse: <quality_grade> • Zustand: <state></gray>"
   cured_batch:
-    name: "<light_purple>Gereifte Charge • <strain></light_purple>"
-    description: "<gray>Reifedauer: <duration> • Klasse: <quality></gray>"
+    name: "<light_purple>Veredelte Charge • <strain_name></light_purple>"
+    description: "<gray>Trockengewicht: <dry_weight> • Klasse: <quality_grade> • Reifung: <duration></gray>"
   ground_product:
-    name: "<yellow>Mahlgut • <strain></yellow>"
-    description: "<gray>Rückverfolgbares Material aus Charge <batch_id>.</gray>"
+    name: "<yellow>Gemahlenes Produkt • <strain_name></yellow>"
+    description: "<gray>Gewicht: <weight> • Klasse: <quality_grade> • Charge: <batch_id></gray>"
   mixture:
-    name: "<aqua>Verdant-Mischung</aqua>"
-    description: "<gray>Präzise Mischung aus <components> fiktiven Sorten.</gray>"
+    name: "<aqua>Verdant-Mischung • <strain_name></aqua>"
+    description: "<gray>Gewicht: <weight> • Sorten: <components> • Zustand: <state></gray>"
   joint:
     name: "<green>Verdant-Rolle • <quality></green>"
-    description: "<gray>Minispielprodukt aus Charge <batch_id>.</gray>"
+    description: "<gray>Gewicht: <weight> • Zustand: <state> • Charge: <batch_id></gray>"
   basics_book:
     name: "<gold>VerdantVice-Grundlagen</gold>"
     description: "<gray>Vollständige Einführung in 16 Spielschritten.</gray>"
@@ -515,6 +515,26 @@ item:
   lore:
     strain: "<gray>Sorte:</gray> <white><strain></white>"
     quality: "<gray>Qualität:</gray> <white><quality></white>"
+  states:
+    fresh: "Frisch"
+    drying: "Trocknung"
+    dried: "Getrocknet"
+    curing: "Reifung"
+    cured: "Gereift"
+    ground: "Gemahlen"
+    mixed: "Gemischt"
+    rolled: "Gerollt"
+    spoiled: "Verdorben"
+  quality_grades:
+    spoiled: "Verdorben"
+    very-poor: "Sehr schwach"
+    street: "Straße"
+    common: "Gewöhnlich"
+    good: "Gut"
+    premium: "Premium"
+    top-shelf: "Spitzenklasse"
+    perfect-batch: "Perfekte Charge"
+    verdant-grade: "Verdant-Klasse"
 
 plant:
   stages:
@@ -722,6 +742,15 @@ trade:
   sale-complete: "<green><item> für <price> verkauft.</green>"
   price-changed: "<yellow>Der Kurs änderte sich von <old_price> auf <new_price>; prüfe den Handel.</yellow>"
 
+  empty-hand: "<red>Halte eine registrierte Charge in deiner Haupthand.</red>"
+  invalid-amount: "<red>Es kann nur eine eindeutige Charge gleichzeitig verkauft werden.</red>"
+  unregistered-item: "<red>Dieser signierte Gegenstand ist nicht registriert.</red>"
+  already-used: "<red>Dieser Chargengegenstand wurde bereits verwendet.</red>"
+  item-reserved: "<yellow>Diese Charge ist gerade für einen anderen Vorgang reserviert.</yellow>"
+  missing-batch: "<red>Die verknüpfte Produktcharge existiert nicht mehr.</red>"
+  batch-state-mismatch: "<red>Der Gegenstandstyp passt nicht zum gespeicherten Chargenzustand.</red>"
+  fresh-batch-requires-drying: "<red>Frische Chargen müssen vor dem Verkauf getrocknet werden.</red>"
+  unsupported-batch-state: "<red>Der Kräuterkundige akzeptiert diesen Produktzustand nicht.</red>"
 farm:
   roles:
     owner: "Besitzer"
@@ -974,7 +1003,7 @@ book:
     page_4: "<dark_green><bold>4. Gießen</bold></dark_green><newline><newline>Nutze die Gießkanne bei niedriger Bewässerung. Wasser ist ein fiktiver Spielwert: Mangel bremst das Wachstum, wiederholtes Gießen über den Wunschbereich erzeugt Überwässerung."
     page_5: "<dark_green><bold>5. Probleme lösen</bold></dark_green><newline><newline>Prüfe das gemeldete Problem und nutze Reinigungsset, Behandlungsspray, Nährstoffpaket oder Reparaturset. Probleme senken das Potenzial schrittweise und zerstören gesunde Pflanzen nicht sofort."
     page_6: "<dark_green><bold>6. Ernten</bold></dark_green><newline><newline>Der Erntezeitpunkt reicht von Viel zu früh bis Überreif. Das markierte Fenster bietet Gewicht und Qualität. Die Ernte erstellt eine registrierte Charge mit dauerhaftem Ursprung und Signatur."
-    page_7: "<dark_green><bold>7. Trocknen</bold></dark_green><newline><newline>Öffne ein sauberes Trockengestell und lege eine frische Charge ein. Das Plugin verwahrt sie sicher und berechnet Phasen nach Zeit. Entnimm sie bei Bereit; zu langes Warten führt zu Übertrocknet oder Ruiniert."
+    page_7: "<dark_green><bold>7. Trocknen</bold></dark_green><newline><newline>Öffne ein sauberes Trockengestell und lege eine frische Charge ein. Das Plugin verwahrt sie sicher und berechnet Phasen nach Zeit. Entnimm sie bei Bereit; zu langes Warten führt zu Übertrocknet oder Ruiniert. Der normale Verkaufsweg ist: Ernte → frische Charge → Trockengestell → trockene Charge → Verkauf beim Kräuterkundigen."
     page_8: "<dark_green><bold>8. Reifen</bold></dark_green><newline><newline>Eine trockene Charge kann in den Reifebehälter. Dieser optionale Spielvorgang kann Qualität, Wert und Stabilität erhöhen. Frühes Beenden ist möglich, doch Vernachlässigung verschlechtert die Charge."
     page_9: "<dark_green><bold>9. Qualität</bold></dark_green><newline><newline>Die Endklasse verbindet Genetik, Pflege, Gesundheit, Erntezeit, Sauberkeit, Verarbeitung, Fertigkeiten, NPC-Arbeit und Verunreinigung. Die Skala reicht von Verdorben bis Verdant-Klasse."
     page_10: "<dark_green><bold>10. Mahlen</bold></dark_green><newline><newline>Lege eine trockene oder gereifte Charge in die Mühle. Stufe und Zustand bestimmen das Verlustrisiko. Das Ergebnis behält seine Chargenherkunft und wird in späteren Menüs geprüft."

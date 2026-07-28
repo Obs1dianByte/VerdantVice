@@ -36,4 +36,12 @@ public enum CustomItemType {
     public boolean consumableState() {
         return consumableState;
     }
+
+    public boolean batchBound() {
+        return switch (this) {
+            case FRESH_BATCH, DRY_BATCH, CURED_BATCH, GROUND_PRODUCT, MIXTURE,
+                    PACKAGE, JOINT -> true;
+            default -> false;
+        };
+    }
 }

@@ -462,29 +462,29 @@ item:
     name: "<light_purple>Cosmetic Additive</light_purple>"
     description: "<gray>An optional visual modifier with no real-world meaning.</gray>"
   package:
-    name: "<gold>Product Package</gold>"
-    description: "<gray>A tamper-checked package linked to one registered batch.</gray>"
+    name: "<gold>Product Package • <strain_name></gold>"
+    description: "<gray>Weight: <weight> • Grade: <quality_grade> • Batch: <batch_id></gray>"
   plantation_contract:
     name: "<gold>Plantation Contract</gold>"
     description: "<gray>Sign it to employ an eligible Verdant Expert.</gray>"
   fresh_batch:
-    name: "<green>Fresh Batch • <strain></green>"
-    description: "<gray>Fresh weight: <weight> • Quality potential: <quality></gray>"
+    name: "<green>Fresh Batch • <strain_name></green>"
+    description: "<gray>Fresh weight: <fresh_weight> • Quality: <quality> • State: <state></gray>"
   dry_batch:
-    name: "<gold>Dried Batch • <strain></gold>"
-    description: "<gray>Dry weight: <weight> • Grade: <quality></gray>"
+    name: "<gold>Dried Batch • <strain_name></gold>"
+    description: "<gray>Dry weight: <dry_weight> • Grade: <quality_grade> • State: <state></gray>"
   cured_batch:
-    name: "<light_purple>Refined Batch • <strain></light_purple>"
-    description: "<gray>Refined for <duration> • Grade: <quality></gray>"
+    name: "<light_purple>Refined Batch • <strain_name></light_purple>"
+    description: "<gray>Dry weight: <dry_weight> • Grade: <quality_grade> • Refined for <duration></gray>"
   ground_product:
-    name: "<yellow>Ground Product • <strain></yellow>"
-    description: "<gray>Traceable material from batch <batch_id>.</gray>"
+    name: "<yellow>Ground Product • <strain_name></yellow>"
+    description: "<gray>Weight: <weight> • Grade: <quality_grade> • Batch: <batch_id></gray>"
   mixture:
-    name: "<aqua>Verdant Mixture</aqua>"
-    description: "<gray>A precise blend of <components> fictional strains.</gray>"
+    name: "<aqua>Verdant Mixture • <strain_name></aqua>"
+    description: "<gray>Weight: <weight> • <components> strains • State: <state></gray>"
   joint:
     name: "<green>Verdant Roll • <quality></green>"
-    description: "<gray>A minigame product linked to batch <batch_id>.</gray>"
+    description: "<gray>Weight: <weight> • State: <state> • Batch: <batch_id></gray>"
   basics_book:
     name: "<gold>VerdantVice Basics</gold>"
     description: "<gray>A complete 16-step introduction to the game systems.</gray>"
@@ -515,6 +515,26 @@ item:
   lore:
     strain: "<gray>Strain:</gray> <white><strain></white>"
     quality: "<gray>Quality:</gray> <white><quality></white>"
+  states:
+    fresh: "Fresh"
+    drying: "Drying"
+    dried: "Dried"
+    curing: "Curing"
+    cured: "Cured"
+    ground: "Ground"
+    mixed: "Mixed"
+    rolled: "Rolled"
+    spoiled: "Spoiled"
+  quality_grades:
+    spoiled: "Spoiled"
+    very-poor: "Very Poor"
+    street: "Street"
+    common: "Common"
+    good: "Good"
+    premium: "Premium"
+    top-shelf: "Top Shelf"
+    perfect-batch: "Perfect Batch"
+    verdant-grade: "Verdant Grade"
 
 plant:
   stages:
@@ -722,6 +742,15 @@ trade:
   sale-complete: "<green>Sold <item> for <price>.</green>"
   price-changed: "<yellow>The quote changed from <old_price> to <new_price>; review the trade.</yellow>"
 
+  empty-hand: "<red>Hold one registered batch in your main hand.</red>"
+  invalid-amount: "<red>Only one unique batch can be sold at a time.</red>"
+  unregistered-item: "<red>This signed item is not registered.</red>"
+  already-used: "<red>This batch item has already been used.</red>"
+  item-reserved: "<yellow>This batch is currently reserved by another operation.</yellow>"
+  missing-batch: "<red>The product batch linked to this item no longer exists.</red>"
+  batch-state-mismatch: "<red>The item type does not match the stored batch state.</red>"
+  fresh-batch-requires-drying: "<red>Fresh batches must be dried before they can be sold.</red>"
+  unsupported-batch-state: "<red>The herbalist does not accept this product state.</red>"
 farm:
   roles:
     owner: "Owner"
@@ -974,7 +1003,7 @@ book:
     page_4: "<dark_green><bold>4. Watering</bold></dark_green><newline><newline>Use a Watering Can when hydration falls. Water is a fictional game meter: too little slows growth, while repeated use above the preferred range can create Overwatering."
     page_5: "<dark_green><bold>5. Solving Problems</bold></dark_green><newline><newline>Inspect the listed condition, then use the matching Cleaning Kit, Treatment Spray, Nutrient Pack, or Repair Kit. Problems lower potential gradually; they do not destroy a healthy plant instantly."
     page_6: "<dark_green><bold>6. Harvesting</bold></dark_green><newline><newline>Harvest timing ranges from Too Early to Overripe. The highlighted window offers the best weight and quality. Harvesting creates one registered batch with a permanent origin and signature."
-    page_7: "<dark_green><bold>7. Drying</bold></dark_green><newline><newline>Open a clean Drying Rack and load a fresh batch. The batch is stored safely by the plugin and advances by timestamps. Remove it near Ready; waiting too long can produce Overdried or Ruined results."
+    page_7: "<dark_green><bold>7. Drying</bold></dark_green><newline><newline>Open a clean Drying Rack and load a fresh batch. The batch is stored safely by the plugin and advances by timestamps. Remove it near Ready; waiting too long can produce Overdried or Ruined results. The normal sale path is: harvest → fresh batch → Drying Rack → dry batch → herbalist sale."
     page_8: "<dark_green><bold>8. Curing</bold></dark_green><newline><newline>A dry batch may enter a Curing Container. This optional game process can improve quality, value, and stability. You may stop early, but a neglected container can eventually degrade the batch."
     page_9: "<dark_green><bold>9. Quality</bold></dark_green><newline><newline>Final grade combines genetics, care, health, timing, cleanliness, processing, skills, worker performance, and contamination. The scale runs from Spoiled to Verdant Grade."
     page_10: "<dark_green><bold>10. Grinding</bold></dark_green><newline><newline>Load a dry or refined batch into a Grinder. Equipment level and condition affect loss risk. The output keeps its batch lineage and must pass authenticity checks in later menus."

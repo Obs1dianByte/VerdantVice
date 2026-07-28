@@ -7,6 +7,7 @@ import com.verdantvice.database.item.ItemRegistryRepository;
 import com.verdantvice.database.item.ItemRegistryState;
 import com.verdantvice.database.item.RegistrationStatus;
 import com.verdantvice.item.CustomItemFactory;
+import com.verdantvice.processing.ProductBatch;
 import org.bukkit.command.CommandSender;
 import org.bukkit.inventory.ItemStack;
 
@@ -57,8 +58,21 @@ public final class SecureItemService {
             String strain,
             double quality
     ) {
-        CustomItemFactory.PreparedItem prepared =
-                factory.create(viewer, type, owner, batchId, strain, quality);
+        return registerPrepared(factory.create(viewer, type, owner, batchId, strain, quality));
+    }
+
+    public CompletableFuture<ItemStack> issue(
+            CommandSender viewer,
+            CustomItemType type,
+            UUID owner,
+            ProductBatch batch
+    ) {
+        return registerPrepared(factory.create(viewer, type, owner, batch));
+    }
+
+    private CompletableFuture<ItemStack> registerPrepared(
+            CustomItemFactory.PreparedItem prepared
+    ) {
         SignedItemData data = prepared.data();
         ItemRegistration registration = new ItemRegistration(
                 data.uniqueInstanceId(),

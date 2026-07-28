@@ -369,9 +369,7 @@ public final class WorkerActionService {
                                 plugin.getServer().getConsoleSender(),
                                 CustomItemType.FRESH_BATCH,
                                 worker.worker().ownerUuid(),
-                                batch.batchId(),
-                                target.get().strainId(),
-                                batch.qualityScore()
+                                batch
                         )
                         .thenCompose(item -> onMain(() ->
                                 deliverBatch(destination.get(), item, batch))))

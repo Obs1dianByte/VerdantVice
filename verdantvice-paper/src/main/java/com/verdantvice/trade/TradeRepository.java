@@ -18,6 +18,7 @@ import com.verdantvice.market.PaperMarketRecord;
 import com.verdantvice.processing.BatchState;
 import com.verdantvice.processing.ProductBatch;
 import com.verdantvice.processing.QualityGrade;
+import com.verdantvice.security.CustomItemType;
 import com.verdantvice.security.SignedItemData;
 import com.verdantvice.storage.DomainJson;
 import com.verdantvice.strain.Strain;
@@ -33,6 +34,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -48,6 +50,7 @@ public final class TradeRepository {
     private final ConfigManager configs;
     private final MarketPricingService pricing = new MarketPricingService();
     private final TradeLimitService limits = new TradeLimitService();
+    private final SaleItemPolicy saleItems = new SaleItemPolicy();
 
     public TradeRepository(
             DatabaseManager database,
@@ -93,18 +96,8 @@ public final class TradeRepository {
                         Math.toIntExact(already.get()), "");
             }
             lockPlayer(session, quote.playerUuid());
-            SignedItemData identity = new SignedItemData(
-                    com.verdantvice.security.CustomItemType.DRY_BATCH,
-                    "sale",
-                    quote.itemInstanceId(),
-                    quote.batch().batchId(),
-                    quote.playerUuid(),
-                    quote.batch().qualityScore(),
-                    dominantStrain(quote.batch()),
-                    quote.batch().createdAt(),
-                    1);
             PreparedSale current = buildQuote(
-                    session, identity, quote.itemPayloadHash(), quote.playerUuid(),
+                    session, quote.itemData(), quote.itemPayloadHash(), quote.playerUuid(),
                     quote.herbalistUuid(), now, true);
             if (current.payout() != quote.payout()
                     || !current.marketVersions().equals(quote.marketVersions())) {
@@ -159,7 +152,7 @@ public final class TradeRepository {
                     operationId, quote.playerUuid(), quote.herbalistUuid(), quote.batch().batchId(),
                     dominant, quote.quantity(), quote.unitPrice(), quote.payout(),
                     quote.batch().qualityScore(), now);
-            updateMarketAfterSale(session, quote.batch(), now);
+            updateMarketAfterSale(session, quote.batch(), quote.quantity(), now);
             String lockSuffix = session.databaseType().isNetworkDatabase()
                     ? " FOR UPDATE" : "";
             long currentExperience = session.queryOne(
@@ -209,19 +202,36 @@ public final class TradeRepository {
             boolean forUpdate
     ) throws SQLException {
         ItemRegistryRecord registered = itemRegistry.find(session, data.uniqueInstanceId(), forUpdate)
-                .orElseThrow(() -> new IllegalArgumentException("unregistered-item"));
-        if (registered.state() != ItemRegistryState.ACTIVE
-                || !constantEquals(registered.signature(), payloadHash)
-                || !Objects.equals(registered.ownerUuid(), playerUuid)
-                || data.batchId() == null
+                .orElseThrow(() -> failure(TradeFailureReason.UNREGISTERED_ITEM));
+        if (registered.state() == ItemRegistryState.CONSUMED) {
+            throw failure(TradeFailureReason.ITEM_ALREADY_CONSUMED);
+        }
+        if (registered.state() == ItemRegistryState.RESERVED) {
+            throw failure(TradeFailureReason.ITEM_RESERVED);
+        }
+        if (!constantEquals(registered.signature(), payloadHash)
+                || !registered.itemType().equals(data.itemType().name())
                 || !Objects.equals(registered.batchId(), data.batchId())) {
-            throw new IllegalArgumentException("invalid-or-used-item");
+            throw failure(TradeFailureReason.SIGNATURE_REGISTRY_MISMATCH);
+        }
+        if (!Objects.equals(registered.ownerUuid(), playerUuid)
+                || !Objects.equals(data.ownerUuid(), playerUuid)) {
+            throw failure(TradeFailureReason.WRONG_OWNER);
+        }
+        if (data.batchId() == null) {
+            throw failure(TradeFailureReason.MISSING_BATCH);
         }
         ProductBatch batch = loadBatch(session, data.batchId(), forUpdate)
-                .orElseThrow(() -> new IllegalArgumentException("unknown-batch"));
-        if (!batch.ownerUuid().equals(playerUuid)) throw new IllegalArgumentException("wrong-owner");
-        if (batch.state() != BatchState.DRIED && batch.state() != BatchState.CURED) {
-            throw new IllegalArgumentException("dry-only");
+                .orElseThrow(() -> failure(TradeFailureReason.MISSING_BATCH));
+        if (!batch.ownerUuid().equals(playerUuid)) {
+            throw failure(TradeFailureReason.WRONG_OWNER);
+        }
+        TradeFailureReason rejection = saleItems.rejectionReason(
+                data.itemType(), batch.state(), acceptedItemTypes());
+        if (rejection != null) throw failure(rejection);
+        double quantity = saleItems.saleWeight(data.itemType(), batch);
+        if (quantity <= 0.0) {
+            throw failure(TradeFailureReason.BATCH_STATE_MISMATCH);
         }
         double reputation = session.queryOne(
                 "SELECT reputation FROM players WHERE player_uuid=?",
@@ -239,6 +249,10 @@ public final class TradeRepository {
             versions.put(component.getKey(), market.version());
         }
         double sellMultiplier = configs.get("economy.yml").getDouble("sell-price-multiplier", 0.85);
+        if (data.itemType() == CustomItemType.FRESH_BATCH) {
+            sellMultiplier *= Math.max(0.0, Math.min(1.0, configs.get("market.yml")
+                    .getDouble("trade.fresh-price-multiplier", 0.35)));
+        }
         int minimum = Math.max(1,
                 configs.get("economy.yml").getInt("minimum-transaction-price", 1));
         int maximum = Math.max(minimum,
@@ -248,24 +262,22 @@ public final class TradeRepository {
         double repeatPenalty = Math.max(0.0,
                 configs.get("market.yml").getDouble("repeat-sale-penalty", 0.025));
         double minimumRepeat = Math.max(0.0, Math.min(1.0,
-                configs.get("market.yml").getDouble(
-                        "minimum-repeat-multiplier", 0.35)));
+                configs.get("market.yml").getDouble("minimum-repeat-multiplier", 0.35)));
         double repeatMultiplier = Math.max(
                 minimumRepeat, 1.0 - ledger.soldBatches() * repeatPenalty);
         int payout = (int) Math.max(minimum, Math.min(maximum,
-                Math.floor(weightedPrice * batch.dryWeight()
-                        * sellMultiplier * repeatMultiplier)));
+                Math.floor(weightedPrice * quantity * sellMultiplier * repeatMultiplier)));
         int dailyLimit = Math.max(1,
                 configs.get("villagers.yml").getInt("herbalist.daily-buy-limit", 64));
         TradeLimits configuredLimits = new TradeLimits(
                 dailyLimit, dailyLimit, (double) dailyLimit * maximum);
         TradeDecision decision = limits.evaluate(
-                batch, batch.dryWeight(), payout, true, ledger, configuredLimits, day);
+                batch, quantity, quantity, payout, true, true, ledger, configuredLimits, day);
         if (!decision.accepted()) throw new IllegalArgumentException(decision.reasonCode());
         return new PreparedSale(
-                UUID.randomUUID(), playerUuid, herbalistUuid, registered.instanceId(), payloadHash,
-                batch, batch.dryWeight(), weightedPrice, payout, versions, now,
-                now.plus(Duration.ofSeconds(30)));
+                UUID.randomUUID(), playerUuid, herbalistUuid, data,
+                registered.instanceId(), payloadHash, batch, quantity, weightedPrice, payout,
+                versions, now, now.plus(Duration.ofSeconds(30)));
     }
 
     private TradeLedger ledger(SqlSession session, UUID playerUuid, LocalDate day) throws SQLException {
@@ -308,12 +320,13 @@ public final class TradeRepository {
                 batchId);
     }
 
-    private void updateMarketAfterSale(SqlSession session, ProductBatch batch, Instant now)
-            throws SQLException {
+    private void updateMarketAfterSale(
+            SqlSession session, ProductBatch batch, double quantity, Instant now
+    ) throws SQLException {
         for (Map.Entry<String, Double> component : batch.strainComposition().entrySet()) {
             PaperMarketRecord current = markets.find(session, component.getKey(), true)
                     .orElseThrow(() -> new SQLException("Missing market row for " + component.getKey()));
-            double weight = batch.dryWeight() * component.getValue();
+            double weight = quantity * component.getValue();
             MarketState decayed = pricing.recordSale(current.state(), weight, now);
             double configuredSupply = Math.max(0.0,
                     configs.get("market.yml").getDouble("supply-impact", 0.015));
@@ -376,9 +389,24 @@ public final class TradeRepository {
         Objects.requireNonNull(data, "data");
         Objects.requireNonNull(payloadHash, "payloadHash");
         Objects.requireNonNull(playerUuid, "playerUuid");
-        if (data.batchId() == null || !Objects.equals(data.ownerUuid(), playerUuid)) {
-            throw new IllegalArgumentException("wrong-owner-or-missing-batch");
+        if (data.batchId() == null) throw failure(TradeFailureReason.MISSING_BATCH);
+        if (!Objects.equals(data.ownerUuid(), playerUuid)) {
+            throw failure(TradeFailureReason.WRONG_OWNER);
         }
+    }
+
+    private Set<CustomItemType> acceptedItemTypes() {
+        List<String> configured = configs.get("market.yml")
+                .getStringList("trade.accepted-item-types");
+        if (configured.isEmpty()) {
+            return Set.of(CustomItemType.DRY_BATCH, CustomItemType.CURED_BATCH,
+                    CustomItemType.PACKAGE);
+        }
+        return saleItems.acceptedTypes(configured);
+    }
+
+    private static TradeValidationException failure(TradeFailureReason reason) {
+        return new TradeValidationException(reason);
     }
 
     private static void lockPlayer(SqlSession session, UUID playerUuid) throws SQLException {

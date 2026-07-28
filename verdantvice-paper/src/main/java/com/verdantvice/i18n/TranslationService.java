@@ -142,6 +142,11 @@ public final class TranslationService {
         return languages.size();
     }
 
+    /** Returns the locale used for global server-owned entity names. */
+    public String serverLocale() {
+        return configuredDefault();
+    }
+
     private String configuredDefault() {
         return normalize(configs.main().getString("default-language", "pl_PL"));
     }

@@ -674,6 +674,10 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
                 }
             }
         }
+        if (type.batchBound()) {
+            sender.sendMessage(translation().component(sender, "errors.wrong-item-state"));
+            return;
+        }
         if (type == CustomItemType.SEED) {
             plugin.strains().require(strain);
         }

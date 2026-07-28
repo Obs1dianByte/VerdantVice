@@ -309,14 +309,14 @@ item:
   rolling_paper: { name: "<white>Papel de enrollado</white>", description: "<gray>Componente ficticio del minijuego.</gray>" }
   filter: { name: "<yellow>Filtro</yellow>", description: "<gray>Componente necesario para el minijuego.</gray>" }
   cosmetic_additive: { name: "<light_purple>Aditivo cosmético</light_purple>", description: "<gray>Adorno opcional sin significado real.</gray>" }
-  package: { name: "<gold>Paquete de producto</gold>", description: "<gray>Envase verificado ligado a un lote.</gray>" }
+  package: { name: "<gold>Paquete de producto • <strain_name></gold>", description: "<gray>Peso: <weight> • Grado: <quality_grade> • Lote: <batch_id></gray>" }
   plantation_contract: { name: "<gold>Contrato de plantación</gold>", description: "<gray>Permite contratar a un Experto Verdant apto.</gray>" }
-  fresh_batch: { name: "<green>Lote fresco • <strain></green>", description: "<gray>Peso fresco: <weight> • Calidad potencial: <quality></gray>" }
-  dry_batch: { name: "<gold>Lote seco • <strain></gold>", description: "<gray>Peso seco: <weight> • Clase: <quality></gray>" }
-  cured_batch: { name: "<light_purple>Lote madurado • <strain></light_purple>", description: "<gray>Maduración: <duration> • Clase: <quality></gray>" }
-  ground_product: { name: "<yellow>Producto molido • <strain></yellow>", description: "<gray>Material rastreable del lote <batch_id>.</gray>" }
-  mixture: { name: "<aqua>Mezcla Verdant</aqua>", description: "<gray>Mezcla precisa de <components> variedades ficticias.</gray>" }
-  joint: { name: "<green>Rollo Verdant • <quality></green>", description: "<gray>Resultado del minijuego ligado al lote <batch_id>.</gray>" }
+  fresh_batch: { name: "<green>Lote fresco • <strain_name></green>", description: "<gray>Peso fresco: <fresh_weight> • Calidad: <quality> • Estado: <state></gray>" }
+  dry_batch: { name: "<gold>Lote seco • <strain_name></gold>", description: "<gray>Peso seco: <dry_weight> • Grado: <quality_grade> • Estado: <state></gray>" }
+  cured_batch: { name: "<light_purple>Lote curado • <strain_name></light_purple>", description: "<gray>Peso seco: <dry_weight> • Grado: <quality_grade> • Curado: <duration></gray>" }
+  ground_product: { name: "<yellow>Producto molido • <strain_name></yellow>", description: "<gray>Peso: <weight> • Grado: <quality_grade> • Lote: <batch_id></gray>" }
+  mixture: { name: "<aqua>Mezcla Verdant • <strain_name></aqua>", description: "<gray>Peso: <weight> • Variedades: <components> • Estado: <state></gray>" }
+  joint: { name: "<green>Rollo Verdant • <quality></green>", description: "<gray>Peso: <weight> • Estado: <state> • Lote: <batch_id></gray>" }
   basics_book: { name: "<gold>Fundamentos de VerdantVice</gold>", description: "<gray>Introducción completa en 16 pasos.</gray>" }
   plant_health_book: { name: "<green>Salud y cuidados</green>", description: "<gray>Guía avanzada de los valores ficticios de la planta.</gray>" }
   strain_guide_book: { name: "<light_purple>Guía de variedades</light_purple>", description: "<gray>Propiedades y rarezas del catálogo.</gray>" }
@@ -329,6 +329,26 @@ item:
   lore:
     strain: "<gray>Variedad:</gray> <white><strain></white>"
     quality: "<gray>Calidad:</gray> <white><quality></white>"
+  states:
+    fresh: "Fresco"
+    drying: "Secando"
+    dried: "Seco"
+    curing: "Curando"
+    cured: "Curado"
+    ground: "Molido"
+    mixed: "Mezclado"
+    rolled: "Enrollado"
+    spoiled: "Estropeado"
+  quality_grades:
+    spoiled: "Estropeado"
+    very-poor: "Muy pobre"
+    street: "Callejero"
+    common: "Común"
+    good: "Bueno"
+    premium: "Premium"
+    top-shelf: "Primera calidad"
+    perfect-batch: "Lote perfecto"
+    verdant-grade: "Grado Verdant"
 
 plant:
   stages: { seed: "Semilla", sprout: "Brote", seedling: "Plántula", vegetative: "Crecimiento", maturing: "Maduración", ready: "Lista", overripe: "Pasada", spoiled: "Estropeada" }
@@ -412,6 +432,15 @@ trade:
   sale-complete: "<green>Vendiste <item> por <price>.</green>"
   price-changed: "<yellow>El precio cambió de <old_price> a <new_price>; revisa la operación.</yellow>"
 
+  empty-hand: "<red>Sostén un lote registrado en la mano principal.</red>"
+  invalid-amount: "<red>Solo se puede vender un lote único a la vez.</red>"
+  unregistered-item: "<red>Este objeto firmado no está registrado.</red>"
+  already-used: "<red>Este objeto de lote ya fue utilizado.</red>"
+  item-reserved: "<yellow>Este lote está reservado por otra operación.</yellow>"
+  missing-batch: "<red>El lote de producto vinculado ya no existe.</red>"
+  batch-state-mismatch: "<red>El tipo de objeto no coincide con el estado guardado del lote.</red>"
+  fresh-batch-requires-drying: "<red>Los lotes frescos deben secarse antes de venderse.</red>"
+  unsupported-batch-state: "<red>El herbolario no acepta este estado de producto.</red>"
 farm:
   roles: { owner: "Propietario", manager: "Gerente", grower: "Cultivador", worker-manager: "Encargado", member: "Miembro", visitor: "Visitante" }
   permissions: { plant: "Plantar semillas", water: "Regar plantas", harvest: "Cosechar", use-storage: "Usar almacenes", use-processing: "Usar equipos", manage-workers: "Gestionar trabajadores", manage-members: "Gestionar miembros", manage-settings: "Cambiar ajustes", upgrade: "Mejorar plantación" }
@@ -529,7 +558,7 @@ book:
     page_4: "<dark_green><bold>4. Regar</bold></dark_green><newline><newline>Riega cuando baje la hidratación. Es un medidor ficticio: tanto la falta como el exceso perjudican."
     page_5: "<dark_green><bold>5. Resolver problemas</bold></dark_green><newline><newline>Identifica el problema y usa limpieza, aerosol, nutrientes o reparación compatibles. Las penalizaciones son graduales."
     page_6: "<dark_green><bold>6. Cosechar</bold></dark_green><newline><newline>El momento va de Demasiado pronto a Pasada. La ventana marcada ofrece mejor peso y calidad y crea un lote firmado."
-    page_7: "<dark_green><bold>7. Secar</bold></dark_green><newline><newline>Carga un lote fresco en un secadero limpio. Retíralo en Listo; esperar demasiado puede arruinarlo."
+    page_7: "<dark_green><bold>7. Secar</bold></dark_green><newline><newline>Carga un lote fresco en un secadero limpio. Retíralo en Listo; esperar demasiado puede arruinarlo. La ruta normal de venta es: cosecha → lote fresco → secadero → lote seco → venta al herbolario."
     page_8: "<dark_green><bold>8. Madurar</bold></dark_green><newline><newline>La maduración opcional puede mejorar calidad, valor y estabilidad, pero el abandono puede degradar el lote."
     page_9: "<dark_green><bold>9. Calidad</bold></dark_green><newline><newline>La clase combina genética, cuidados, salud, cosecha, limpieza, procesado, habilidades, trabajadores y contaminación."
     page_10: "<dark_green><bold>10. Moler</bold></dark_green><newline><newline>El Molinillo transforma un lote seco o madurado. Su estado influye en las pérdidas y se conserva el origen."

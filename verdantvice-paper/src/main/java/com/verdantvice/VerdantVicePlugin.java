@@ -142,7 +142,7 @@ public final class VerdantVicePlugin extends JavaPlugin {
 
             translations.setPreferenceWriter(playerData::setLocale);
             CustomItemFactory itemFactory =
-                    new CustomItemFactory(configs, translations, itemSigner);
+                    new CustomItemFactory(configs, translations, itemSigner, strains);
             secureItems = new SecureItemService(
                     itemFactory,
                     itemSigner,
@@ -574,6 +574,9 @@ public final class VerdantVicePlugin extends JavaPlugin {
         }
         ConfigManager.ReloadReport report = configs.reloadSafe();
         translations.load();
+        if (herbalists != null && Bukkit.isPrimaryThread()) {
+            herbalists.refreshNames();
+        }
         StrainRegistry reloaded = new StrainConfigLoader(configs).load();
         reloaded.all().forEach(strain -> {
             if (strains.find(strain.id()).isPresent()) {

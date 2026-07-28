@@ -86,21 +86,21 @@ public final class HerbalistConversionService {
         PersistentDataContainer pdc = villager.getPersistentDataContainer();
         Optional<UUID> marked = markedId(villager);
         if (marked.isPresent()) {
-            return repository.find(marked.get()).thenApply(record -> new HerbalistEvaluation(
-                    record.isPresent()
-                            ? HerbalistEvaluation.Status.EXISTING
-                            : HerbalistEvaluation.Status.INVALID_ENTITY,
-                    record));
+            return repository.find(marked.get()).thenCompose(record -> onMain(() -> {
+                if (record.isPresent() && villager.isValid() && !villager.isDead()) {
+                    refreshName(villager);
+                }
+                return new HerbalistEvaluation(
+                        record.isPresent()
+                                ? HerbalistEvaluation.Status.EXISTING
+                                : HerbalistEvaluation.Status.INVALID_ENTITY,
+                        record);
+            }));
         }
         if (villager.getProfession() != Villager.Profession.FARMER) {
             return CompletableFuture.completedFuture(new HerbalistEvaluation(
                     HerbalistEvaluation.Status.NOT_FARMER, Optional.empty()));
         }
-        if (!forced && pdc.has(evaluatedKey, PersistentDataType.BYTE)) {
-            return CompletableFuture.completedFuture(new HerbalistEvaluation(
-                    HerbalistEvaluation.Status.NORMAL, Optional.empty()));
-        }
-
         Location location = villager.getLocation();
         UUID entityUuid = villager.getUniqueId();
         UUID worldUuid = villager.getWorld().getUID();
@@ -121,6 +121,10 @@ public final class HerbalistConversionService {
                     if (existing.isPresent()) {
                         return CompletableFuture.completedFuture(new HerbalistEvaluation(
                                 HerbalistEvaluation.Status.EXISTING, existing));
+                    }
+                    if (!forced && pdc.has(evaluatedKey, PersistentDataType.BYTE)) {
+                        return CompletableFuture.completedFuture(new HerbalistEvaluation(
+                                HerbalistEvaluation.Status.NORMAL, Optional.empty()));
                     }
                     if (!forced && ThreadLocalRandom.current().nextDouble() >= chance) {
                         return CompletableFuture.completedFuture(new HerbalistEvaluation(
@@ -146,6 +150,29 @@ public final class HerbalistConversionService {
         }));
     }
 
+    /**
+     * Restores the PDC marker and global name from an existing database row
+     * without running conversion chance or creating a new herbalist.
+     */
+    public CompletableFuture<Optional<HerbalistRecord>> restoreOrRefresh(Villager villager) {
+        requireMainThread();
+        Objects.requireNonNull(villager, "villager");
+        if (!villager.isValid() || villager.isDead()) {
+            return CompletableFuture.completedFuture(Optional.empty());
+        }
+        Optional<UUID> marked = markedId(villager);
+        CompletableFuture<Optional<HerbalistRecord>> lookup = marked.isPresent()
+                ? repository.find(marked.orElseThrow())
+                : repository.findByEntity(villager.getUniqueId());
+        return lookup.thenCompose(record -> onMain(() -> {
+            if (record.isPresent() && villager.isValid() && !villager.isDead()) {
+                applyMarker(villager, new HerbalistEvaluation(
+                        HerbalistEvaluation.Status.EXISTING, record));
+            }
+            return record;
+        }));
+    }
+
     public CompletableFuture<Optional<HerbalistRecord>> resolve(Villager villager) {
         Optional<UUID> id = markedId(villager);
         return id.isPresent()
@@ -158,12 +185,33 @@ public final class HerbalistConversionService {
         pdc.set(evaluatedKey, PersistentDataType.BYTE, (byte) 1);
         result.herbalist().ifPresent(record -> {
             pdc.set(herbalistIdKey, PersistentDataType.STRING, record.herbalistUuid().toString());
-            String locale = configs.main().getString("default-language", "pl_PL");
-            Component name = translations.component(locale, "herbalist.title", java.util.Map.of());
-            villager.customName(name);
-            villager.setCustomNameVisible(true);
+            refreshName(villager);
             villager.setRemoveWhenFarAway(false);
         });
+    }
+
+    public void refreshName(Villager villager) {
+        requireMainThread();
+        if (!isMarkedHerbalist(villager) || !villager.isValid() || villager.isDead()) return;
+        Component name = translations.component(
+                translations.serverLocale(), "herbalist.title", java.util.Map.of());
+        villager.customName(name);
+        villager.setCustomNameVisible(true);
+    }
+
+    public void refreshLoadedHerbalists() {
+        requireMainThread();
+        for (org.bukkit.World world : plugin.getServer().getWorlds()) {
+            for (Villager villager : world.getEntitiesByClass(Villager.class)) {
+                restoreOrRefresh(villager).exceptionally(failure -> {
+                    plugin.getLogger().log(
+                            java.util.logging.Level.WARNING,
+                            "Could not restore herbalist marker for " + villager.getUniqueId(),
+                            failure);
+                    return Optional.empty();
+                });
+            }
+        }
     }
 
     private <T> CompletableFuture<T> serialize(Supplier<CompletableFuture<T>> operation) {

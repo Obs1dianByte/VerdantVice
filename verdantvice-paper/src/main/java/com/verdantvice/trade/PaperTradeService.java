@@ -1,24 +1,16 @@
 package com.verdantvice.trade;
 
-import com.verdantvice.security.CustomItemType;
 import com.verdantvice.security.ItemSigner;
 import com.verdantvice.security.SignedItemData;
 import org.bukkit.inventory.ItemStack;
 
 import java.time.Instant;
-import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public final class PaperTradeService {
-    private static final Set<CustomItemType> SELLABLE = EnumSet.of(
-            CustomItemType.DRY_BATCH,
-            CustomItemType.CURED_BATCH,
-            CustomItemType.PACKAGE);
-
     private final ItemSigner signer;
     private final TradeRepository repository;
 
@@ -32,11 +24,15 @@ public final class PaperTradeService {
             UUID playerUuid,
             UUID herbalistUuid
     ) {
+        if (item == null || item.getType().isAir()) {
+            return failed(TradeFailureReason.EMPTY_HAND);
+        }
+        if (item.getAmount() != 1) {
+            return failed(TradeFailureReason.INVALID_AMOUNT);
+        }
         ItemSigner.Verification verification = signer.verify(item);
-        if (item.getAmount() != 1
-                || !verification.valid()
-                || !SELLABLE.contains(verification.data().itemType())) {
-            return CompletableFuture.failedFuture(new IllegalArgumentException("authentic-only"));
+        if (!verification.valid()) {
+            return failed(TradeFailureReason.INVALID_SIGNATURE);
         }
         SignedItemData data = verification.data();
         return repository.prepareSale(
@@ -53,5 +49,9 @@ public final class PaperTradeService {
 
     public ItemSigner.Verification verify(ItemStack item) {
         return signer.verify(item);
+    }
+
+    private static <T> CompletableFuture<T> failed(TradeFailureReason reason) {
+        return CompletableFuture.failedFuture(new TradeValidationException(reason));
     }
 }

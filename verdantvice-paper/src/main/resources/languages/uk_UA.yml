@@ -104,14 +104,14 @@ item:
   rolling_paper: { name: "<white>Папір для згортання</white>", description: "<gray>Вигаданий компонент мінігри.</gray>" }
   filter: { name: "<yellow>Фільтр</yellow>", description: "<gray>Потрібний компонент мінігри.</gray>" }
   cosmetic_additive: { name: "<light_purple>Косметична добавка</light_purple>", description: "<gray>Необов'язкова ігрова прикраса.</gray>" }
-  package: { name: "<gold>Пакунок продукту</gold>", description: "<gray>Захищене пакування однієї партії.</gray>" }
+  package: { name: "<gold>Упаковка продукту • <strain_name></gold>", description: "<gray>Вага: <weight> • Клас: <quality_grade> • Партія: <batch_id></gray>" }
   plantation_contract: { name: "<gold>Контракт плантації</gold>", description: "<gray>Дозволяє найняти Експерта Verdant.</gray>" }
-  fresh_batch: { name: "<green>Свіжа партія • <strain></green>", description: "<gray>Маса: <weight> • Потенціал: <quality></gray>" }
-  dry_batch: { name: "<gold>Суха партія • <strain></gold>", description: "<gray>Суха маса: <weight> • Клас: <quality></gray>" }
-  cured_batch: { name: "<light_purple>Витримана партія • <strain></light_purple>", description: "<gray>Витримка: <duration> • Клас: <quality></gray>" }
-  ground_product: { name: "<yellow>Подрібнений продукт • <strain></yellow>", description: "<gray>Матеріал партії <batch_id>.</gray>" }
-  mixture: { name: "<aqua>Суміш Verdant</aqua>", description: "<gray>Суміш <components> вигаданих сортів.</gray>" }
-  joint: { name: "<green>Згорток Verdant • <quality></green>", description: "<gray>Результат мінігри з партії <batch_id>.</gray>" }
+  fresh_batch: { name: "<green>Свіжа партія • <strain_name></green>", description: "<gray>Свіжа вага: <fresh_weight> • Якість: <quality> • Стан: <state></gray>" }
+  dry_batch: { name: "<gold>Суха партія • <strain_name></gold>", description: "<gray>Суха вага: <dry_weight> • Клас: <quality_grade> • Стан: <state></gray>" }
+  cured_batch: { name: "<light_purple>Витримана партія • <strain_name></light_purple>", description: "<gray>Суха вага: <dry_weight> • Клас: <quality_grade> • Витримка: <duration></gray>" }
+  ground_product: { name: "<yellow>Подрібнений продукт • <strain_name></yellow>", description: "<gray>Вага: <weight> • Клас: <quality_grade> • Партія: <batch_id></gray>" }
+  mixture: { name: "<aqua>Суміш Verdant • <strain_name></aqua>", description: "<gray>Вага: <weight> • Сорти: <components> • Стан: <state></gray>" }
+  joint: { name: "<green>Рол Verdant • <quality></green>", description: "<gray>Вага: <weight> • Стан: <state> • Партія: <batch_id></gray>" }
   basics_book: { name: "<gold>Основи VerdantVice</gold>", description: "<gray>Повний вступ у 16 кроках.</gray>" }
   plant_health_book: { name: "<green>Здоров'я та догляд</green>", description: "<gray>Розширений посібник станів.</gray>" }
   strain_guide_book: { name: "<light_purple>Посібник сортів</light_purple>", description: "<gray>Властивості та рідкість.</gray>" }
@@ -122,6 +122,26 @@ item:
   guide_book: { name: "<gold>Основи VerdantVice</gold>", description: "<gray>Локалізований посібник із 16 кроків.</gray>" }
   advanced_book: { name: "<aqua>Розширений посібник Verdant</aqua>", description: "<gray>Підписана фахова книга.</gray>" }
   lore: { strain: "<gray>Сорт:</gray> <white><strain></white>", quality: "<gray>Якість:</gray> <white><quality></white>" }
+  states:
+    fresh: "Свіжа"
+    drying: "Сушіння"
+    dried: "Суха"
+    curing: "Витримка"
+    cured: "Витримана"
+    ground: "Подрібнена"
+    mixed: "Змішана"
+    rolled: "Скручена"
+    spoiled: "Зіпсована"
+  quality_grades:
+    spoiled: "Зіпсована"
+    very-poor: "Дуже низька"
+    street: "Вулична"
+    common: "Звичайна"
+    good: "Добра"
+    premium: "Преміум"
+    top-shelf: "Найвищий клас"
+    perfect-batch: "Ідеальна партія"
+    verdant-grade: "Клас Verdant"
 plant:
   stages: { seed: "Насіння", sprout: "Паросток", seedling: "Саджанець", vegetative: "Ріст", maturing: "Дозрівання", ready: "Готова", overripe: "Перестигла", spoiled: "Зіпсована" }
   conditions:
@@ -152,7 +172,25 @@ drying: { stages: { fresh: "Свіжа", wet: "Мокра", damp: "Волога"
 curing: { stages: { fresh: "Не почато", developing: "Розвивається", balanced: "Збалансована", ready: "Готова", extended: "Подовжена", degraded: "Погіршена", ruined: "Знищена" }, loaded: "<green>Партію <batch_id> вкладено на витримку.</green>", completed: "<light_purple>Партію <batch_id> витримано.</light_purple>", interrupted: "<yellow>Витримку завершено раніше.</yellow>", container-full: "<red>Контейнер повний.</red>" }
 rolling: { results: { failed: "<dark_red>Невдача</dark_red>", spilled: "<red>Розсипано</red>", crooked: "<gold>Криво</gold>", loose: "<yellow>Вільно</yellow>", normal: "<white>Нормально</white>", good: "<green>Добре</green>", perfect: "<light_purple>Ідеально</light_purple>", overfilled: "<red>Переповнено</red>" }, steps: { place-paper: "Поклади папір", add-filter: "Додай фільтр", add-product: "Додай продукт", distribute: "Розподіли наповнення", finish-roll: "Заверши згорток" }, complete: "<green>Мінігру завершено:</green> <result>", aborted: "<yellow>Мінігру безпечно завершено; матеріали повернуто.</yellow>" }
 herbalist: { title: "<dark_green>Травник</dark_green>", created: "<green>Цей фермер став травником Verdant.</green>", evaluated-normal: "<gray>Цей фермер не травник.</gray>", village-limit: "<yellow>У поселенні вже максимум травників.</yellow>", reputation-up: "<green>Репутація зросла на <amount>.</green>", tiers: { novice: "Новачок", apprentice: "Учень", journeyman: "Підмайстер", expert: "Експерт", master: "Майстер", verdant-expert: "Експерт Verdant" }, specializations: { seeds: "Продавець насіння", tools: "Постачальник обладнання", buyer: "Покупець якості", contracts: "Посередник контрактів" }, hire: { unavailable: "<red>Найняти можна лише Експерта Verdant.</red>", already-employed: "<red>Травник уже працює.</red>", contract-required: "<yellow>Потрібен чинний контракт.</yellow>", signed: "<green><worker> підписав контракт для <farm>.</green>", dismissed: "<yellow><worker> звільнений.</yellow>" } }
-trade: { authentic-only: "<red>Приймаються лише справжні зареєстровані партії.</red>", dry-only: "<red>Купують лише правильно сухі або витримані партії.</red>", quality-too-low: "<red>Потрібен клас не нижче <quality>.</red>", strain-not-wanted: "<yellow>На цей сорт зараз немає попиту.</yellow>", daily-limit: "<red>Денний ліміт вичерпано.</red>", server-budget: "<yellow>Денний бюджет смарагдів вичерпано.</yellow>", purchase-complete: "<green>Куплено <item> за <price>.</green>", sale-complete: "<green>Продано <item> за <price>.</green>", price-changed: "<yellow>Ціна змінилася з <old_price> на <new_price>.</yellow>" }
+trade:
+  authentic-only: "<red>Приймаються лише справжні зареєстровані партії.</red>"
+  dry-only: "<red>Купують лише правильно сухі або витримані партії.</red>"
+  quality-too-low: "<red>Потрібен клас не нижче <quality>.</red>"
+  strain-not-wanted: "<yellow>На цей сорт зараз немає попиту.</yellow>"
+  daily-limit: "<red>Денний ліміт вичерпано.</red>"
+  server-budget: "<yellow>Денний бюджет смарагдів вичерпано.</yellow>"
+  purchase-complete: "<green>Куплено <item> за <price>.</green>"
+  sale-complete: "<green>Продано <item> за <price>.</green>"
+  price-changed: "<yellow>Ціна змінилася з <old_price> на <new_price>.</yellow>"
+  empty-hand: "<red>Тримай одну зареєстровану партію в основній руці.</red>"
+  invalid-amount: "<red>Одночасно можна продати лише одну унікальну партію.</red>"
+  unregistered-item: "<red>Цей підписаний предмет не зареєстровано.</red>"
+  already-used: "<red>Цей предмет партії вже використано.</red>"
+  item-reserved: "<yellow>Цю партію зарезервовано іншою операцією.</yellow>"
+  missing-batch: "<red>Пов’язаної партії продукту більше не існує.</red>"
+  batch-state-mismatch: "<red>Тип предмета не відповідає збереженому стану партії.</red>"
+  fresh-batch-requires-drying: "<red>Свіжі партії потрібно висушити перед продажем.</red>"
+  unsupported-batch-state: "<red>Травник не приймає продукт у цьому стані.</red>"
 farm:
   roles: { owner: "Власник", manager: "Керівник", grower: "Садівник", worker-manager: "Бригадир", member: "Учасник", visitor: "Відвідувач" }
   permissions: { plant: "Садити", water: "Поливати", harvest: "Збирати", use-storage: "Користуватися сховищами", use-processing: "Користуватися обладнанням", manage-workers: "Керувати працівниками", manage-members: "Керувати учасниками", manage-settings: "Змінювати налаштування", upgrade: "Поліпшувати плантацію" }
@@ -212,7 +250,7 @@ book:
     page_4: "<dark_green><bold>4. Полив</bold></dark_green><newline><newline>Зволоження — вигаданий показник; шкодять нестача й надлишок."
     page_5: "<dark_green><bold>5. Проблеми</bold></dark_green><newline><newline>Застосуй правильне чищення, лікування, живлення або ремонт. Штрафи зростають поступово."
     page_6: "<dark_green><bold>6. Збір</bold></dark_green><newline><newline>Найкраще вікно дає масу та якість і створює підписану партію."
-    page_7: "<dark_green><bold>7. Сушіння</bold></dark_green><newline><newline>Поклади свіжу партію в чисту сушарку й дістань на стадії Готова."
+    page_7: "<dark_green><bold>7. Сушіння</bold></dark_green><newline><newline>Поклади свіжу партію в чисту сушарку й дістань на стадії Готова. Звичайний шлях продажу: збір → свіжа партія → сушарка → суха партія → продаж травнику."
     page_8: "<dark_green><bold>8. Витримка</bold></dark_green><newline><newline>Додаткова витримка поліпшує якість, але занедбання її знижує."
     page_9: "<dark_green><bold>9. Якість</bold></dark_green><newline><newline>Якість утворюють генетика, догляд, збір, чистота, обробка, навички й забруднення."
     page_10: "<dark_green><bold>10. Подрібнення</bold></dark_green><newline><newline>Подрібнювач обробляє суху партію та зберігає походження."

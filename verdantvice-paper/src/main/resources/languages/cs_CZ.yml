@@ -229,14 +229,14 @@ item:
   rolling_paper: { name: "<white>Balicí papír</white>", description: "<gray>Fiktivní součást minihry.</gray>" }
   filter: { name: "<yellow>Filtr</yellow>", description: "<gray>Povinná součást minihry.</gray>" }
   cosmetic_additive: { name: "<light_purple>Kosmetická přísada</light_purple>", description: "<gray>Volitelná herní ozdoba.</gray>" }
-  package: { name: "<gold>Balení produktu</gold>", description: "<gray>Ověřené balení jedné várky.</gray>" }
+  package: { name: "<gold>Balení produktu • <strain_name></gold>", description: "<gray>Hmotnost: <weight> • Třída: <quality_grade> • Várka: <batch_id></gray>" }
   plantation_contract: { name: "<gold>Farmářská smlouva</gold>", description: "<gray>Umožní najmout Experta Verdant.</gray>" }
-  fresh_batch: { name: "<green>Čerstvá várka • <strain></green>", description: "<gray>Hmotnost: <weight> • Potenciál: <quality></gray>" }
-  dry_batch: { name: "<gold>Suchá várka • <strain></gold>", description: "<gray>Suchá hmotnost: <weight> • Třída: <quality></gray>" }
-  cured_batch: { name: "<light_purple>Vyzrálá várka • <strain></light_purple>", description: "<gray>Zrání: <duration> • Třída: <quality></gray>" }
-  ground_product: { name: "<yellow>Drcený produkt • <strain></yellow>", description: "<gray>Materiál z várky <batch_id>.</gray>" }
-  mixture: { name: "<aqua>Směs Verdant</aqua>", description: "<gray>Směs <components> fiktivních odrůd.</gray>" }
-  joint: { name: "<green>Rolka Verdant • <quality></green>", description: "<gray>Výsledek minihry z várky <batch_id>.</gray>" }
+  fresh_batch: { name: "<green>Čerstvá várka • <strain_name></green>", description: "<gray>Čerstvá hmotnost: <fresh_weight> • Kvalita: <quality> • Stav: <state></gray>" }
+  dry_batch: { name: "<gold>Suchá várka • <strain_name></gold>", description: "<gray>Suchá hmotnost: <dry_weight> • Třída: <quality_grade> • Stav: <state></gray>" }
+  cured_batch: { name: "<light_purple>Vyzrálá várka • <strain_name></light_purple>", description: "<gray>Suchá hmotnost: <dry_weight> • Třída: <quality_grade> • Zrání: <duration></gray>" }
+  ground_product: { name: "<yellow>Mletý produkt • <strain_name></yellow>", description: "<gray>Hmotnost: <weight> • Třída: <quality_grade> • Várka: <batch_id></gray>" }
+  mixture: { name: "<aqua>Směs Verdant • <strain_name></aqua>", description: "<gray>Hmotnost: <weight> • Odrůdy: <components> • Stav: <state></gray>" }
+  joint: { name: "<green>Verdant role • <quality></green>", description: "<gray>Hmotnost: <weight> • Stav: <state> • Várka: <batch_id></gray>" }
   basics_book: { name: "<gold>Základy VerdantVice</gold>", description: "<gray>Úplný průvodce v 16 krocích.</gray>" }
   plant_health_book: { name: "<green>Zdraví a péče</green>", description: "<gray>Pokročilá příručka stavů rostlin.</gray>" }
   strain_guide_book: { name: "<light_purple>Průvodce odrůdami</light_purple>", description: "<gray>Vlastnosti a vzácnosti odrůd.</gray>" }
@@ -247,6 +247,26 @@ item:
   guide_book: { name: "<gold>Základy VerdantVice</gold>", description: "<gray>Lokalizovaný průvodce 16 kroky.</gray>" }
   advanced_book: { name: "<aqua>Pokročilý průvodce Verdant</aqua>", description: "<gray>Podepsaná odborná kniha.</gray>" }
   lore: { strain: "<gray>Odrůda:</gray> <white><strain></white>", quality: "<gray>Kvalita:</gray> <white><quality></white>" }
+  states:
+    fresh: "Čerstvá"
+    drying: "Sušení"
+    dried: "Suchá"
+    curing: "Zrání"
+    cured: "Vyzrálá"
+    ground: "Mletá"
+    mixed: "Smíšená"
+    rolled: "Svinutá"
+    spoiled: "Zkažená"
+  quality_grades:
+    spoiled: "Zkažená"
+    very-poor: "Velmi slabá"
+    street: "Pouliční"
+    common: "Běžná"
+    good: "Dobrá"
+    premium: "Prémiová"
+    top-shelf: "Nejvyšší třída"
+    perfect-batch: "Dokonalá várka"
+    verdant-grade: "Třída Verdant"
 plant:
   stages: { seed: "Semeno", sprout: "Klíček", seedling: "Sazenice", vegetative: "Růst", maturing: "Dozrávání", ready: "Připravená", overripe: "Přezrálá", spoiled: "Zkažená" }
   conditions:
@@ -301,7 +321,25 @@ herbalist:
   tiers: { novice: "Nováček", apprentice: "Učeň", journeyman: "Tovaryš", expert: "Expert", master: "Mistr", verdant-expert: "Expert Verdant" }
   specializations: { seeds: "Prodejce semen", tools: "Dodavatel vybavení", buyer: "Výkupce kvality", contracts: "Zprostředkovatel zakázek" }
   hire: { unavailable: "<red>Najmout lze jen Experta Verdant.</red>", already-employed: "<red>Bylinkář už pracuje.</red>", contract-required: "<yellow>Potřebuješ platnou smlouvu.</yellow>", signed: "<green><worker> podepsal smlouvu pro <farm>.</green>", dismissed: "<yellow><worker> byl propuštěn.</yellow>" }
-trade: { authentic-only: "<red>Přijímány jsou jen pravé registrované várky.</red>", dry-only: "<red>Výkup je jen pro správně suché nebo vyzrálé várky.</red>", quality-too-low: "<red>Je potřeba alespoň <quality>.</red>", strain-not-wanted: "<yellow>Po této odrůdě nyní není poptávka.</yellow>", daily-limit: "<red>Denní limit byl vyčerpán.</red>", server-budget: "<yellow>Denní rozpočet smaragdů je vyčerpán.</yellow>", purchase-complete: "<green>Koupeno <item> za <price>.</green>", sale-complete: "<green>Prodáno <item> za <price>.</green>", price-changed: "<yellow>Cena se změnila z <old_price> na <new_price>.</yellow>" }
+trade:
+  authentic-only: "<red>Přijímány jsou jen pravé registrované várky.</red>"
+  dry-only: "<red>Výkup je jen pro správně suché nebo vyzrálé várky.</red>"
+  quality-too-low: "<red>Je potřeba alespoň <quality>.</red>"
+  strain-not-wanted: "<yellow>Po této odrůdě nyní není poptávka.</yellow>"
+  daily-limit: "<red>Denní limit byl vyčerpán.</red>"
+  server-budget: "<yellow>Denní rozpočet smaragdů je vyčerpán.</yellow>"
+  purchase-complete: "<green>Koupeno <item> za <price>.</green>"
+  sale-complete: "<green>Prodáno <item> za <price>.</green>"
+  price-changed: "<yellow>Cena se změnila z <old_price> na <new_price>.</yellow>"
+  empty-hand: "<red>Drž jednu registrovanou várku v hlavní ruce.</red>"
+  invalid-amount: "<red>Najednou lze prodat jen jednu unikátní várku.</red>"
+  unregistered-item: "<red>Tento podepsaný předmět není registrován.</red>"
+  already-used: "<red>Tento předmět várky už byl použit.</red>"
+  item-reserved: "<yellow>Tato várka je rezervována jinou operací.</yellow>"
+  missing-batch: "<red>Propojená produktová várka již neexistuje.</red>"
+  batch-state-mismatch: "<red>Typ předmětu neodpovídá uloženému stavu várky.</red>"
+  fresh-batch-requires-drying: "<red>Čerstvé várky musí být před prodejem usušeny.</red>"
+  unsupported-batch-state: "<red>Bylinkář tento stav produktu nepřijímá.</red>"
 farm:
   roles: { owner: "Vlastník", manager: "Správce", grower: "Pěstitel", worker-manager: "Vedoucí", member: "Člen", visitor: "Návštěvník" }
   permissions: { plant: "Sázet", water: "Zalévat", harvest: "Sklízet", use-storage: "Používat sklady", use-processing: "Používat zařízení", manage-workers: "Spravovat pracovníky", manage-members: "Spravovat členy", manage-settings: "Měnit nastavení", upgrade: "Vylepšovat farmu" }
@@ -376,7 +414,7 @@ book:
     page_4: "<dark_green><bold>4. Zálivka</bold></dark_green><newline><newline>Zálivka je fiktivní ukazatel; škodí její nedostatek i přebytek."
     page_5: "<dark_green><bold>5. Problémy</bold></dark_green><newline><newline>Použij správné čištění, léčbu, výživu nebo opravu. Postihy rostou postupně."
     page_6: "<dark_green><bold>6. Sklizeň</bold></dark_green><newline><newline>Vybrané okno dává nejlepší hmotnost a kvalitu a vytvoří podepsanou várku."
-    page_7: "<dark_green><bold>7. Sušení</bold></dark_green><newline><newline>Čerstvou várku vlož do čistého sušáku a vyjmi ve fázi Hotová."
+    page_7: "<dark_green><bold>7. Sušení</bold></dark_green><newline><newline>Čerstvou várku vlož do čistého sušáku a vyjmi ve fázi Hotová. Běžná cesta prodeje je: sklizeň → čerstvá várka → sušák → suchá várka → prodej bylinkáři."
     page_8: "<dark_green><bold>8. Zrání</bold></dark_green><newline><newline>Volitelné zrání může zlepšit kvalitu, ale zanedbání ji sníží."
     page_9: "<dark_green><bold>9. Kvalita</bold></dark_green><newline><newline>Kvalitu tvoří genetika, péče, sklizeň, čistota, zpracování, dovednosti a kontaminace."
     page_10: "<dark_green><bold>10. Drcení</bold></dark_green><newline><newline>Drtič zpracuje suchou várku a zachová její původ."

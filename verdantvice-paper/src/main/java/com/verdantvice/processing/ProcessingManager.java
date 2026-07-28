@@ -331,9 +331,7 @@ public final class ProcessingManager {
                         player,
                         CustomItemType.MIXTURE,
                         player.getUniqueId(),
-                        mixed.batchId(),
-                        mixed.strainComposition().keySet().stream().sorted().findFirst().orElse(""),
-                        mixed.qualityScore()
+                        mixed
                 ))
                 .thenCompose(item -> onMain(() -> {
                     removeInstance(player, firstData.uniqueInstanceId());
@@ -485,9 +483,7 @@ public final class ProcessingManager {
                         player,
                         itemType,
                         data.ownerUuid(),
-                        updated.batchId(),
-                        dominantStrain(updated),
-                        score
+                        updated
                 ))
                 .thenCompose(replacement -> onMain(() -> {
                     removeInstance(player, data.uniqueInstanceId());
@@ -683,9 +679,7 @@ public final class ProcessingManager {
                         player,
                         CustomItemType.GROUND_PRODUCT,
                         player.getUniqueId(),
-                        transformed.batchId(),
-                        dominantStrain(transformed),
-                        transformed.qualityScore()
+                        transformed
                 ))
                 .whenComplete((output, failure) -> onMain(() -> {
                     if (failure != null) {
@@ -732,9 +726,7 @@ public final class ProcessingManager {
                     player,
                     outputType,
                     player.getUniqueId(),
-                    updated.batchId(),
-                    dominantStrain(updated),
-                    updated.qualityScore()
+                    updated
             ).thenCompose(item -> deleteJob(job).thenApply(ignored -> item))
                     .whenComplete((item, deliveryFailure) -> onMain(() -> {
                         if (deliveryFailure != null) {
@@ -1108,9 +1100,7 @@ public final class ProcessingManager {
                         player,
                         CustomItemType.JOINT,
                         player.getUniqueId(),
-                        finished.batchId(),
-                        dominantStrain(finished),
-                        Math.min(100.0, finished.qualityScore() * rolled.valueMultiplier())
+                        finished
                 ))
                 .whenComplete((item, failure) -> onMain(() -> {
                     rollingSessions.remove(player.getUniqueId());
@@ -1162,9 +1152,7 @@ public final class ProcessingManager {
                         player,
                         session.sourceType(),
                         player.getUniqueId(),
-                        session.source().batchId(),
-                        dominantStrain(session.source()),
-                        session.source().qualityScore()
+                        session.source()
                 )
         );
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))

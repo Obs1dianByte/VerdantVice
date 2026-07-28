@@ -138,6 +138,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
         }
         plugin.getServer().getPluginManager().registerEvents(herbalistListener, plugin);
         plugin.getServer().getPluginManager().registerEvents(menuListener, plugin);
+        conversion.refreshLoadedHerbalists();
         long minutes = Math.max(1L,
                 configs.get("market.yml").getLong("update-minutes", 30L));
         long ticks = Math.multiplyExact(minutes, 60L * 20L);
@@ -185,8 +186,30 @@ public final class HerbalistMarketManager implements AutoCloseable {
         return conversion;
     }
 
+    public void restoreOrRefreshHerbalist(Villager villager) {
+        requireMainThread();
+        conversion.restoreOrRefresh(villager).exceptionally(failure -> {
+            plugin.getLogger().log(
+                    Level.WARNING,
+                    "Could not restore herbalist " + villager.getUniqueId(),
+                    unwrap(failure));
+            return Optional.empty();
+        });
+    }
+
+    public void refreshHerbalistName(Villager villager) {
+        requireMainThread();
+        conversion.refreshName(villager);
+    }
+
+    public void refreshNames() {
+        requireMainThread();
+        conversion.refreshLoadedHerbalists();
+    }
+
     public void handleInteraction(Player player, Villager villager) {
         requireMainThread();
+        if (conversion.isMarkedHerbalist(villager)) conversion.refreshName(villager);
         conversion.evaluate(villager).whenComplete((evaluation, failure) ->
                 runMain(() -> {
                     if (!player.isOnline()) return;
@@ -453,10 +476,6 @@ public final class HerbalistMarketManager implements AutoCloseable {
 
     private void prepareSale(Player player, UUID herbalistUuid) {
         ItemStack held = player.getInventory().getItemInMainHand().clone();
-        if (held.getType() == Material.AIR || held.getAmount() != 1) {
-            player.sendMessage(translations.component(player, "trade.authentic-only"));
-            return;
-        }
         trades.prepare(held, player.getUniqueId(), herbalistUuid)
                 .whenComplete((sale, failure) -> runMain(() -> {
                     if (!player.isOnline()) return;
@@ -491,7 +510,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
         Optional<EscrowedItem> escrow = takeSignedItem(player, sale.itemInstanceId());
         if (escrow.isEmpty()) {
             endMutation(player);
-            player.sendMessage(translations.component(player, "trade.authentic-only"));
+            player.sendMessage(translations.component(player, "trade.already-used"));
             return;
         }
         player.closeInventory();
@@ -883,65 +902,90 @@ public final class HerbalistMarketManager implements AutoCloseable {
             FailureContext context
     ) {
         Throwable cause = unwrap(failure);
-        String reason = cause.getMessage();
-        plugin.getLogger().log(Level.WARNING, "Herbalist action failed", cause);
-        if (cause.getClass().getName().contains("Database")
-                || cause instanceof java.sql.SQLException) {
-            player.sendMessage(
-                    translations.component(player, "errors.database-unavailable"));
-        } else {
-            sendReason(player, reason, context);
+        if (cause instanceof com.verdantvice.trade.TradeValidationException validation) {
+            player.sendMessage(translations.component(
+                    player, validation.reason().translationKey()));
+            return;
         }
+        if (cause instanceof com.verdantvice.database.DatabaseUnavailableException
+                || cause instanceof java.sql.SQLException) {
+            plugin.getLogger().log(Level.WARNING, "Herbalist database action failed", cause);
+            player.sendMessage(translations.component(player, "errors.database-unavailable"));
+            return;
+        }
+        String key = reasonKey(cause.getMessage(), context);
+        if (key != null) {
+            Map<String, ?> placeholders = key.equals("contracts.expired")
+                    ? Map.of("contract_id", "")
+                    : Map.of();
+            player.sendMessage(translations.component(player, key, placeholders));
+            return;
+        }
+        String errorId = UUID.randomUUID().toString().substring(0, 8);
+        plugin.getLogger().log(
+                Level.WARNING, "Herbalist action failed [" + errorId + "]", cause);
+        player.sendMessage(translations.component(
+                player, "errors.internal", Map.of("error_id", errorId)));
     }
 
     private void sendReason(Player player, String reason, FailureContext context) {
-        String normalized = reason == null ? "" : reason.toLowerCase(java.util.Locale.ROOT);
-        String key;
-        if (normalized.contains("daily-limit")
-                || normalized.contains("daily limit")
-                || normalized.contains("batch-limit")
-                || normalized.contains("weight-limit")
-                || normalized.contains("payout-limit")) {
-            key = "trade.daily-limit";
-        } else if (normalized.contains("server-budget")) {
-            key = "trade.server-budget";
-        } else if (normalized.contains("dry-only")
-                || normalized.contains("not-tradeable")
-                || normalized.contains("not-deliverable")) {
-            key = "trade.dry-only";
-        } else if (normalized.contains("expired") && context == FailureContext.CONTRACT) {
-            key = "contracts.expired";
-        } else if ((normalized.contains("require")
-                || normalized.contains("quality")
-                || normalized.contains("strain"))
-                && context == FailureContext.CONTRACT) {
-            key = "contracts.item-not-required";
-        } else if (normalized.contains("already-claimed")) {
-            key = "contracts.already-claimed";
-        } else if (normalized.contains("contract-limit")
-                || normalized.contains("busy")) {
-            key = "errors.busy";
-        } else if (normalized.contains("authentic")
-                || normalized.contains("unregistered")
-                || normalized.contains("invalid")
-                || normalized.contains("used")
-                || normalized.contains("owner")
-                || normalized.contains("batch")) {
-            key = "trade.authentic-only";
-        } else if (context == FailureContext.CONTRACT) {
-            key = "contracts.item-not-required";
-        } else if (context == FailureContext.PURCHASE) {
-            key = "errors.insufficient-items";
-        } else {
+        String key = reasonKey(reason, context);
+        if (key == null) {
+            String errorId = UUID.randomUUID().toString().substring(0, 8);
             player.sendMessage(translations.component(
-                    player, "errors.internal",
-                    Map.of("error_id", UUID.randomUUID().toString().substring(0, 8))));
+                    player, "errors.internal", Map.of("error_id", errorId)));
             return;
         }
         Map<String, ?> placeholders = key.equals("contracts.expired")
                 ? Map.of("contract_id", "")
                 : Map.of();
         player.sendMessage(translations.component(player, key, placeholders));
+    }
+
+    static String reasonKey(String reason, FailureContext context) {
+        String normalized = reason == null ? "" : reason.toLowerCase(java.util.Locale.ROOT);
+        if (normalized.contains("daily-limit")
+                || normalized.contains("daily limit")
+                || normalized.contains("batch-limit")
+                || normalized.contains("weight-limit")
+                || normalized.contains("payout-limit")) return "trade.daily-limit";
+        if (normalized.contains("server-budget")) return "trade.server-budget";
+        if (normalized.contains("fresh-batch") || normalized.contains("requires-drying")) {
+            return "trade.fresh-batch-requires-drying";
+        }
+        if (normalized.contains("batch-state") || normalized.contains("unsupported-sale-state")) {
+            return "trade.unsupported-batch-state";
+        }
+        if (normalized.contains("dry-only")
+                || normalized.contains("not-tradeable")
+                || normalized.contains("not-deliverable")) return "trade.dry-only";
+        if (normalized.contains("wrong-owner")) return "errors.wrong-owner";
+        if (normalized.contains("already-used") || normalized.contains("consumed")) {
+            return "trade.already-used";
+        }
+        if (normalized.contains("reserved")) return "trade.item-reserved";
+        if (normalized.contains("unregistered")) return "trade.unregistered-item";
+        if (normalized.contains("missing-batch") || normalized.contains("unknown-batch")) {
+            return "trade.missing-batch";
+        }
+        if (normalized.contains("authentic")
+                || normalized.contains("signature")
+                || normalized.contains("modified")
+                || normalized.contains("invalid-or-used-item")) return "trade.authentic-only";
+        if (normalized.contains("expired") && context == FailureContext.CONTRACT) {
+            return "contracts.expired";
+        }
+        if ((normalized.contains("require")
+                || normalized.contains("quality")
+                || normalized.contains("strain"))
+                && context == FailureContext.CONTRACT) return "contracts.item-not-required";
+        if (normalized.contains("already-claimed")) return "contracts.already-claimed";
+        if (normalized.contains("contract-limit") || normalized.contains("busy")) {
+            return "errors.busy";
+        }
+        if (context == FailureContext.CONTRACT) return "contracts.item-not-required";
+        if (context == FailureContext.PURCHASE) return "errors.insufficient-items";
+        return null;
     }
 
     private void removeExpiredQuotes() {
