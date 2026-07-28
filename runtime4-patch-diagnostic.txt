@@ -1,0 +1,41 @@
+branch=fix/runtime-items-trade-localization
+head=445197e7201d9abd334d69e9da99a216b8d38c9c
+
+Mismatches:
+- CONFIGURATION.md: oczekiwano blob ea764454481cad721cd30e24e7a49a0f3f819eb5, HEAD ma 096ddcf9d58160a0755094e018f54eac07023080
+- README.md: oczekiwano blob b47a8825ba7a20492e6ce811142e8c9384baf18f, HEAD ma b93f6f0c5c27a032781a3f69093203378b9a000c
+- verdantvice-core/src/main/java/com/verdantvice/trade/TradeLimitService.java: oczekiwano blob fc2cfce27ce1814fafab53b8e9b4af9eda58f20a, HEAD ma 127706fce776891f5bbad3dc50189e307000012d
+- verdantvice-paper/src/main/java/com/verdantvice/VerdantVicePlugin.java: oczekiwano blob d745fe2d034988ccc7d22be330950a45d20bba78, HEAD ma c8101bf16990729a53e276fb764a73c6197cd4fb
+- verdantvice-paper/src/main/java/com/verdantvice/command/VerdantViceCommand.java: oczekiwano blob 70b912bc023827e0bd0be6885ba4c680f0202b21, HEAD ma bdab3b3918fcab705c36befef614aee8ddb4e12c
+- verdantvice-paper/src/main/java/com/verdantvice/gui/GuiListener.java: oczekiwano blob d3667a5599a36e03528d1ecf23d6631e31cb648b, HEAD ma 838f0e3d068e0f6cb0960f77ba93543306b427eb
+- verdantvice-paper/src/main/java/com/verdantvice/herbalist/HerbalistConversionService.java: oczekiwano blob 5b719cf1dba79760c6756644c35af90a18f40c40, HEAD ma 05c55816118d5c82c3fa9b5d67a8154e43ecaa9b
+- verdantvice-paper/src/main/java/com/verdantvice/herbalist/HerbalistListener.java: oczekiwano blob cf08d6601fa7f92b90a6eb346181073216dce7ff, HEAD ma d428cf6707d67487a49ffb19b8adb5bf1ad4843e
+- verdantvice-paper/src/main/java/com/verdantvice/herbalist/HerbalistMarketManager.java: oczekiwano blob 7028e1bbfefde2debbfacc949d8d2d0b293d70a0, HEAD ma e1071ee1bd58eb86f8517da8c9f05e635aa0909f
+- verdantvice-paper/src/main/java/com/verdantvice/i18n/TranslationService.java: oczekiwano blob 801dd5911378d2bb8c4f56899222a199350b9c83, HEAD ma 7d6862c28a4a1a9af1ef2e53bc01c13385b21812
+- verdantvice-paper/src/main/java/com/verdantvice/item/CustomItemFactory.java: oczekiwano blob fbdfff9050093b34e2b2caef65eec15e5d17b5fa, HEAD ma 7cd6dfaa183846499c71618b8fa5c5688e605b0a
+- verdantvice-paper/src/main/java/com/verdantvice/plant/PlantManager.java: oczekiwano blob 6418ba7c4ac7e09c95d324446c84a5a69c21bd4d, HEAD ma a83dfde967472d9ed0852f73e98a7ccd316f4d18
+- verdantvice-paper/src/main/java/com/verdantvice/processing/ProcessingManager.java: oczekiwano blob 692166ce5ff6c8b09e9826393f755e13e24386db, HEAD ma bbddc01ed44f52be7c15e24d9ed7c91361e81bf6
+- verdantvice-paper/src/main/java/com/verdantvice/security/CustomItemType.java: oczekiwano blob 121a101b457c894e9a1bfd30eaf96ac98173634c, HEAD ma db06a42b06ce3f19197c538dd8e402f88bdedda3
+- verdantvice-paper/src/main/java/com/verdantvice/security/ItemSecurityListener.java: oczekiwano blob 6b655fd31a3211164f79aa2fb246270a94b1157f, HEAD ma 88ee3400d1cfa67e555362325f37a70660ca09e3
+- verdantvice-paper/src/main/java/com/verdantvice/security/SecureItemService.java: oczekiwano blob 387fa70edbbce12f1f09dc85cb0a1ebe15ae48f1, HEAD ma 2555399d573d76bac0f335808019cb21c7db4020
+- verdantvice-paper/src/main/java/com/verdantvice/trade/PaperTradeService.java: oczekiwano blob 48113dedef6ee77301fababf1b54b05706db12e6, HEAD ma 9a621ff94eb660f72a1384b61d547de499bb24f9
+- verdantvice-paper/src/main/java/com/verdantvice/trade/PreparedSale.java: oczekiwano blob 56ab00daf4e0edc7d181fb6422632bb8ddf2d8da, HEAD ma 10ab7fb7968d2ee0009fa684cb671e1f7b55959d
+- verdantvice-paper/src/main/java/com/verdantvice/trade/TradeRepository.java: oczekiwano blob 6c8a0f8c07578ce596e5c6b9c94951cb91f27f36, HEAD ma 6be111f58b1f1ad85d238be1dfe4c0b253028b0e
+- verdantvice-paper/src/main/java/com/verdantvice/worker/ai/WorkerActionService.java: oczekiwano blob 8a15f632474e78b69efe2dd1cc6e116ff225e976, HEAD ma c77e6dafd8ebb749aa4150b4de417a9375e5f1bd
+- verdantvice-paper/src/main/resources/languages/cs_CZ.yml: oczekiwano blob 48cdc7f562632ffc8deed9736692b724d68bb4d5, HEAD ma e4c12644c8d2ab31045eac7cf7bc55c4f6eb5f25
+- verdantvice-paper/src/main/resources/languages/de_DE.yml: oczekiwano blob 734cdbbbb83855f215a98510b006c32cf3d475b9, HEAD ma 6ae7b88b2c7c615a766f8003fc3fcdf5a7ecc599
+- verdantvice-paper/src/main/resources/languages/en_US.yml: oczekiwano blob c518ee0847f698df85ed1fa06859b457274cc190, HEAD ma 569e2dfcab827064f0ed7d1120f567595e536649
+- verdantvice-paper/src/main/resources/languages/es_ES.yml: oczekiwano blob d7e6c754c6def6080acd7752c7d64e689ea9ba09, HEAD ma 76c060547708d4fcde438e1ccabbdb224b1a6912
+- verdantvice-paper/src/main/resources/languages/pl_PL.yml: oczekiwano blob 4b0d98d5fa226cc989f9fc731644874fb6cd1f64, HEAD ma 1896ab7f61d7e4702dde48015ab32451b14ff6bd
+- verdantvice-paper/src/main/resources/languages/uk_UA.yml: oczekiwano blob d82485ddd752c5738b9a6ef2d4cfe09ddf2c4e54, HEAD ma 6a5062d2d874423c91c62f4ce32e06280a5f3b61
+- verdantvice-paper/src/main/resources/market.yml: oczekiwano blob 0030ab92efb792c61bfd6da095facdd74a89ebf8, HEAD ma 50a1c6fdc9cabca53e154df0224013c9e2bb7075
+
+git status --short:
+?? __pycache__/
+?? apply_runtime_fix.py
+?? fix_per_key_queue.bat
+?? fix_per_key_queue.py
+?? resume_runtime_fix.bat
+?? resume_runtime_fix.py
+?? runtime4-context.zip
+?? start_runtime4_fix.bat
