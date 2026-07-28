@@ -31,6 +31,8 @@ public final class PlantRepository {
 
     private final DatabaseManager database;
     private final Map<UUID, Long> versions = new ConcurrentHashMap<>();
+    private final Map<UUID, Instant> persistedUpdates = new ConcurrentHashMap<>();
+    private final PerKeyAsyncQueue<UUID> writeQueue = new PerKeyAsyncQueue<>();
 
     public PlantRepository(DatabaseManager database) {
         this.database = Objects.requireNonNull(database, "database");
@@ -38,10 +40,13 @@ public final class PlantRepository {
 
     public CompletableFuture<List<StoredPlant>> loadAll() {
         return database.query(SELECT_ALL, this::map).thenApply(plants -> {
-            plants.forEach(stored -> versions.put(
-                    stored.plant().uniqueId(),
-                    stored.rowVersion()
-            ));
+            versions.clear();
+            persistedUpdates.clear();
+            plants.forEach(stored -> {
+                UUID plantId = stored.plant().uniqueId();
+                versions.put(plantId, stored.rowVersion());
+                persistedUpdates.put(plantId, stored.plant().lastUpdatedAt());
+            });
             return plants;
         });
     }
@@ -52,12 +57,24 @@ public final class PlantRepository {
                 this::map,
                 plantId
         ).thenApply(optional -> {
-            optional.ifPresent(stored -> versions.put(plantId, stored.rowVersion()));
+            optional.ifPresent(stored -> {
+                versions.put(plantId, stored.rowVersion());
+                persistedUpdates.put(plantId, stored.plant().lastUpdatedAt());
+            });
             return optional;
         });
     }
 
     public CompletableFuture<Void> create(Plant plant, GeneticProfile genetics) {
+        Objects.requireNonNull(plant, "plant");
+        Objects.requireNonNull(genetics, "genetics");
+        return writeQueue.submit(
+                plant.uniqueId(),
+                () -> createNow(plant, genetics)
+        );
+    }
+
+    private CompletableFuture<Void> createNow(Plant plant, GeneticProfile genetics) {
         String traits = DomainJson.genetics(genetics);
         String geneticSignature = sha256(traits);
         return database.transaction(session -> {
@@ -97,11 +114,38 @@ public final class PlantRepository {
                     plant.plantedAt()
             );
             return null;
-        }).thenRun(() -> versions.put(plant.uniqueId(), 0L));
+        }).thenRun(() -> {
+            versions.put(plant.uniqueId(), 0L);
+            persistedUpdates.put(plant.uniqueId(), plant.lastUpdatedAt());
+        });
     }
 
     public CompletableFuture<Void> save(Plant plant, String eventType) {
-        long expected = versions.getOrDefault(plant.uniqueId(), 0L);
+        return saveVersioned(plant, eventType).thenAccept(ignored -> {
+        });
+    }
+
+    public CompletableFuture<Long> saveVersioned(Plant plant, String eventType) {
+        Objects.requireNonNull(plant, "plant");
+        return writeQueue.submit(
+                plant.uniqueId(),
+                () -> saveNow(plant, eventType)
+        );
+    }
+
+    private CompletableFuture<Long> saveNow(Plant plant, String eventType) {
+        UUID plantId = plant.uniqueId();
+        Instant persistedAt = persistedUpdates.get(plantId);
+        if (persistedAt != null && plant.lastUpdatedAt().isBefore(persistedAt)) {
+            return CompletableFuture.failedFuture(
+                    new ConcurrentPlantModificationException(
+                            "Refusing stale plant update for " + plantId
+                                    + "; persisted=" + persistedAt
+                                    + ", attempted=" + plant.lastUpdatedAt()
+                    )
+            );
+        }
+        long expected = versions.getOrDefault(plantId, 0L);
         return database.transaction(session -> {
             int changed = session.update(
                     """
@@ -133,27 +177,43 @@ public final class PlantRepository {
                     plant.harvestWindowEnd(),
                     plant.farmId().orElse(null),
                     plant.workerAssigned().orElse(null),
-                    plant.uniqueId(),
+                    plantId,
                     expected
             );
             if (changed != 1) {
-                throw new SQLException("Concurrent plant modification: " + plant.uniqueId());
+                throw new ConcurrentPlantModificationException(
+                        "Concurrent plant modification: " + plantId
+                                + " (expected row_version=" + expected + ')'
+                );
             }
             if (eventType != null && !eventType.isBlank()) {
                 session.update(
                         "INSERT INTO plant_events "
                                 + "(plant_uuid, event_type, event_data_json, actor_uuid, "
                                 + "idempotency_key, created_at) VALUES (?, ?, NULL, NULL, NULL, ?)",
-                        plant.uniqueId(),
+                        plantId,
                         eventType,
                         plant.lastUpdatedAt()
                 );
             }
             return null;
-        }).thenRun(() -> versions.replace(plant.uniqueId(), expected, expected + 1L));
+        }).thenApply(ignored -> {
+            long nextVersion = expected + 1L;
+            versions.put(plantId, nextVersion);
+            persistedUpdates.put(plantId, plant.lastUpdatedAt());
+            return nextVersion;
+        });
     }
 
     public CompletableFuture<Boolean> delete(UUID plantId, String reason, UUID actor) {
+        Objects.requireNonNull(plantId, "plantId");
+        return writeQueue.submit(
+                plantId,
+                () -> deleteNow(plantId, reason, actor)
+        );
+    }
+
+    private CompletableFuture<Boolean> deleteNow(UUID plantId, String reason, UUID actor) {
         long expected = versions.getOrDefault(plantId, 0L);
         return database.transaction(session -> {
             if (reason != null) {
@@ -177,28 +237,33 @@ public final class PlantRepository {
         }).thenApply(deleted -> {
             if (deleted) {
                 versions.remove(plantId);
+                persistedUpdates.remove(plantId);
             }
             return deleted;
         });
+    }
+
+    int activeWriteQueues() {
+        return writeQueue.activeKeys();
     }
 
     private void insertPlant(com.verdantvice.database.SqlSession session, Plant plant)
             throws SQLException {
         session.update(
                 """
-                INSERT INTO plants (
-                  plant_uuid, owner_uuid, world_uuid, block_x, block_y, block_z,
-                  chunk_x, chunk_z, strain_id, genetic_profile_id, growth_stage,
-                  growth_progress, health, hydration, nutrition, light_level, stress,
-                  cleanliness, disease_id, pest_level, resistance, yield_potential,
-                  quality_potential, planted_at, last_updated_at, last_watered_at,
-                  harvest_window_start, harvest_window_end, farm_id, worker_assigned,
-                  state_json, row_version
-                ) VALUES (
-                  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                  ?, ?, ?, ?, ?, ?, ?, ?, NULL, 0
-                )
-                """,
+                        INSERT INTO plants (
+                          plant_uuid, owner_uuid, world_uuid, block_x, block_y, block_z,
+                          chunk_x, chunk_z, strain_id, genetic_profile_id, growth_stage,
+                          growth_progress, health, hydration, nutrition, light_level, stress,
+                          cleanliness, disease_id, pest_level, resistance, yield_potential,
+                          quality_potential, planted_at, last_updated_at, last_watered_at,
+                          harvest_window_start, harvest_window_end, farm_id, worker_assigned,
+                          state_json, row_version
+                        ) VALUES (
+                          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                          ?, ?, ?, ?, ?, ?, ?, ?, NULL, 0
+                        )
+                        """,
                 plant.uniqueId(),
                 plant.ownerUuid(),
                 plant.position().worldUuid(),
@@ -228,8 +293,7 @@ public final class PlantRepository {
                 plant.harvestWindowStart(),
                 plant.harvestWindowEnd(),
                 plant.farmId().orElse(null),
-                plant.workerAssigned().orElse(null)
-        );
+                plant.workerAssigned().orElse(null));
     }
 
     private StoredPlant map(ResultSet result) throws SQLException {
@@ -238,8 +302,7 @@ public final class PlantRepository {
                 geneticId,
                 result.getString("genetic_class"),
                 result.getString("traits_json"),
-                Instant.ofEpochMilli(result.getLong("genetic_created_at"))
-        );
+                Instant.ofEpochMilli(result.getLong("genetic_created_at")));
         Instant plantedAt = Instant.ofEpochMilli(result.getLong("planted_at"));
         Plant plant = new Plant(
                 UUID.fromString(result.getString("plant_uuid")),
@@ -248,8 +311,7 @@ public final class PlantRepository {
                         UUID.fromString(result.getString("world_uuid")),
                         result.getInt("block_x"),
                         result.getInt("block_y"),
-                        result.getInt("block_z")
-                ),
+                        result.getInt("block_z")),
                 result.getString("strain_id"),
                 geneticId,
                 GrowthStage.valueOf(result.getString("growth_stage")),
@@ -271,8 +333,7 @@ public final class PlantRepository {
                 requiredInstant(result, "harvest_window_start"),
                 requiredInstant(result, "harvest_window_end"),
                 optionalUuid(result.getString("farm_id")),
-                optionalUuid(result.getString("worker_assigned"))
-        );
+                optionalUuid(result.getString("worker_assigned")));
         return new StoredPlant(plant, genetics, result.getLong("row_version"));
     }
 
