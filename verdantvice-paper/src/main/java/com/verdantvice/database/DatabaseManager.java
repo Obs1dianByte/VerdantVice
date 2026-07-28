@@ -35,8 +35,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class DatabaseManager implements AutoCloseable {
-    private static final DateTimeFormatter BACKUP_TIME =
-            DateTimeFormatter.ofPattern("uuuuMMdd-HHmmss-SSS").withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter BACKUP_TIME = DateTimeFormatter.ofPattern("uuuuMMdd-HHmmss-SSS")
+            .withZone(ZoneOffset.UTC);
 
     private final DatabaseConfig config;
     private final Logger logger;
@@ -61,14 +61,12 @@ public final class DatabaseManager implements AutoCloseable {
             }
             if (state != LifecycleState.NEW) {
                 return CompletableFuture.failedFuture(
-                        new DatabaseUnavailableException("Database manager cannot start from state " + state)
-                );
+                        new DatabaseUnavailableException("Database manager cannot start from state " + state));
             }
             state = LifecycleState.STARTING;
             executor = createExecutor();
             backupScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(
-                    namedThreadFactory("VerdantVice-DB-Backup")
-            );
+                    namedThreadFactory("VerdantVice-DB-Backup"));
             startFuture = CompletableFuture.supplyAsync(this::initialize, executor).whenComplete((report, failure) -> {
                 if (failure == null) {
                     synchronized (lifecycleLock) {
@@ -111,8 +109,7 @@ public final class DatabaseManager implements AutoCloseable {
     public <T> CompletableFuture<List<T>> query(
             String sql,
             RowMapper<T> mapper,
-            Object... arguments
-    ) {
+            Object... arguments) {
         Object[] snapshot = arguments.clone();
         return read(session -> session.query(sql, mapper, snapshot));
     }
@@ -120,8 +117,7 @@ public final class DatabaseManager implements AutoCloseable {
     public <T> CompletableFuture<Optional<T>> queryOne(
             String sql,
             RowMapper<T> mapper,
-            Object... arguments
-    ) {
+            Object... arguments) {
         Object[] snapshot = arguments.clone();
         return read(session -> session.queryOne(sql, mapper, snapshot));
     }
@@ -134,8 +130,7 @@ public final class DatabaseManager implements AutoCloseable {
     public CompletableFuture<Path> backupNow() {
         if (config.type() != DatabaseType.SQLITE) {
             return CompletableFuture.failedFuture(
-                    new UnsupportedOperationException("Built-in backups are available only for SQLite")
-            );
+                    new UnsupportedOperationException("Built-in backups are available only for SQLite"));
         }
         return submit(session -> createSqliteBackup(session, "manual"), false, false);
     }
@@ -148,8 +143,7 @@ public final class DatabaseManager implements AutoCloseable {
                 state == LifecycleState.RUNNING,
                 current == null ? 0 : current.getActiveCount(),
                 current == null ? 0 : current.getQueue().size(),
-                current == null ? 0L : current.getCompletedTaskCount()
-        );
+                current == null ? 0L : current.getCompletedTaskCount());
     }
 
     public boolean isRunning() {
@@ -224,8 +218,8 @@ public final class DatabaseManager implements AutoCloseable {
 
     private void verifyConnection(DataSource dataSource) throws SQLException {
         try (Connection connection = dataSource.getConnection();
-             java.sql.PreparedStatement statement = connection.prepareStatement("SELECT 1");
-             java.sql.ResultSet ignored = statement.executeQuery()) {
+                java.sql.PreparedStatement statement = connection.prepareStatement("SELECT 1");
+                java.sql.ResultSet ignored = statement.executeQuery()) {
             if (!ignored.next()) {
                 throw new SQLException("Database health query returned no rows");
             }
@@ -236,19 +230,16 @@ public final class DatabaseManager implements AutoCloseable {
         Objects.requireNonNull(work, "work");
         if (state != LifecycleState.RUNNING) {
             return CompletableFuture.failedFuture(
-                    new DatabaseUnavailableException("Database is not accepting work; current state is " + state)
-            );
+                    new DatabaseUnavailableException("Database is not accepting work; current state is " + state));
         }
         ThreadPoolExecutor current = executor;
         try {
             return CompletableFuture.supplyAsync(
                     () -> runWithRetry(work, retry, transaction),
-                    current
-            );
+                    current);
         } catch (RejectedExecutionException exception) {
             return CompletableFuture.failedFuture(
-                    new DatabaseUnavailableException("Database executor queue is full", exception)
-            );
+                    new DatabaseUnavailableException("Database executor queue is full", exception));
         }
     }
 
@@ -266,14 +257,13 @@ public final class DatabaseManager implements AutoCloseable {
                 long delay = retryDelayMillis(attempt);
                 logger.log(Level.WARNING,
                         "Transient database failure; retrying operation ({0}/{1}) in {2} ms: {3}",
-                        new Object[]{attempt + 1, maximumAttempts, delay, exception.getMessage()});
+                        new Object[] { attempt + 1, maximumAttempts, delay, exception.getMessage() });
                 sleep(delay);
             }
         }
         throw new DatabaseUnavailableException(
                 "Database operation failed after " + maximumAttempts + " attempt(s)",
-                mostRecent
-        );
+                mostRecent);
     }
 
     private <T> T runAutoCommit(SqlWork<T> work) throws SQLException {
@@ -293,8 +283,7 @@ public final class DatabaseManager implements AutoCloseable {
                     connection.commit();
                 } catch (SQLException exception) {
                     throw new AmbiguousCommitException(
-                            "The database did not confirm whether the transaction committed", exception
-                    );
+                            "The database did not confirm whether the transaction committed", exception);
                 }
                 return result;
             } catch (SQLException | RuntimeException exception) {
@@ -417,16 +406,15 @@ public final class DatabaseManager implements AutoCloseable {
                 TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<>(config.executorQueueCapacity()),
                 namedThreadFactory("VerdantVice-DB"),
-                new ThreadPoolExecutor.AbortPolicy()
-        );
+                new ThreadPoolExecutor.AbortPolicy());
     }
 
     private ThreadFactory namedThreadFactory(String prefix) {
         return runnable -> {
             Thread thread = new Thread(runnable, prefix + "-" + threadSequence.incrementAndGet());
             thread.setDaemon(true);
-            thread.setUncaughtExceptionHandler((ignored, failure) ->
-                    logger.log(Level.SEVERE, "Uncaught database worker failure", failure));
+            thread.setUncaughtExceptionHandler(
+                    (ignored, failure) -> logger.log(Level.SEVERE, "Uncaught database worker failure", failure));
             return thread;
         };
     }

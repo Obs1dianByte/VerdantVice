@@ -83,8 +83,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
     private final byte[] signingSecret;
     private final NamespacedKey stationKey;
     private final PlantGrowthService growthService = new PlantGrowthService();
-    private final com.verdantvice.plant.care.PlantCareService careService =
-            new com.verdantvice.plant.care.PlantCareService();
+    private final com.verdantvice.plant.care.PlantCareService careService = new com.verdantvice.plant.care.PlantCareService();
     private final HarvestWindowService windowService = new HarvestWindowService();
     private final HarvestService harvestService = new HarvestService(windowService);
     private final BatchAuthenticityService authenticity = new BatchAuthenticityService();
@@ -92,6 +91,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
     private final Map<ChunkKey, Set<UUID>> chunkIndex = new ConcurrentHashMap<>();
     private final Set<BlockPosition> pendingStations = ConcurrentHashMap.newKeySet();
     private final ArrayDeque<UUID> updateQueue = new ArrayDeque<>();
+    private final PlantWriteTracker writeTracker = new PlantWriteTracker();
 
     private PlantDisplayService displays;
     private BukkitTask updateTask;
@@ -107,8 +107,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
             ItemSigner signer,
             StrainRegistry strains,
             SeedGeneticsResolver geneticsResolver,
-            byte[] signingSecret
-    ) {
+            byte[] signingSecret) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.configs = Objects.requireNonNull(configs, "configs");
         this.translations = Objects.requireNonNull(translations, "translations");
@@ -150,8 +149,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
         }
         long period = Math.max(
                 20L,
-                configs.main().getLong("performance.plant-update-seconds", 30L) * 20L
-        );
+                configs.main().getLong("performance.plant-update-seconds", 30L) * 20L);
         updateTask = Bukkit.getScheduler().runTaskTimer(plugin, this::processCycle, period, period);
     }
 
@@ -162,13 +160,13 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
             updateTask = null;
         }
         pendingStations.clear();
+        writeTracker.clear();
     }
 
     public CompletableFuture<Plant> plant(
             Player player,
             Block station,
-            ItemStack seedItem
-    ) {
+            ItemStack seedItem) {
         requireMainThread();
         Objects.requireNonNull(player, "player");
         Objects.requireNonNull(station, "station");
@@ -194,19 +192,16 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                     strain,
                     genetics,
                     now,
-                    farmId
-            ).withEnvironment(
-                    station.getLightLevel(),
-                    100.0,
-                    Optional.empty(),
-                    0.0
-            );
+                    farmId).withEnvironment(
+                            station.getLightLevel(),
+                            100.0,
+                            Optional.empty(),
+                            0.0);
             VerdantPlantPlacedEvent event = new VerdantPlantPlacedEvent(
                     player,
                     candidate.uniqueId(),
                     station.getLocation(),
-                    strain.id()
-            );
+                    strain.id());
             Bukkit.getPluginManager().callEvent(event);
             if (event.isCancelled()) {
                 throw new IllegalStateException("canceled");
@@ -216,8 +211,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                     .thenCompose(consumed -> repository.create(candidate, genetics))
                     .thenCompose(ignored -> onMain(() -> {
                         removeInstance(player, seed.uniqueInstanceId());
-                        PlantRepository.StoredPlant stored =
-                                new PlantRepository.StoredPlant(candidate, genetics, 0L);
+                        PlantRepository.StoredPlant stored = new PlantRepository.StoredPlant(candidate, genetics, 0L);
                         plants.put(candidate.uniqueId(), stored);
                         index(candidate);
                         updateQueue.addLast(candidate.uniqueId());
@@ -231,19 +225,16 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                                 0.25,
                                 0.2,
                                 0.25,
-                                0.0
-                        );
+                                0.0);
                         player.playSound(
                                 station.getLocation(),
                                 org.bukkit.Sound.ITEM_CROP_PLANT,
                                 0.8f,
-                                1.1f
-                        );
+                                1.1f);
                         player.sendMessage(translations.component(
                                 player,
                                 "plant.interaction.planted",
-                                Map.of("strain", strain.displayName())
-                        ));
+                                Map.of("strain", strain.displayName())));
                     }).thenApply(ignoredAgain -> candidate))
                     .whenComplete((value, failure) -> pendingStations.remove(position));
         } catch (RuntimeException failure) {
@@ -287,7 +278,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
             case PLANT_SCANNER -> inspect(player, stored, true);
             case WATERING_CAN -> water(player, stored, held);
             case CLEANING_KIT, TREATMENT_SPRAY, NUTRIENT_PACK, REPAIR_KIT ->
-                    care(player, stored, held, verification.data().itemType());
+                care(player, stored, held, verification.data().itemType());
             default -> player.sendMessage(translations.component(player, "errors.wrong-item-state"));
         }
     }
@@ -349,17 +340,14 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
             UUID plantId,
             UUID workerUuid,
             double requestedAmount,
-            double efficiency
-    ) {
+            double efficiency) {
         requireMainThread();
         Objects.requireNonNull(workerUuid, "workerUuid");
         PlantRepository.StoredPlant stored = plants.get(
-                Objects.requireNonNull(plantId, "plantId")
-        );
+                Objects.requireNonNull(plantId, "plantId"));
         if (stored == null) {
             return CompletableFuture.failedFuture(
-                    new IllegalArgumentException("target_unavailable")
-            );
+                    new IllegalArgumentException("target_unavailable"));
         }
         Instant now = Instant.now();
         Plant caughtUp = growthService.update(
@@ -368,8 +356,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 stored.genetics(),
                 now,
                 growthPolicy(),
-                true
-        ).plant();
+                true).plant();
         double adjusted = Math.max(0.01, Math.min(100.0, requestedAmount * efficiency));
         Plant updated = growthService.water(caughtUp, adjusted, now).plant()
                 .assignWorker(Optional.of(workerUuid));
@@ -384,18 +371,15 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
             UUID workerUuid,
             com.verdantvice.plant.care.CareAction action,
             double requestedAmount,
-            double efficiency
-    ) {
+            double efficiency) {
         requireMainThread();
         Objects.requireNonNull(workerUuid, "workerUuid");
         PlantRepository.StoredPlant stored = plants.get(
-                Objects.requireNonNull(plantId, "plantId")
-        );
+                Objects.requireNonNull(plantId, "plantId"));
         Objects.requireNonNull(action, "action");
         if (stored == null) {
             return CompletableFuture.failedFuture(
-                    new IllegalArgumentException("target_unavailable")
-            );
+                    new IllegalArgumentException("target_unavailable"));
         }
         Instant now = Instant.now();
         Plant caughtUp = growthService.update(
@@ -404,41 +388,35 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 stored.genetics(),
                 now,
                 growthPolicy(),
-                true
-        ).plant();
+                true).plant();
         double boundedEfficiency = Math.max(0.1, Math.min(2.0, efficiency));
         com.verdantvice.plant.care.CareResult result = switch (action) {
             case FEED -> careService.feed(
                     caughtUp,
                     requestedAmount,
                     boundedEfficiency,
-                    now
-            );
+                    now);
             case CLEAN -> careService.clean(
                     caughtUp,
                     requestedAmount,
                     boundedEfficiency,
-                    now
-            );
+                    now);
             case TREAT -> careService.treat(
                     caughtUp,
                     requestedAmount,
                     boundedEfficiency,
-                    now
-            );
+                    now);
             case REPAIR_AND_RELIEVE_STRESS ->
-                    careService.repairAndRelieveStress(
-                            caughtUp,
-                            requestedAmount,
-                            boundedEfficiency,
-                            now
-                    );
+                careService.repairAndRelieveStress(
+                        caughtUp,
+                        requestedAmount,
+                        boundedEfficiency,
+                        now);
         };
         return persistWorkerUpdate(
                 stored,
                 result.plant().assignWorker(Optional.of(workerUuid)),
-                "WORKER_CARE_" + action.name()
-        );
+                "WORKER_CARE_" + action.name());
     }
 
     /**
@@ -448,17 +426,14 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
      */
     public CompletableFuture<ProductBatch> harvestByWorker(
             UUID plantId,
-            UUID workerUuid
-    ) {
+            UUID workerUuid) {
         requireMainThread();
         Objects.requireNonNull(workerUuid, "workerUuid");
         PlantRepository.StoredPlant stored = plants.get(
-                Objects.requireNonNull(plantId, "plantId")
-        );
+                Objects.requireNonNull(plantId, "plantId"));
         if (stored == null) {
             return CompletableFuture.failedFuture(
-                    new IllegalArgumentException("target_unavailable")
-            );
+                    new IllegalArgumentException("target_unavailable"));
         }
         Plant plant = stored.plant();
         if (plant.growthStage() == GrowthStage.SEED
@@ -466,30 +441,25 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 || plant.growthStage() == GrowthStage.SEEDLING
                 || plant.growthStage() == GrowthStage.SPOILED) {
             return CompletableFuture.failedFuture(
-                    new IllegalStateException("plant_not_ready")
-            );
+                    new IllegalStateException("plant_not_ready"));
         }
         ProductBatch raw = harvestService.harvest(
                 UUID.randomUUID(),
                 plant,
                 strains.require(plant.strainId()),
                 stored.genetics(),
-                Instant.now()
-        );
+                Instant.now());
         ProductBatch batch = authenticity.sign(raw, signingSecret);
         return batchRepository.create(batch)
                 .thenCompose(ignored -> repository.delete(
                         plant.uniqueId(),
                         "WORKER_HARVESTED",
-                        workerUuid
-                ))
+                        workerUuid))
                 .thenCompose(deleted -> {
                     if (!deleted) {
                         return CompletableFuture.failedFuture(
                                 new IllegalStateException(
-                                        "Concurrent worker harvest for " + plant.uniqueId()
-                                )
-                        );
+                                        "Concurrent worker harvest for " + plant.uniqueId()));
                     }
                     return onMain(() -> {
                         plants.remove(plant.uniqueId());
@@ -513,8 +483,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
             UUID ownerUuid,
             UUID farmId,
             Block station,
-            ItemStack seedItem
-    ) {
+            ItemStack seedItem) {
         requireMainThread();
         Objects.requireNonNull(workerUuid, "workerUuid");
         Objects.requireNonNull(ownerUuid, "ownerUuid");
@@ -524,8 +493,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
         BlockPosition position = position(station.getLocation());
         if (!pendingStations.add(position)) {
             return CompletableFuture.failedFuture(
-                    new IllegalStateException("busy")
-            );
+                    new IllegalStateException("busy"));
         }
         try {
             com.verdantvice.farm.Farm farm = farms.get(farmId)
@@ -548,13 +516,11 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
             SignedItemData seed = verified.data();
             Strain strain = strains.require(seed.strain());
             if ((strain.rarity() == com.verdantvice.strain.StrainRarity.RARE
-                    || strain.rarity()
-                    == com.verdantvice.strain.StrainRarity.LEGENDARY)
+                    || strain.rarity() == com.verdantvice.strain.StrainRarity.LEGENDARY)
                     && !farm.settings().allowRareSeeds()) {
                 throw new IllegalStateException("rare_seed_disallowed");
             }
-            if (strain.rarity()
-                    == com.verdantvice.strain.StrainRarity.LEGENDARY
+            if (strain.rarity() == com.verdantvice.strain.StrainRarity.LEGENDARY
                     && farm.settings().legendarySeedRequiresApproval()) {
                 throw new IllegalStateException("legendary_seed_requires_approval");
             }
@@ -568,25 +534,21 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
             int perChunk = plantsInChunk(
                     position.worldUuid(),
                     Math.floorDiv(position.x(), 16),
-                    Math.floorDiv(position.z(), 16)
-            ).size();
+                    Math.floorDiv(position.z(), 16)).size();
             if (perChunk >= configs.main().getInt(
                     "performance.max-plants-per-chunk",
-                    32
-            )) {
+                    32)) {
                 throw new IllegalStateException("chunk_limit");
             }
             double minimum = configs.main().getDouble(
                     "limits.minimum-station-distance",
-                    2.0
-            );
+                    2.0);
             double squared = minimum * minimum;
             boolean tooClose = plants.values().stream()
                     .map(PlantRepository.StoredPlant::plant)
                     .filter(plant -> plant.position().worldUuid()
                             .equals(position.worldUuid()))
-                    .anyMatch(plant ->
-                            distanceSquared(plant.position(), position) < squared);
+                    .anyMatch(plant -> distanceSquared(plant.position(), position) < squared);
             if (tooClose) {
                 throw new IllegalStateException("too_close");
             }
@@ -599,21 +561,19 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                     strain,
                     genetics,
                     now,
-                    Optional.of(farmId)
-            ).withEnvironment(
-                    station.getLightLevel(),
-                    100.0,
-                    Optional.empty(),
-                    0.0
-            ).assignWorker(Optional.of(workerUuid));
+                    Optional.of(farmId)).withEnvironment(
+                            station.getLightLevel(),
+                            100.0,
+                            Optional.empty(),
+                            0.0)
+                    .assignWorker(Optional.of(workerUuid));
             String operation = "worker-plant:"
                     + workerUuid + ':' + seed.uniqueInstanceId();
             return secureItems.consume(
-                            seedItem,
-                            SEED_ONLY,
-                            workerUuid,
-                            operation
-                    )
+                    seedItem,
+                    SEED_ONLY,
+                    workerUuid,
+                    operation)
                     .thenCompose(consumed -> repository.create(candidate, genetics))
                     .thenCompose(ignored -> onMain(() -> {
                         plants.put(
@@ -621,9 +581,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                                 new PlantRepository.StoredPlant(
                                         candidate,
                                         genetics,
-                                        0L
-                                )
-                        );
+                                        0L));
                         index(candidate);
                         updateQueue.addLast(candidate.uniqueId());
                         if (displays != null) {
@@ -631,8 +589,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                         }
                     }))
                     .thenApply(ignored -> candidate)
-                    .whenComplete((value, failure) ->
-                            pendingStations.remove(position));
+                    .whenComplete((value, failure) -> pendingStations.remove(position));
         } catch (RuntimeException failure) {
             pendingStations.remove(position);
             return CompletableFuture.failedFuture(failure);
@@ -668,20 +625,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 stage == GrowthStage.SPOILED ? 0.0 : current.qualityPotential(),
                 Instant.now()
         );
-        return repository.save(updated, "ADMIN_STAGE")
-                .thenCompose(ignored -> onMain(() -> {
-                    plants.put(
-                            plantId,
-                            new PlantRepository.StoredPlant(
-                                    updated,
-                                    stored.genetics(),
-                                    stored.rowVersion() + 1L
-                            )
-                    );
-                    if (displays != null) {
-                        displays.update(updated);
-                    }
-                }).thenApply(mainThreadResult -> updated));
+        return persistWorkerUpdate(stored, updated, "ADMIN_STAGE");
     }
 
     public void inspect(Player player, UUID plantId, boolean advanced) {
@@ -715,6 +659,9 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
         for (int processed = 0; processed < maximum && !updateQueue.isEmpty(); processed++) {
             UUID id = updateQueue.removeFirst();
             updateQueue.addLast(id);
+            if (writeTracker.hasPending(id)) {
+                continue;
+            }
             PlantRepository.StoredPlant stored = plants.get(id);
             if (stored == null) {
                 continue;
@@ -777,8 +724,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 plant.lightLevel(),
                 plant.cleanliness(),
                 Optional.of("fictional_mold"),
-                pest
-        );
+                pest);
     }
 
     private void persistUpdate(
@@ -786,38 +732,29 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
             Plant updated,
             String eventType
     ) {
-        repository.save(updated, eventType).whenComplete((ignored, failure) -> {
-            if (failure != null) {
-                plugin.getLogger().log(Level.WARNING,
-                        "Could not persist plant " + updated.uniqueId(), failure);
+        persistStoredUpdate(oldStored, updated, eventType).whenComplete((ignored, failure) -> {
+            UUID plantId = updated.uniqueId();
+            if (failure == null) {
+                writeTracker.markSuccess(plantId);
                 return;
             }
-            onMain(() -> {
-                PlantRepository.StoredPlant current = plants.get(updated.uniqueId());
-                if (current == null || current.plant().lastUpdatedAt()
-                        .isAfter(oldStored.plant().lastUpdatedAt())) {
-                    return;
-                }
-                plants.put(
-                        updated.uniqueId(),
-                        new PlantRepository.StoredPlant(
-                                updated,
-                                oldStored.genetics(),
-                                oldStored.rowVersion() + 1L
-                        )
+            Throwable cause = unwrapFailure(failure);
+            if (!writeTracker.shouldLogFailure(plantId)) {
+                return;
+            }
+            if (cause instanceof com.verdantvice.storage.ConcurrentPlantModificationException) {
+                plugin.getLogger().log(
+                        Level.WARNING,
+                        "Plant persistence conflict for {0}: {1}",
+                        new Object[]{plantId, cause.getMessage()}
                 );
-                if (oldStored.plant().growthStage() != updated.growthStage()) {
-                    VerdantPlantStageChangeEvent event = new VerdantPlantStageChangeEvent(
-                            updated.uniqueId(),
-                            oldStored.plant().growthStage(),
-                            updated.growthStage()
-                    );
-                    Bukkit.getPluginManager().callEvent(event);
-                }
-                if (displays != null) {
-                    displays.update(updated);
-                }
-            });
+            } else {
+                plugin.getLogger().log(
+                        Level.WARNING,
+                        "Could not persist plant " + plantId,
+                        cause
+                );
+            }
         });
     }
 
@@ -826,41 +763,93 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
             Plant updated,
             String eventType
     ) {
-        return repository.save(updated, eventType)
-                .thenCompose(ignored -> onMain(() -> {
-                    PlantRepository.StoredPlant current =
-                            plants.get(updated.uniqueId());
-                    if (current == null) {
-                        throw new IllegalStateException("target_unavailable");
-                    }
-                    if (current.plant().lastUpdatedAt()
-                            .isAfter(oldStored.plant().lastUpdatedAt())) {
-                        throw new IllegalStateException(
-                                "plant_changed_during_worker_action"
-                        );
-                    }
-                    plants.put(
-                            updated.uniqueId(),
-                            new PlantRepository.StoredPlant(
-                                    updated,
-                                    oldStored.genetics(),
-                                    oldStored.rowVersion() + 1L
-                            )
-                    );
-                    if (oldStored.plant().growthStage() != updated.growthStage()) {
-                        Bukkit.getPluginManager().callEvent(
-                                new VerdantPlantStageChangeEvent(
-                                        updated.uniqueId(),
-                                        oldStored.plant().growthStage(),
-                                        updated.growthStage()
+        return persistStoredUpdate(oldStored, updated, eventType);
+    }
+
+    private CompletableFuture<Plant> persistStoredUpdate(
+            PlantRepository.StoredPlant oldStored,
+            Plant updated,
+            String eventType
+    ) {
+        requireMainThread();
+        UUID plantId = updated.uniqueId();
+        PlantRepository.StoredPlant current = plants.get(plantId);
+        if (current == null) {
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("target_unavailable")
+            );
+        }
+        if (current.plant().lastUpdatedAt().isAfter(updated.lastUpdatedAt())) {
+            return CompletableFuture.failedFuture(
+                    new com.verdantvice.storage.ConcurrentPlantModificationException(
+                            "A newer plant state is already cached for " + plantId
+                    )
+            );
+        }
+
+        writeTracker.begin(plantId);
+        PlantRepository.StoredPlant optimistic = new PlantRepository.StoredPlant(
+                updated,
+                oldStored.genetics(),
+                current.rowVersion()
+        );
+        plants.put(plantId, optimistic);
+
+        CompletableFuture<Plant> result = new CompletableFuture<>();
+        repository.saveVersioned(updated, eventType).whenComplete((rowVersion, failure) ->
+                onMain(() -> {
+                    try {
+                        if (failure != null) {
+                            Throwable cause = unwrapFailure(failure);
+                            PlantRepository.StoredPlant cached = plants.get(plantId);
+                            if (cached != null && cached.plant().equals(updated)) {
+                                plants.put(plantId, oldStored);
+                                if (displays != null) {
+                                    displays.update(oldStored.plant());
+                                }
+                            }
+                            result.completeExceptionally(cause);
+                            return;
+                        }
+
+                        PlantRepository.StoredPlant cached = plants.get(plantId);
+                        if (cached == null) {
+                            result.completeExceptionally(
+                                    new IllegalStateException("target_unavailable")
+                            );
+                            return;
+                        }
+                        plants.put(
+                                plantId,
+                                new PlantRepository.StoredPlant(
+                                        cached.plant(),
+                                        cached.genetics(),
+                                        rowVersion
                                 )
                         );
+                        if (oldStored.plant().growthStage() != updated.growthStage()) {
+                            Bukkit.getPluginManager().callEvent(
+                                    new VerdantPlantStageChangeEvent(
+                                            plantId,
+                                            oldStored.plant().growthStage(),
+                                            updated.growthStage()
+                                    )
+                            );
+                        }
+                        if (displays != null) {
+                            displays.update(cached.plant());
+                        }
+                        writeTracker.markSuccess(plantId);
+                        result.complete(updated);
+                    } finally {
+                        writeTracker.end(plantId);
                     }
-                    if (displays != null) {
-                        displays.update(updated);
-                    }
-                }))
-                .thenApply(ignored -> updated);
+                }).exceptionally(mainFailure -> {
+                    result.completeExceptionally(unwrapFailure(mainFailure));
+                    return null;
+                })
+        );
+        return result;
     }
 
     private void water(Player player, PlantRepository.StoredPlant stored, ItemStack tool) {
@@ -876,8 +865,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 stored.genetics(),
                 now,
                 growthPolicy(),
-                true
-        ).plant();
+                true).plant();
         double amount = configs.get("plants.yml").getDouble("care.watering-can-hydration", 28.0);
         WateringResult result = growthService.water(caughtUp, amount, now);
         damageTool(player, tool);
@@ -885,16 +873,14 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
         player.sendMessage(translations.component(
                 player,
                 "plant.interaction.watered",
-                Map.of("hydration", decimal(result.plant().hydration()))
-        ));
+                Map.of("hydration", decimal(result.plant().hydration()))));
     }
 
     private void care(
             Player player,
             PlantRepository.StoredPlant stored,
             ItemStack tool,
-            CustomItemType type
-    ) {
+            CustomItemType type) {
         Location plantLocation = location(stored.plant().position());
         if (plantLocation == null || !farms.can(player, plantLocation, FarmPermission.WATER)) {
             player.sendMessage(translations.component(player, "errors.farm-permission"));
@@ -907,34 +893,29 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 stored.genetics(),
                 now,
                 growthPolicy(),
-                true
-        ).plant();
+                true).plant();
         YamlConfiguration yaml = configs.get("plants.yml");
         com.verdantvice.plant.care.CareResult result = switch (type) {
             case CLEANING_KIT -> careService.clean(
                     caughtUp,
                     yaml.getDouble("care.cleaning-kit-cleanliness", 35.0),
                     1.0,
-                    now
-            );
+                    now);
             case TREATMENT_SPRAY -> careService.treat(
                     caughtUp,
                     yaml.getDouble("care.treatment-spray-disease-reduction", 45.0),
                     1.0,
-                    now
-            );
+                    now);
             case NUTRIENT_PACK -> careService.feed(
                     caughtUp,
                     yaml.getDouble("care.nutrient-pack-nutrition", 24.0),
                     1.0,
-                    now
-            );
+                    now);
             case REPAIR_KIT -> careService.repairAndRelieveStress(
                     caughtUp,
                     yaml.getDouble("care.repair-kit-condition", 40.0),
                     1.0,
-                    now
-            );
+                    now);
             default -> throw new IllegalArgumentException("Unsupported care tool");
         };
         damageTool(player, tool);
@@ -949,9 +930,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 key,
                 Map.of(
                         "cleanliness", decimal(result.plant().cleanliness()),
-                        "condition", result.action().name().toLowerCase(Locale.ROOT)
-                )
-        ));
+                        "condition", result.action().name().toLowerCase(Locale.ROOT))));
     }
 
     private void harvest(Player player, PlantRepository.StoredPlant stored) {
@@ -976,8 +955,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                     plant,
                     strains.require(plant.strainId()),
                     stored.genetics(),
-                    Instant.now()
-            );
+                    Instant.now());
         } catch (RuntimeException failure) {
             player.sendMessage(translations.component(player, "errors.wrong-item-state"));
             return;
@@ -987,8 +965,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 player,
                 plant.uniqueId(),
                 batch.batchId(),
-                batch.harvestTiming()
-        );
+                batch.harvestTiming());
         Bukkit.getPluginManager().callEvent(event);
         if (event.isCancelled()) {
             return;
@@ -1000,13 +977,11 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                         player.getUniqueId(),
                         batch.batchId(),
                         plant.strainId(),
-                        batch.qualityScore()
-                ))
+                        batch.qualityScore()))
                 .thenCompose(item -> repository.delete(
                         plant.uniqueId(),
                         "HARVESTED",
-                        player.getUniqueId()
-                ).thenApply(deleted -> new HarvestDelivery(item, deleted)))
+                        player.getUniqueId()).thenApply(deleted -> new HarvestDelivery(item, deleted)))
                 .whenComplete((delivery, failure) -> onMain(() -> {
                     if (failure != null || delivery == null || !delivery.deleted()) {
                         plugin.getLogger().log(Level.WARNING,
@@ -1027,9 +1002,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                             Map.of(
                                     "weight", decimal(batch.freshWeight()),
                                     "strain", strains.require(plant.strainId()).displayName(),
-                                    "timing", batch.harvestTiming().name()
-                            )
-                    ));
+                                    "timing", batch.harvestTiming().name())));
                 }));
     }
 
@@ -1041,8 +1014,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
         lines.add(translations.component(player, "gui.plants.details-title", Map.of(
                 "strain", strain.displayName(),
                 "stage", translations.plain(player,
-                        "plant.stages." + plant.growthStage().name().toLowerCase(Locale.ROOT))
-        )));
+                        "plant.stages." + plant.growthStage().name().toLowerCase(Locale.ROOT)))));
         lines.add(translations.component(player, "gui.plants.novice-summary",
                 Map.of("condition", overall(player, plant))));
         lines.add(translations.component(player, "gui.plants.approximate-ready",
@@ -1096,8 +1068,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
         int perChunk = plantsInChunk(
                 position.worldUuid(),
                 Math.floorDiv(position.x(), 16),
-                Math.floorDiv(position.z(), 16)
-        ).size();
+                Math.floorDiv(position.z(), 16)).size();
         if (perChunk >= configs.main().getInt("performance.max-plants-per-chunk", 32)) {
             throw new IllegalStateException("chunk_limit");
         }
@@ -1126,8 +1097,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 plantsConfig.getDouble("growth.nutrition-loss-per-hour", 1.0),
                 plantsConfig.getDouble("growth.base-health-loss-per-hour", 0.15),
                 2.0,
-                Duration.ofHours(plantsConfig.getLong("growth.spoiled-hours", 30L))
-        );
+                Duration.ofHours(plantsConfig.getLong("growth.spoiled-hours", 30L)));
     }
 
     private boolean sameSimulation(Plant first, Plant second) {
@@ -1164,8 +1134,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
 
     private void giveOrDrop(Player player, ItemStack item) {
         Map<Integer, ItemStack> overflow = player.getInventory().addItem(item);
-        overflow.values().forEach(stack ->
-                player.getWorld().dropItemNaturally(player.getLocation(), stack));
+        overflow.values().forEach(stack -> player.getWorld().dropItemNaturally(player.getLocation(), stack));
     }
 
     private void index(Plant plant) {
@@ -1188,8 +1157,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
         return new ChunkKey(
                 position.worldUuid(),
                 Math.floorDiv(position.x(), 16),
-                Math.floorDiv(position.z(), 16)
-        );
+                Math.floorDiv(position.z(), 16));
     }
 
     private BlockPosition position(Location location) {
@@ -1197,8 +1165,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 Objects.requireNonNull(location.getWorld()).getUID(),
                 location.getBlockX(),
                 location.getBlockY(),
-                location.getBlockZ()
-        );
+                location.getBlockZ());
     }
 
     private Location location(BlockPosition position) {
@@ -1218,8 +1185,8 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 + (100.0 - plant.stress())) / 4.0;
         String suffix = score >= 85 ? "excellent"
                 : score >= 65 ? "good"
-                : score >= 45 ? "fair"
-                : score >= 25 ? "poor" : "critical";
+                        : score >= 45 ? "fair"
+                                : score >= 25 ? "poor" : "critical";
         return translations.plain(player, "plant.overall." + suffix);
     }
 
@@ -1234,6 +1201,16 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
         }
         long hours = minutes / 60L;
         return hours + "h " + (minutes % 60L) + "m";
+    }
+
+    private Throwable unwrapFailure(Throwable failure) {
+        Throwable current = failure;
+        while ((current instanceof java.util.concurrent.CompletionException
+                || current instanceof java.util.concurrent.ExecutionException)
+                && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
     }
 
     private CompletableFuture<Void> onMain(Runnable action) {

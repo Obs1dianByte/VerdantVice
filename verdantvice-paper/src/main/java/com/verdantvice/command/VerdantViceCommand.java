@@ -946,26 +946,18 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
     }
 
     private void asyncFailure(CommandSender sender, Throwable failure) {
-        Throwable cause = failure == null
-                ? new IllegalStateException("Operation returned no result")
-                : unwrap(failure);
-        String message = Objects.toString(cause.getMessage(), "");
-        String key = switch (message) {
-            case "farm_limit", "limit_reached", "chunk_limit" -> "errors.limit-reached";
-            case "region_denied" -> "errors.protected-region";
-            case "farm_permission_denied", "farm_permission" -> "errors.farm-permission";
-            case "invalid_or_wrong_item", "invalid_item", "same_parent_strain" ->
-                    "errors.invalid-item";
-            case "invalid_name" -> "errors.invalid-name";
-            case "item_already_used_or_modified", "item_reservation_failed",
-                 "item_consumption_failed" -> "errors.duplicate-item";
-            case "wrong_owner" -> "errors.wrong-owner";
-            case "busy" -> "errors.busy";
-            default -> "errors.database-unavailable";
-        };
-        sender.sendMessage(translation().component(sender, key, Map.of("limit", "configured")));
-        if (key.equals("errors.database-unavailable")) {
-            plugin.getLogger().log(Level.WARNING, "Asynchronous command operation failed", cause);
+        CommandFailureMapper.FailureMapping mapping = CommandFailureMapper.map(failure);
+        sender.sendMessage(translation().component(
+                sender,
+                mapping.translationKey(),
+                Map.of("limit", "configured")
+        ));
+        if (mapping.logStackTrace()) {
+            plugin.getLogger().log(
+                    Level.WARNING,
+                    "Asynchronous command operation failed",
+                    mapping.cause()
+            );
         }
     }
 

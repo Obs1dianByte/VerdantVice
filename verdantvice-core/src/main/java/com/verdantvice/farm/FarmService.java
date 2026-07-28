@@ -16,7 +16,7 @@ public final class FarmService {
                        Collection<Farm> existingFarms, Instant now) {
         DomainChecks.required(existingFarms, "existingFarms");
         if (existingFarms.stream().anyMatch(existing -> existing.region().overlaps(region))) {
-            throw new IllegalArgumentException("Farm region overlaps an existing farm");
+            throw new IllegalArgumentException("farm_region_overlap");
         }
         FarmMember owner = new FarmMember(ownerUuid, FarmRole.OWNER, java.util.Set.of(),
                 java.util.Set.of(), now);
