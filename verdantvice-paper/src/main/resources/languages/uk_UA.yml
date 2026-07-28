@@ -266,3 +266,14 @@ book:
   advanced_genetics: { title: "Розширена генетика", author: "VerdantVice", page_1: "<aqua><bold>Класи</bold></aqua><newline><newline>Клас підсумовує сім незалежних модифікаторів.", page_2: "<aqua><bold>Схрещення</bold></aqua><newline><newline>Гра зважує риси, додає відхилення й записує батьків.", page_3: "<aqua><bold>Стабільність</bold></aqua><newline><newline>Стабільність обмежує випадковість; назва не змінює підписані риси." }
   farm_management: { title: "Керування плантацією", author: "VerdantVice", page_1: "<dark_green><bold>Ролі</bold></dark_green><newline><newline>Давай учасникам лише потрібні дозволи.", page_2: "<dark_green><bold>Сховища</bold></dark_green><newline><newline>Прив'язуй скрині за типом і бережи рідкісне насіння.", page_3: "<dark_green><bold>Люди</bold></dark_green><newline><newline>Ліжко, їжа, шлях, відпочинок і зарплата підтримують мораль." }
   perfect_batch: { title: "Таємниці ідеальної партії", author: "VerdantVice", page_1: "<yellow><bold>Без скорочень</bold></yellow><newline><newline>Генетика не стирає поганий догляд чи забруднення.", page_2: "<yellow><bold>Потенціал</bold></yellow><newline><newline>Підтримуй здоров'я й чистоту та збирай у правильне вікно.", page_3: "<yellow><bold>Відстеження</bold></yellow><newline><newline>Кожна зміна зберігає втрати й походження; копія lore не змінює якість." }
+
+processing:
+  errors:
+    invalid-signature: "<red>Цей предмет має недійсний підпис.</red>"
+    unregistered-item: "<red>Цей підписаний предмет не зареєстрований.</red>"
+    item-already-used: "<red>Цей предмет партії вже використано.</red>"
+    wrong-owner: "<red>Ви не є власником цієї партії.</red>"
+    missing-batch: "<red>Партія продукту, пов’язана з цим предметом, не існує.</red>"
+    invalid-batch-signature: "<red>Збережена партія продукту не пройшла перевірку автентичності.</red>"
+    wrong-batch-state: "<red>Ця партія не свіжа, тому сушіння не можна розпочати.</red>"
+    station-busy: "<yellow>Ця станція вже запускає або виконує процес.</yellow>"

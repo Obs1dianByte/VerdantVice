@@ -21,6 +21,7 @@ import com.verdantvice.processing.QualityGrade;
 import com.verdantvice.security.CustomItemType;
 import com.verdantvice.security.SignedItemData;
 import com.verdantvice.storage.DomainJson;
+import com.verdantvice.storage.BatchService;
 import com.verdantvice.strain.Strain;
 import com.verdantvice.strain.StrainRegistry;
 
@@ -48,6 +49,7 @@ public final class TradeRepository {
     private final MarketRepository markets;
     private final StrainRegistry strains;
     private final ConfigManager configs;
+    private final BatchService batchService;
     private final MarketPricingService pricing = new MarketPricingService();
     private final TradeLimitService limits = new TradeLimitService();
     private final SaleItemPolicy saleItems = new SaleItemPolicy();
@@ -57,13 +59,15 @@ public final class TradeRepository {
             ItemRegistryRepository itemRegistry,
             MarketRepository markets,
             StrainRegistry strains,
-            ConfigManager configs
+            ConfigManager configs,
+            BatchService batchService
     ) {
         this.database = Objects.requireNonNull(database, "database");
         this.itemRegistry = Objects.requireNonNull(itemRegistry, "itemRegistry");
         this.markets = Objects.requireNonNull(markets, "markets");
         this.strains = Objects.requireNonNull(strains, "strains");
         this.configs = Objects.requireNonNull(configs, "configs");
+        this.batchService = Objects.requireNonNull(batchService, "batchService");
     }
 
     public CompletableFuture<PreparedSale> prepareSale(
@@ -75,7 +79,11 @@ public final class TradeRepository {
     ) {
         validateIdentity(data, payloadHash, playerUuid);
         return database.read(session -> buildQuote(
-                session, data, payloadHash, playerUuid, herbalistUuid, now, false));
+                session, data, payloadHash, playerUuid, herbalistUuid, now, false))
+                .thenApply(quote -> {
+                    batchService.remember(quote.batch());
+                    return quote;
+                });
     }
 
     public CompletableFuture<SaleCommitResult> commit(PreparedSale quote, String operationId, Instant now) {
@@ -221,10 +229,18 @@ public final class TradeRepository {
         if (data.batchId() == null) {
             throw failure(TradeFailureReason.MISSING_BATCH);
         }
-        ProductBatch batch = loadBatch(session, data.batchId(), forUpdate)
-                .orElseThrow(() -> failure(TradeFailureReason.MISSING_BATCH));
-        if (!batch.ownerUuid().equals(playerUuid)) {
-            throw failure(TradeFailureReason.WRONG_OWNER);
+        ProductBatch batch;
+        try {
+            batch = batchService.require(
+                    session, data.batchId(), playerUuid,
+                    java.util.EnumSet.allOf(BatchState.class), forUpdate).batch();
+        } catch (com.verdantvice.storage.BatchAccessException access) {
+            throw switch (access.reason()) {
+                case MISSING_BATCH -> failure(TradeFailureReason.MISSING_BATCH);
+                case WRONG_OWNER -> failure(TradeFailureReason.WRONG_OWNER);
+                case INVALID_BATCH_SIGNATURE -> failure(TradeFailureReason.INVALID_SIGNATURE);
+                case WRONG_BATCH_STATE -> failure(TradeFailureReason.BATCH_STATE_MISMATCH);
+            };
         }
         TradeFailureReason rejection = saleItems.rejectionReason(
                 data.itemType(), batch.state(), acceptedItemTypes());
@@ -306,20 +322,6 @@ public final class TradeRepository {
         return new TradeLedger(playerUuid, day, ids.size(), totals.weight(), totals.payout(), ids);
     }
 
-    private Optional<ProductBatch> loadBatch(SqlSession session, UUID batchId, boolean forUpdate)
-            throws SQLException {
-        String suffix = forUpdate && session.databaseType().isNetworkDatabase() ? " FOR UPDATE" : "";
-        return session.queryOne("""
-                        SELECT batch_id, owner_uuid, strain_composition_json, genetic_origin_json,
-                               fresh_weight, dry_weight, quality_score, quality_grade,
-                               contamination, freshness, harvest_timing, created_at,
-                               signature, batch_state
-                        FROM product_batches WHERE batch_id=?
-                        """ + suffix,
-                TradeRepository::mapBatch,
-                batchId);
-    }
-
     private void updateMarketAfterSale(
             SqlSession session, ProductBatch batch, double quantity, Instant now
     ) throws SQLException {
@@ -354,34 +356,6 @@ public final class TradeRepository {
             if (!markets.save(session, current, replacement)) {
                 throw new SQLException("Concurrent market update for " + current.strainId());
             }
-        }
-    }
-
-    private static ProductBatch mapBatch(ResultSet result) throws SQLException {
-        try {
-            double freshWeight = result.getDouble("fresh_weight");
-            double dryWeight = result.getDouble("dry_weight");
-            if (result.wasNull()) dryWeight = 0.0;
-            double quality = result.getDouble("quality_score");
-            return new ProductBatch(
-                    UUID.fromString(result.getString("batch_id")),
-                    UUID.fromString(result.getString("owner_uuid")),
-                    DomainJson.composition(result.getString("strain_composition_json")),
-                    DomainJson.uuidSet(result.getString("genetic_origin_json")),
-                    freshWeight,
-                    dryWeight,
-                    quality,
-                    QualityGrade.valueOf(result.getString("quality_grade")),
-                    result.getDouble("contamination"),
-                    result.getDouble("freshness"),
-                    HarvestTiming.valueOf(result.getString("harvest_timing")),
-                    Optional.empty(),
-                    Optional.empty(),
-                    Instant.ofEpochMilli(result.getLong("created_at")),
-                    result.getString("signature"),
-                    BatchState.valueOf(result.getString("batch_state")));
-        } catch (RuntimeException exception) {
-            throw new SQLException("Malformed product batch row", exception);
         }
     }
 

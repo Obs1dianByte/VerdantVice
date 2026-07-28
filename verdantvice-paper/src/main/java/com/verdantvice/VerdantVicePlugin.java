@@ -39,6 +39,8 @@ import com.verdantvice.security.ItemSigner;
 import com.verdantvice.security.SecureItemService;
 import com.verdantvice.security.SigningSecretManager;
 import com.verdantvice.storage.BatchRepository;
+import com.verdantvice.storage.BatchService;
+import com.verdantvice.processing.BatchAuthenticityService;
 import com.verdantvice.storage.CustomStrainRepository;
 import com.verdantvice.storage.FarmRepository;
 import com.verdantvice.storage.PlantRepository;
@@ -135,6 +137,8 @@ public final class VerdantVicePlugin extends JavaPlugin {
             FarmRepository farmRepository = new FarmRepository(database);
             PlantRepository plantRepository = new PlantRepository(database);
             BatchRepository batchRepository = new BatchRepository(database);
+            BatchService batchService = new BatchService(
+                    batchRepository, new BatchAuthenticityService(), signingSecret);
             PlayerProfileRepository profileRepository =
                     new PlayerProfileRepository(database);
             ItemRegistryRepository itemRegistry = new ItemRegistryRepository(database);
@@ -177,7 +181,7 @@ public final class VerdantVicePlugin extends JavaPlugin {
                     translations,
                     farms,
                     plantRepository,
-                    batchRepository,
+                    batchService,
                     secureItems,
                     itemSigner,
                     strains,
@@ -198,7 +202,7 @@ public final class VerdantVicePlugin extends JavaPlugin {
                     translations,
                     notifications,
                     database,
-                    batchRepository,
+                    batchService,
                     secureItems,
                     itemSigner,
                     signingSecret
@@ -229,6 +233,7 @@ public final class VerdantVicePlugin extends JavaPlugin {
                     secureItems,
                     itemSigner,
                     itemRegistry,
+                    batchService,
                     books
             );
             workers = WorkerManager.create(

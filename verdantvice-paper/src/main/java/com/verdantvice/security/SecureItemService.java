@@ -8,6 +8,10 @@ import com.verdantvice.database.item.ItemRegistryState;
 import com.verdantvice.database.item.RegistrationStatus;
 import com.verdantvice.item.CustomItemFactory;
 import com.verdantvice.processing.ProductBatch;
+import com.verdantvice.processing.ProcessingFailureException;
+import com.verdantvice.processing.ProcessingFailureReason;
+import com.verdantvice.database.SqlSession;
+import com.verdantvice.database.item.ItemCasResult;
 import org.bukkit.command.CommandSender;
 import org.bukkit.inventory.ItemStack;
 
@@ -23,11 +27,12 @@ import java.util.concurrent.CompletableFuture;
  * consumed with compare-and-set transitions, so copied inventory data cannot
  * be accepted twice on two server threads or after a restart.
  */
-public final class SecureItemService {
+public final class SecureItemService implements ItemConsumptionGateway {
     private final CustomItemFactory factory;
     private final ItemSigner signer;
     private final ItemRegistryRepository registry;
     private final Duration reservationDuration;
+    private final ProcessingItemValidator processingValidator = new ProcessingItemValidator();
 
     public SecureItemService(
             CustomItemFactory factory,
@@ -193,6 +198,75 @@ public final class SecureItemService {
         });
     }
 
+    @Override
+    public CompletableFuture<ValidatedItem> validateActive(
+            ItemStack item,
+            Set<CustomItemType> accepted,
+            UUID actor
+    ) {
+        Objects.requireNonNull(item, "item");
+        Objects.requireNonNull(accepted, "accepted");
+        Objects.requireNonNull(actor, "actor");
+        ItemStack snapshot = item.clone();
+        ItemSigner.Verification verification = signer.verify(snapshot);
+        if (!verification.valid()) {
+            return CompletableFuture.failedFuture(new ProcessingFailureException(
+                    ProcessingFailureReason.INVALID_SIGNATURE));
+        }
+        SignedItemData data = verification.data();
+        try {
+            processingValidator.validateData(data, accepted, actor);
+        } catch (ProcessingFailureException failure) {
+            return CompletableFuture.failedFuture(failure);
+        }
+        String payloadHash = signer.payloadHash(data);
+        return registry.find(data.uniqueInstanceId()).thenApply(optional -> {
+            ItemRegistryRecord record = optional.orElseThrow(() ->
+                    new ProcessingFailureException(
+                            ProcessingFailureReason.UNREGISTERED_ITEM));
+            processingValidator.validateRecord(record, data, payloadHash, actor);
+            return new ValidatedItem(snapshot, data, payloadHash);
+        });
+    }
+
+    @Override
+    public ConsumedItem consume(
+            SqlSession session,
+            ValidatedItem validated,
+            Set<CustomItemType> accepted,
+            UUID actor,
+            String operationId,
+            Instant now
+    ) throws java.sql.SQLException {
+        Objects.requireNonNull(session, "session");
+        Objects.requireNonNull(validated, "validated");
+        Objects.requireNonNull(accepted, "accepted");
+        Objects.requireNonNull(actor, "actor");
+        Objects.requireNonNull(operationId, "operationId");
+        Objects.requireNonNull(now, "now");
+        SignedItemData data = validated.data();
+        processingValidator.validateData(data, accepted, actor);
+        ItemRegistryRecord record = registry.find(
+                session, data.uniqueInstanceId(), true).orElseThrow(() ->
+                new ProcessingFailureException(ProcessingFailureReason.UNREGISTERED_ITEM));
+        processingValidator.validateRecord(record, data, validated.payloadHash(), actor);
+        UUID reservation = UUID.randomUUID();
+        ItemCasResult reserved = registry.reserve(
+                session, record.instanceId(), record.version(), validated.payloadHash(),
+                reservation, actor.toString(), now.plus(reservationDuration), operationId, now);
+        if (reserved.status() == CasStatus.REJECTED || reserved.record().isEmpty()) {
+            throw new ProcessingFailureException(ProcessingFailureReason.ITEM_ALREADY_USED);
+        }
+        ItemRegistryRecord reservedRecord = reserved.record().orElseThrow();
+        ItemCasResult consumed = registry.consume(
+                session, record.instanceId(), reservedRecord.version(),
+                validated.payloadHash(), reservation, operationId, now);
+        if (consumed.status() == CasStatus.REJECTED) {
+            throw new ProcessingFailureException(ProcessingFailureReason.ITEM_ALREADY_USED);
+        }
+        return new ConsumedItem(data, operationId);
+    }
+
     public ItemSigner.Verification verify(ItemStack item) {
         return signer.verify(item);
     }
@@ -205,6 +279,23 @@ public final class SecureItemService {
                 left.getBytes(java.nio.charset.StandardCharsets.US_ASCII),
                 right.getBytes(java.nio.charset.StandardCharsets.US_ASCII)
         );
+    }
+
+    public record ValidatedItem(
+            ItemStack snapshot,
+            SignedItemData data,
+            String payloadHash
+    ) {
+        public ValidatedItem {
+            snapshot = snapshot.clone();
+            Objects.requireNonNull(data, "data");
+            Objects.requireNonNull(payloadHash, "payloadHash");
+        }
+
+        @Override
+        public ItemStack snapshot() {
+            return snapshot.clone();
+        }
     }
 
     public record ConsumedItem(SignedItemData data, String operationId) {

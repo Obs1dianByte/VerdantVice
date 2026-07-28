@@ -23,7 +23,7 @@ import com.verdantvice.security.CustomItemType;
 import com.verdantvice.security.ItemSigner;
 import com.verdantvice.security.SecureItemService;
 import com.verdantvice.security.SignedItemData;
-import com.verdantvice.storage.BatchRepository;
+import com.verdantvice.storage.BatchService;
 import com.verdantvice.storage.PlantRepository;
 import com.verdantvice.strain.Strain;
 import com.verdantvice.strain.StrainRegistry;
@@ -75,7 +75,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
     private final TranslationService translations;
     private final FarmManager farms;
     private final PlantRepository repository;
-    private final BatchRepository batchRepository;
+    private final BatchService batchService;
     private final SecureItemService secureItems;
     private final ItemSigner signer;
     private final StrainRegistry strains;
@@ -102,7 +102,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
             TranslationService translations,
             FarmManager farms,
             PlantRepository repository,
-            BatchRepository batchRepository,
+            BatchService batchService,
             SecureItemService secureItems,
             ItemSigner signer,
             StrainRegistry strains,
@@ -113,7 +113,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
         this.translations = Objects.requireNonNull(translations, "translations");
         this.farms = Objects.requireNonNull(farms, "farms");
         this.repository = Objects.requireNonNull(repository, "repository");
-        this.batchRepository = Objects.requireNonNull(batchRepository, "batchRepository");
+        this.batchService = Objects.requireNonNull(batchService, "batchService");
         this.secureItems = Objects.requireNonNull(secureItems, "secureItems");
         this.signer = Objects.requireNonNull(signer, "signer");
         this.strains = Objects.requireNonNull(strains, "strains");
@@ -450,7 +450,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 stored.genetics(),
                 Instant.now());
         ProductBatch batch = authenticity.sign(raw, signingSecret);
-        return batchRepository.create(batch)
+        return batchService.create(batch)
                 .thenCompose(ignored -> repository.delete(
                         plant.uniqueId(),
                         "WORKER_HARVESTED",
@@ -970,7 +970,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
         if (event.isCancelled()) {
             return;
         }
-        batchRepository.create(batch)
+        batchService.create(batch)
                 .thenCompose(ignored -> secureItems.issue(
                         player,
                         CustomItemType.FRESH_BATCH,

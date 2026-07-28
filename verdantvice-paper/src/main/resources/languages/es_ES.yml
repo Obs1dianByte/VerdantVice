@@ -604,3 +604,14 @@ book:
     page_1: "<yellow><bold>Sin atajos</bold></yellow><newline><newline>La genética excelente no borra malos cuidados, contaminación ni errores de procesado."
     page_2: "<yellow><bold>Protege el potencial</bold></yellow><newline><newline>Usa un perfil estable, conserva salud y limpieza y cosecha en la mejor ventana."
     page_3: "<yellow><bold>Procesado rastreable</bold></yellow><newline><newline>Mantén los equipos. Cada transformación registra pérdida, origen y autenticidad; copiar el lore no cambia la calidad."
+
+processing:
+  errors:
+    invalid-signature: "<red>Este objeto tiene una firma no válida.</red>"
+    unregistered-item: "<red>Este objeto firmado no está registrado.</red>"
+    item-already-used: "<red>Este objeto de lote ya se ha utilizado.</red>"
+    wrong-owner: "<red>No eres el propietario de este lote.</red>"
+    missing-batch: "<red>El lote de producto vinculado a este objeto no existe.</red>"
+    invalid-batch-signature: "<red>El lote almacenado no superó la verificación de autenticidad.</red>"
+    wrong-batch-state: "<red>Este lote no está fresco y no puede comenzar el secado.</red>"
+    station-busy: "<yellow>Esta estación ya está iniciando o ejecutando un proceso.</yellow>"

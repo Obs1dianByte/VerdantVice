@@ -20,6 +20,7 @@ import com.verdantvice.security.ItemSigner;
 import com.verdantvice.security.SecureItemService;
 import com.verdantvice.strain.Strain;
 import com.verdantvice.strain.StrainRegistry;
+import com.verdantvice.storage.BatchService;
 import com.verdantvice.trade.EconomyService;
 import com.verdantvice.trade.PaperTradeService;
 import com.verdantvice.trade.PreparedSale;
@@ -95,6 +96,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
             SecureItemService secureItems,
             ItemSigner signer,
             ItemRegistryRepository itemRegistry,
+            BatchService batchService,
             TutorialBookService books
     ) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
@@ -106,15 +108,16 @@ public final class HerbalistMarketManager implements AutoCloseable {
         Objects.requireNonNull(database, "database");
         Objects.requireNonNull(secureItems, "secureItems");
         Objects.requireNonNull(itemRegistry, "itemRegistry");
+        Objects.requireNonNull(batchService, "batchService");
         Objects.requireNonNull(books, "books");
 
         herbalists = new HerbalistRepository(database);
         marketRepository = new MarketRepository(database, configs);
         markets = new PaperMarketService(marketRepository, strains, configs);
         tradeRepository = new TradeRepository(
-                database, itemRegistry, marketRepository, strains, configs);
+                database, itemRegistry, marketRepository, strains, configs, batchService);
         trades = new PaperTradeService(signer, tradeRepository);
-        contractRepository = new PaperContractRepository(database, itemRegistry);
+        contractRepository = new PaperContractRepository(database, itemRegistry, batchService);
         contracts = new PaperContractService(
                 contractRepository, markets, strains, configs, signer);
         conversion = new HerbalistConversionService(

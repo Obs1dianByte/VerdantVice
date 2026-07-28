@@ -1049,3 +1049,14 @@ book:
     page_1: "<yellow><bold>No Single Shortcut</bold></yellow><newline><newline>Quality combines many fictional mechanics. Excellent genetics cannot erase poor care, contamination, or badly timed processing."
     page_2: "<yellow><bold>Protect Potential</bold></yellow><newline><newline>Use a stable profile, maintain health and cleanliness, resolve problems early, and harvest inside the best window."
     page_3: "<yellow><bold>Careful, Traceable Processing</bold></yellow><newline><newline>Maintain equipment and match worker skills. Every transformation records losses, lineage, and authenticity; copied lore never changes registered quality."
+
+processing:
+  errors:
+    invalid-signature: "<red>This item has an invalid signature.</red>"
+    unregistered-item: "<red>This signed item is not registered.</red>"
+    item-already-used: "<red>This batch item has already been used.</red>"
+    wrong-owner: "<red>You are not the owner of this batch.</red>"
+    missing-batch: "<red>The product batch linked to this item does not exist.</red>"
+    invalid-batch-signature: "<red>The stored product batch failed authenticity verification.</red>"
+    wrong-batch-state: "<red>This product batch is not fresh and cannot start drying.</red>"
+    station-busy: "<yellow>This processing station is already starting or running a job.</yellow>"

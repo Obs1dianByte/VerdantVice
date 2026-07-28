@@ -1049,3 +1049,14 @@ book:
     page_1: "<yellow><bold>Nie ma jednego skrótu</bold></yellow><newline><newline>Jakość łączy wiele fikcyjnych mechanik. Doskonała genetyka nie usuwa skutków złej opieki, zanieczyszczenia ani błędnej obróbki."
     page_2: "<yellow><bold>Chroń potencjał</bold></yellow><newline><newline>Wybierz stabilny profil, dbaj o zdrowie i czystość, szybko rozwiązuj problemy i zbieraj w najlepszym oknie."
     page_3: "<yellow><bold>Ostrożna i jawna obróbka</bold></yellow><newline><newline>Konserwuj urządzenia i dobieraj specjalizacje. Każda transformacja zapisuje straty, pochodzenie i autentyczność; skopiowane lore nie zmienia jakości."
+
+processing:
+  errors:
+    invalid-signature: "<red>Ten przedmiot ma nieprawidłowy podpis.</red>"
+    unregistered-item: "<red>Ten podpisany przedmiot nie jest zarejestrowany.</red>"
+    item-already-used: "<red>Ten przedmiot partii został już użyty.</red>"
+    wrong-owner: "<red>Nie jesteś właścicielem tej partii.</red>"
+    missing-batch: "<red>Partia produktu powiązana z tym przedmiotem nie istnieje.</red>"
+    invalid-batch-signature: "<red>Zapisana partia produktu nie przeszła kontroli autentyczności.</red>"
+    wrong-batch-state: "<red>Ta partia nie jest świeża i nie może rozpocząć suszenia.</red>"
+    station-busy: "<yellow>Ta stacja już uruchamia albo wykonuje proces.</yellow>"

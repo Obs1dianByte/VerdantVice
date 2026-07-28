@@ -430,3 +430,14 @@ book:
   advanced_genetics: { title: "Pokročilá genetika", author: "VerdantVice", page_1: "<aqua><bold>Třídy</bold></aqua><newline><newline>Třída shrnuje sedm nezávislých modifikátorů.", page_2: "<aqua><bold>Křížení</bold></aqua><newline><newline>Hra váží rysy, přidá odchylku a uloží rodiče.", page_3: "<aqua><bold>Stabilita</bold></aqua><newline><newline>Stabilita omezuje náhodu; filtrovaný název nemění podepsané rysy." }
   farm_management: { title: "Správa farmy", author: "VerdantVice", page_1: "<dark_green><bold>Role</bold></dark_green><newline><newline>Členům dej jen potřebná oprávnění.", page_2: "<dark_green><bold>Sklady</bold></dark_green><newline><newline>Propojuj truhly podle typu a chraň vzácná semena.", page_3: "<dark_green><bold>Lidé</bold></dark_green><newline><newline>Lůžko, jídlo, cesta, odpočinek a mzda udržují morálku." }
   perfect_batch: { title: "Tajemství dokonalé várky", author: "VerdantVice", page_1: "<yellow><bold>Bez zkratky</bold></yellow><newline><newline>Genetika nevymaže špatnou péči ani kontaminaci.", page_2: "<yellow><bold>Potenciál</bold></yellow><newline><newline>Udržuj zdraví a čistotu a sklízej ve správném okně.", page_3: "<yellow><bold>Dohledatelnost</bold></yellow><newline><newline>Každá změna ukládá ztrátu a původ; kopie lore kvalitu nezmění." }
+
+processing:
+  errors:
+    invalid-signature: "<red>Tento předmět má neplatný podpis.</red>"
+    unregistered-item: "<red>Tento podepsaný předmět není registrován.</red>"
+    item-already-used: "<red>Tento předmět šarže již byl použit.</red>"
+    wrong-owner: "<red>Nejsi vlastníkem této šarže.</red>"
+    missing-batch: "<red>Produktová šarže propojená s tímto předmětem neexistuje.</red>"
+    invalid-batch-signature: "<red>Uložená produktová šarže neprošla ověřením pravosti.</red>"
+    wrong-batch-state: "<red>Tato šarže není čerstvá a nelze zahájit sušení.</red>"
+    station-busy: "<yellow>Tato zpracovatelská stanice již spouští nebo provádí proces.</yellow>"

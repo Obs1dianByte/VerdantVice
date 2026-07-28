@@ -1049,3 +1049,14 @@ book:
     page_1: "<yellow><bold>Keine einzelne Abkürzung</bold></yellow><newline><newline>Qualität verbindet viele fiktive Mechaniken. Hervorragende Genetik beseitigt schlechte Pflege, Verunreinigung oder falsche Verarbeitung nicht."
     page_2: "<yellow><bold>Potenzial schützen</bold></yellow><newline><newline>Nutze ein stabiles Profil, halte Gesundheit und Sauberkeit hoch, löse Probleme früh und ernte im besten Fenster."
     page_3: "<yellow><bold>Sorgfältig und nachvollziehbar</bold></yellow><newline><newline>Warte Geräte und wähle passende Fachkräfte. Jede Umwandlung speichert Verlust, Herkunft und Echtheit; kopierte Lore ändert keine Qualität."
+
+processing:
+  errors:
+    invalid-signature: "<red>Dieser Gegenstand hat eine ungültige Signatur.</red>"
+    unregistered-item: "<red>Dieser signierte Gegenstand ist nicht registriert.</red>"
+    item-already-used: "<red>Dieser Chargengegenstand wurde bereits verwendet.</red>"
+    wrong-owner: "<red>Du bist nicht der Besitzer dieser Charge.</red>"
+    missing-batch: "<red>Die mit diesem Gegenstand verknüpfte Produktcharge existiert nicht.</red>"
+    invalid-batch-signature: "<red>Die gespeicherte Produktcharge hat die Echtheitsprüfung nicht bestanden.</red>"
+    wrong-batch-state: "<red>Diese Charge ist nicht frisch und kann nicht getrocknet werden.</red>"
+    station-busy: "<yellow>Diese Verarbeitungsstation startet oder bearbeitet bereits einen Vorgang.</yellow>"

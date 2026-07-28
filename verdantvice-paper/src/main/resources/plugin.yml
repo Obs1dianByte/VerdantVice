@@ -3,8 +3,8 @@ version: '${version}'
 main: com.verdantvice.VerdantVicePlugin
 description: Fictional plant, production, market, and plantation simulation for Paper.
 api-version: '1.21.4'
-authors: [VerdantVice]
-website: https://example.invalid/verdantvice
+authors: [ObsidianByte, VerdantVice]
+website: https://github.com/Obs1dianByte/VerdantVice
 load: POSTWORLD
 softdepend:
   - Vault

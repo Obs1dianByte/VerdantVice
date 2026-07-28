@@ -4,6 +4,7 @@ import com.verdantvice.api.event.VerdantBatchCureEvent;
 import com.verdantvice.api.event.VerdantBatchDryEvent;
 import com.verdantvice.config.ConfigManager;
 import com.verdantvice.database.DatabaseManager;
+import com.verdantvice.database.DatabaseUnavailableException;
 import com.verdantvice.i18n.TranslationService;
 import com.verdantvice.notification.NotificationService;
 import com.verdantvice.notification.NotificationType;
@@ -11,7 +12,9 @@ import com.verdantvice.security.CustomItemType;
 import com.verdantvice.security.ItemSigner;
 import com.verdantvice.security.SecureItemService;
 import com.verdantvice.security.SignedItemData;
-import com.verdantvice.storage.BatchRepository;
+import com.verdantvice.storage.BatchService;
+import com.verdantvice.storage.BatchAccessException;
+import com.verdantvice.storage.BatchAccessFailure;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -70,7 +73,7 @@ public final class ProcessingManager {
     private final TranslationService translations;
     private final NotificationService notifications;
     private final DatabaseManager database;
-    private final BatchRepository batchRepository;
+    private final BatchService batchService;
     private final SecureItemService secureItems;
     private final ItemSigner signer;
     private final byte[] signingSecret;
@@ -79,10 +82,11 @@ public final class ProcessingManager {
     private final GrindingService grinding = new GrindingService();
     private final MixtureService mixing = new MixtureService();
     private final BatchAuthenticityService authenticity = new BatchAuthenticityService();
-    private final Map<UUID, ProductBatch> batches = new ConcurrentHashMap<>();
     private final Map<UUID, ProcessJob> jobs = new ConcurrentHashMap<>();
     private final Map<BlockKey, Station> stations = new ConcurrentHashMap<>();
     private final Set<UUID> pendingStations = ConcurrentHashMap.newKeySet();
+    private final ProcessingStartGuard startGuard = new ProcessingStartGuard(pendingStations);
+    private final DryingStartService dryingStarts;
     private final Map<UUID, RollingSession> rollingSessions = new ConcurrentHashMap<>();
     private final File stationFile;
     private BukkitTask updateTask;
@@ -93,7 +97,7 @@ public final class ProcessingManager {
             TranslationService translations,
             NotificationService notifications,
             DatabaseManager database,
-            BatchRepository batchRepository,
+            BatchService batchService,
             SecureItemService secureItems,
             ItemSigner signer,
             byte[] signingSecret
@@ -103,16 +107,18 @@ public final class ProcessingManager {
         this.translations = Objects.requireNonNull(translations, "translations");
         this.notifications = Objects.requireNonNull(notifications, "notifications");
         this.database = Objects.requireNonNull(database, "database");
-        this.batchRepository = Objects.requireNonNull(batchRepository, "batchRepository");
+        this.batchService = Objects.requireNonNull(batchService, "batchService");
         this.secureItems = Objects.requireNonNull(secureItems, "secureItems");
         this.signer = Objects.requireNonNull(signer, "signer");
         this.signingSecret = Objects.requireNonNull(signingSecret, "signingSecret").clone();
+        this.dryingStarts = new DryingStartService(
+                database, batchService, secureItems, authenticity, this.signingSecret);
         this.stationFile = configs.dataPath("data/processing-stations.yml").toFile();
     }
 
     public CompletableFuture<Void> load() {
         loadStations();
-        CompletableFuture<List<ProductBatch>> batchFuture = batchRepository.loadAll();
+        CompletableFuture<Void> batchFuture = batchService.loadAll();
         CompletableFuture<List<ProcessJob>> dryingFuture = database.query(
                 """
                 SELECT drying_job_id, batch_id, owner_uuid, rack_id, status
@@ -130,13 +136,13 @@ public final class ProcessingManager {
                 """,
                 result -> job(result, ProcessingStationType.CURING_CONTAINER)
         );
-        return CompletableFuture.allOf(batchFuture, dryingFuture, curingFuture)
-                .thenCompose(ignored -> onMain(() -> {
-                    batches.clear();
-                    batchFuture.join().forEach(batch -> batches.put(batch.batchId(), batch));
+        return batchFuture
+                .thenCombine(dryingFuture, (ignored, dryingJobs) -> dryingJobs)
+                .thenCombine(curingFuture, LoadedJobs::new)
+                .thenCompose(loaded -> onMain(() -> {
                     jobs.clear();
-                    dryingFuture.join().forEach(job -> jobs.put(job.stationId(), job));
-                    curingFuture.join().forEach(job -> jobs.put(job.stationId(), job));
+                    loaded.drying().forEach(job -> jobs.put(job.stationId(), job));
+                    loaded.curing().forEach(job -> jobs.put(job.stationId(), job));
                 }));
     }
 
@@ -165,6 +171,8 @@ public final class ProcessingManager {
         }
         List<RollingSession> sessions = List.copyOf(rollingSessions.values());
         sessions.forEach(session -> abortRolling(session.playerId(), true));
+        pendingStations.clear();
+        startGuard.clear();
         saveStations();
     }
 
@@ -190,7 +198,8 @@ public final class ProcessingManager {
 
     public boolean canBreak(Block block) {
         Station station = stations.get(BlockKey.of(block.getLocation()));
-        return station == null || !jobs.containsKey(station.stationId());
+        return station == null || (!jobs.containsKey(station.stationId())
+                && !pendingStations.contains(station.stationId()));
     }
 
     public void removeStation(Block block) {
@@ -324,7 +333,7 @@ public final class ProcessingManager {
                 GROUND,
                 player.getUniqueId(),
                 secondOperation
-        )).thenCompose(consumed -> batchRepository.create(mixed))
+        )).thenCompose(consumed -> batchService.create(mixed))
                 .thenCompose(ignored -> markSourceConsumed(firstBatch))
                 .thenCompose(ignored -> markSourceConsumed(secondBatch))
                 .thenCompose(ignored -> secureItems.issue(
@@ -336,7 +345,7 @@ public final class ProcessingManager {
                 .thenCompose(item -> onMain(() -> {
                     removeInstance(player, firstData.uniqueInstanceId());
                     removeInstance(player, secondData.uniqueInstanceId());
-                    batches.put(mixed.batchId(), mixed);
+                    batchService.remember(mixed);
                     giveOrDrop(player, item);
                 }));
     }
@@ -354,7 +363,7 @@ public final class ProcessingManager {
             return CompletableFuture.failedFuture(new IllegalArgumentException("insufficient_items"));
         }
         SignedItemData productData = product.data();
-        ProductBatch source = batches.get(productData.batchId());
+        ProductBatch source = batchService.cachedOrNull(productData.batchId());
         if (source == null || (source.state() != BatchState.MIXED && source.state() != BatchState.GROUND)
                 || !authenticity.verify(source, signingSecret)) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("wrong_item_state"));
@@ -431,7 +440,7 @@ public final class ProcessingManager {
     }
 
     public Optional<ProductBatch> batch(UUID id) {
-        return Optional.ofNullable(batches.get(id));
+        return batchService.cached(id);
     }
 
     public CompletableFuture<Void> setQuality(
@@ -447,7 +456,7 @@ public final class ProcessingManager {
             );
         }
         SignedItemData data = verification.data();
-        ProductBatch source = batches.get(data.batchId());
+        ProductBatch source = batchService.cachedOrNull(data.batchId());
         if (source == null || !authenticity.verify(source, signingSecret)) {
             return CompletableFuture.failedFuture(
                     new IllegalArgumentException("invalid_batch")
@@ -478,7 +487,7 @@ public final class ProcessingManager {
                 Set.of(itemType),
                 player.getUniqueId(),
                 "admin-quality:" + UUID.randomUUID()
-        ).thenCompose(ignored -> batchRepository.save(updated))
+        ).thenCompose(ignored -> batchService.save(updated))
                 .thenCompose(ignored -> secureItems.issue(
                         player,
                         itemType,
@@ -487,74 +496,78 @@ public final class ProcessingManager {
                 ))
                 .thenCompose(replacement -> onMain(() -> {
                     removeInstance(player, data.uniqueInstanceId());
-                    batches.put(updated.batchId(), updated);
+                    batchService.remember(updated);
                     giveOrDrop(player, replacement);
                 }));
     }
 
     private void startDrying(Player player, Station station) {
+        requireMainThread();
         ItemStack input = player.getInventory().getItemInMainHand().clone();
         ItemSigner.Verification verification = signer.verify(input);
-        if (!verification.valid() || verification.data().itemType() != CustomItemType.FRESH_BATCH) {
-            player.sendMessage(translations.component(player, "errors.wrong-item-state"));
+        if (!verification.valid()) {
+            sendProcessingFailure(player, ProcessingFailureReason.INVALID_SIGNATURE);
             return;
         }
         SignedItemData data = verification.data();
-        ProductBatch source;
-        try {
-            source = requireBatch(data, BatchState.FRESH);
-        } catch (RuntimeException failure) {
-            player.sendMessage(translations.component(player, "errors.wrong-item-state"));
+        if (data.itemType() != CustomItemType.FRESH_BATCH || data.batchId() == null) {
+            sendProcessingFailure(player, ProcessingFailureReason.WRONG_BATCH_STATE);
             return;
         }
-        if (!pendingStations.add(station.stationId())) {
-            player.sendMessage(translations.component(player, "errors.busy"));
-            return;
-        }
-        Instant now = Instant.now();
         YamlConfiguration config = quality();
-        ProductBatch started = authenticity.sign(drying.start(
-                source,
-                now,
+        DryingStartService.Parameters parameters = new DryingStartService.Parameters(
                 Duration.ofMinutes(config.getLong(
-                        "processing.drying.duration-minutes",
-                        20L
-                )),
+                        "processing.drying.duration-minutes", 20L)),
                 config.getDouble("processing.drying.cleanliness", 92.0),
                 config.getDouble("processing.drying.stability", 90.0),
                 config.getDouble("processing.drying.speed", 1.0)
-        ), signingSecret);
-        ProcessJob job = new ProcessJob(
-                UUID.randomUUID(),
-                station.stationId(),
-                started.batchId(),
-                player.getUniqueId(),
-                ProcessingStationType.DRYING_RACK,
-                false
         );
-        secureItems.consume(
-                input,
-                FRESH,
-                player.getUniqueId(),
-                "dry:" + job.jobId()
-        ).thenCompose(ignored -> batchRepository.save(started))
-                .thenCompose(ignored -> insertJob(job, started))
-                .whenComplete((ignored, failure) -> onMain(() -> {
-                    pendingStations.remove(station.stationId());
-                    if (failure != null) {
-                        fail(player, "Could not start drying", failure);
-                        return;
-                    }
-                    removeInstance(player, data.uniqueInstanceId());
-                    batches.put(started.batchId(), started);
-                    jobs.put(station.stationId(), job);
-                    player.sendMessage(translations.component(
-                            player,
-                            "drying.loaded",
-                            Map.of("batch_id", started.batchId())
-                    ));
-                    open(player, station);
-                }));
+        ProcessingStartGuard.Lease lease = startGuard.tryAcquire(
+                station.stationId(), data.uniqueInstanceId()).orElse(null);
+        if (lease == null) {
+            sendProcessingFailure(player, ProcessingFailureReason.STATION_BUSY);
+            return;
+        }
+
+        Instant now = Instant.now();
+        CompletableFuture<DryingStartService.Result> attempt;
+        try {
+            attempt = secureItems.validateActive(input, FRESH, player.getUniqueId())
+                    .thenCompose(validated -> batchService.require(
+                            data.batchId(), player.getUniqueId(), Set.of(BatchState.FRESH))
+                            .thenApply(ignored -> validated))
+                    .thenCompose(validated -> dryingStarts.start(
+                            validated, player.getUniqueId(), station.stationId(), now, parameters));
+        } catch (Throwable failure) {
+            lease.close();
+            handleProcessingFailure(player, "Could not start drying", failure);
+            return;
+        }
+        attempt.whenComplete((result, failure) -> {
+            lease.close();
+            onMain(() -> {
+                if (failure != null || result == null) {
+                    handleProcessingFailure(player, "Could not start drying", failure);
+                    return;
+                }
+                ProductBatch started = result.batch();
+                removeInstance(player, data.uniqueInstanceId());
+                jobs.put(station.stationId(), new ProcessJob(
+                        result.jobId(),
+                        station.stationId(),
+                        started.batchId(),
+                        player.getUniqueId(),
+                        ProcessingStationType.DRYING_RACK,
+                        false
+                ));
+                player.sendMessage(translations.component(
+                        player,
+                        "drying.loaded",
+                        Map.of("batch_id", started.batchId())
+                ));
+                open(player, station);
+            });
+        });
     }
 
     private void startCuring(Player player, Station station) {
@@ -600,7 +613,7 @@ public final class ProcessingManager {
                 DRIED,
                 player.getUniqueId(),
                 "cure:" + job.jobId()
-        ).thenCompose(ignored -> batchRepository.save(started))
+        ).thenCompose(ignored -> batchService.save(started))
                 .thenCompose(ignored -> insertJob(job, started))
                 .whenComplete((ignored, failure) -> onMain(() -> {
                     pendingStations.remove(station.stationId());
@@ -609,7 +622,7 @@ public final class ProcessingManager {
                         return;
                     }
                     removeInstance(player, data.uniqueInstanceId());
-                    batches.put(started.batchId(), started);
+                    batchService.remember(started);
                     jobs.put(station.stationId(), job);
                     player.sendMessage(translations.component(
                             player,
@@ -628,7 +641,7 @@ public final class ProcessingManager {
             return;
         }
         SignedItemData data = verification.data();
-        ProductBatch source = batches.get(data.batchId());
+        ProductBatch source = batchService.cachedOrNull(data.batchId());
         if (source == null || (source.state() != BatchState.DRIED
                 && source.state() != BatchState.CURED)
                 || !authenticity.verify(source, signingSecret)) {
@@ -674,7 +687,7 @@ public final class ProcessingManager {
                 GRINDABLE,
                 player.getUniqueId(),
                 "grind:" + ground.productId()
-        ).thenCompose(ignored -> batchRepository.save(transformed))
+        ).thenCompose(ignored -> batchService.save(transformed))
                 .thenCompose(ignored -> secureItems.issue(
                         player,
                         CustomItemType.GROUND_PRODUCT,
@@ -687,7 +700,7 @@ public final class ProcessingManager {
                         return;
                     }
                     removeInstance(player, data.uniqueInstanceId());
-                    batches.put(transformed.batchId(), transformed);
+                    batchService.remember(transformed);
                     giveOrDrop(player, output);
                     open(player, station);
                 }));
@@ -767,7 +780,7 @@ public final class ProcessingManager {
     }
 
     private CompletableFuture<ProductBatch> updateOne(ProcessJob job, boolean force) {
-        ProductBatch source = batches.get(job.batchId());
+        ProductBatch source = batchService.cachedOrNull(job.batchId());
         if (source == null) {
             return CompletableFuture.failedFuture(new IllegalStateException("Missing process batch"));
         }
@@ -779,10 +792,10 @@ public final class ProcessingManager {
                 ? updated.state() == BatchState.DRIED || updated.state() == BatchState.SPOILED
                 : updated.state() == BatchState.CURED || updated.state() == BatchState.SPOILED;
         ProductBatch finalUpdated = updated;
-        return batchRepository.save(finalUpdated)
+        return batchService.save(finalUpdated)
                 .thenCompose(ignored -> updateJob(job, finalUpdated, ready))
                 .thenCompose(ignored -> onMain(() -> {
-                    batches.put(finalUpdated.batchId(), finalUpdated);
+                    batchService.remember(finalUpdated);
                     ProcessJob current = jobs.get(job.stationId());
                     if (current != null) {
                         jobs.put(job.stationId(), current.withReady(ready));
@@ -931,7 +944,7 @@ public final class ProcessingManager {
     }
 
     private ProductBatch requireBatch(SignedItemData item, BatchState expected) {
-        ProductBatch batch = batches.get(item.batchId());
+        ProductBatch batch = batchService.cachedOrNull(item.batchId());
         if (batch == null || batch.state() != expected
                 || !batch.ownerUuid().equals(item.ownerUuid())
                 || !authenticity.verify(batch, signingSecret)) {
@@ -950,8 +963,8 @@ public final class ProcessingManager {
                 source.curingData(),
                 BatchState.ROLLED
         ), signingSecret);
-        return batchRepository.save(consumed).thenRun(() ->
-                batches.put(consumed.batchId(), consumed));
+        return batchService.save(consumed).thenRun(() ->
+                batchService.remember(consumed));
     }
 
     private GroundProduct ground(ProductBatch batch) {
@@ -1095,7 +1108,7 @@ public final class ProcessingManager {
                 session.source().curingData(),
                 BatchState.ROLLED
         ), signingSecret);
-        batchRepository.save(finished)
+        batchService.save(finished)
                 .thenCompose(ignored -> secureItems.issue(
                         player,
                         CustomItemType.JOINT,
@@ -1110,7 +1123,7 @@ public final class ProcessingManager {
                         restoreRollingInputs(player, session);
                         return;
                     }
-                    batches.put(finished.batchId(), finished);
+                    batchService.remember(finished);
                     giveOrDrop(player, item);
                     player.sendMessage(translations.component(
                             player,
@@ -1187,7 +1200,7 @@ public final class ProcessingManager {
                     translations.component(player, "common.none")
             );
         }
-        ProductBatch batch = batches.get(job.batchId());
+        ProductBatch batch = batchService.cachedOrNull(job.batchId());
         String status = batch == null
                 ? translations.plain(player, "common.unknown")
                 : batch.state().name();
@@ -1311,6 +1324,38 @@ public final class ProcessingManager {
         }
     }
 
+    private void handleProcessingFailure(Player player, String context, Throwable failure) {
+        Throwable cause = unwrap(failure);
+        if (cause instanceof ProcessingFailureException expected) {
+            sendProcessingFailure(player, expected.reason());
+            return;
+        }
+        if (cause instanceof BatchAccessException batchFailure) {
+            ProcessingFailureReason reason = switch (batchFailure.reason()) {
+                case MISSING_BATCH -> ProcessingFailureReason.MISSING_BATCH;
+                case INVALID_BATCH_SIGNATURE -> ProcessingFailureReason.INVALID_BATCH_SIGNATURE;
+                case WRONG_OWNER -> ProcessingFailureReason.WRONG_OWNER;
+                case WRONG_BATCH_STATE -> ProcessingFailureReason.WRONG_BATCH_STATE;
+            };
+            sendProcessingFailure(player, reason);
+            return;
+        }
+        if (cause instanceof DatabaseUnavailableException
+                || cause instanceof java.sql.SQLException) {
+            plugin.getLogger().log(Level.WARNING,
+                    context + " for " + player.getUniqueId(), cause);
+            sendProcessingFailure(player, ProcessingFailureReason.DATABASE_UNAVAILABLE);
+            return;
+        }
+        plugin.getLogger().log(Level.WARNING,
+                context + " for " + player.getUniqueId(), cause);
+        sendProcessingFailure(player, ProcessingFailureReason.DATABASE_UNAVAILABLE);
+    }
+
+    private void sendProcessingFailure(Player player, ProcessingFailureReason reason) {
+        player.sendMessage(translations.component(player, reason.translationKey()));
+    }
+
     private void fail(Player player, String context, Throwable failure) {
         Throwable cause = unwrap(failure);
         plugin.getLogger().log(Level.WARNING, context + " for " + player.getUniqueId(), cause);
@@ -1353,6 +1398,9 @@ public final class ProcessingManager {
         if (!Bukkit.isPrimaryThread()) {
             throw new IllegalStateException("Processing world operations require the main thread");
         }
+    }
+
+    private record LoadedJobs(List<ProcessJob> drying, List<ProcessJob> curing) {
     }
 
     public record Station(
