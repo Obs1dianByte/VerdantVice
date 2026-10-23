@@ -1,8 +1,8 @@
-# Rozwiązywanie problemów
+# Troubleshooting
 
-## Najpierw zbierz bezpieczne dane
+## Collect safe diagnostics first
 
-Wykonaj:
+Run:
 
 ```text
 /vv admin database
@@ -10,206 +10,209 @@ Wykonaj:
 /vv admin debug
 ```
 
-Ostatnia komenda tworzy:
+The last command creates:
 
 ```text
 plugins/VerdantVice/logs/diagnostic-<UTC>.yml
 ```
 
-Raport zawiera wersje pluginu, serwera i Javy, stan i typ bazy, wielkość
-kolejki, liczbę plantacji/roślin/graczy, język, debug i zadeklarowane moduły.
-Nie odczytuje hasła bazy ani `signing.key`.
+The report includes plugin, server, and Java versions; database state and
+type; queue size; farm/plant/player counts; language; debug status; and
+declared modules. It does not read the database password or `signing.key`.
 
-Do zgłoszenia dołącz także fragment konsoli od pierwszego błędu. Nie
-publikuj `database.yml`, klucza, dumpu bazy ani danych graczy.
+Include the console output starting at the first error in a bug report.
+Do not publish `database.yml`, the key, a database dump, or player data.
 
-## Plugin nie uruchamia się
+## The plugin does not start
 
-### `UnsupportedClassVersionError` albo zła Java
+### `UnsupportedClassVersionError` or incorrect Java
 
-- Paper/Purpur 1.21.4: użyj co najmniej Javy 21;
-- Paper/Purpur 26.2: użyj Javy 25;
-- upewnij się, że proces serwera, a nie tylko terminal, używa właściwego
-  `java`.
+- Paper/Purpur 1.21.4: use at least Java 21.
+- Paper/Purpur 26.2: use Java 25.
+- Ensure the server process, not just the terminal, uses the correct `java`.
 
-Sprawdź `java -version` w tym samym skrypcie startowym.
+Check `java -version` in the same startup script.
 
-### Zainstalowano `-thin.jar`
+### `-thin.jar` was installed
 
-Plik `VerdantVice-1.0.0-thin.jar` nie zawiera wymaganych bibliotek. Zastąp go
-`VerdantVice-1.0.0.jar` z zadania `shadowJar`/`build` i usuń duplikaty.
+`VerdantVice-1.0.0-thin.jar` does not include required libraries. Replace it
+with `VerdantVice-1.0.0.jar` from the `shadowJar`/`build` task and remove
+any duplicate plugin files.
 
 ### `Invalid configuration`
 
-Sprawdź ostatnio zmieniony YAML, wcięcia i typ wartości. Najczęstsze
-ograniczenia:
+Check the most recently edited YAML file, indentation, and value types.
+Common constraints:
 
-- `plants-per-cycle`: 1–10000;
-- `max-plants-per-chunk`: 1–512;
-- `database-save-seconds`: 5–86400;
-- język z listy sześciu kodów;
-- typ `SQLITE`, `MYSQL` lub `MARIADB`.
+- `plants-per-cycle`: 1–10000.
+- `max-plants-per-chunk`: 1–512.
+- `database-save-seconds`: 5–86400.
+- Language must be one of the six supported codes.
+- Database type must be `SQLITE`, `MYSQL`, or `MARIADB`.
 
-Jeżeli bezpieczny reload odrzuci konfigurację, aktywny snapshot pozostaje
-niezmieniony. Napraw plik i ponów komendę.
+If safe reload rejects a configuration, the active snapshot remains
+unchanged. Fix the file and retry the command.
 
-### Brak lub niepełny język
+### Missing or incomplete language
 
-`en_US.yml` jest obowiązkowy, a pozostałe języki muszą zawierać wszystkie
-jego klucze tekstowe. Przywróć brakujące klucze z zasobów tego samego JAR-a;
-nie usuwaj całego katalogu bez zachowania własnych tłumaczeń.
+`en_US.yml` is required, and other languages must contain all its text keys.
+Restore missing keys from the resources in the same JAR; do not remove the
+entire directory without preserving your custom translations.
 
-## Komendy odpowiadają „plugin nie jest gotowy”
+## Commands report that the plugin is not ready
 
-Start DB i ładowanie danych są asynchroniczne. Poczekaj na:
+Database startup and data loading are asynchronous. Wait for:
 
 ```text
 Plugin enabled successfully.
 ```
 
-Jeśli komunikat nie pojawia się, wcześniejszy wyjątek wskazuje moduł, który
-nie wystartował. Sprawdź połączenie DB, migracje i dostęp do plików.
+If this message never appears, an earlier exception identifies the module
+that failed to start. Check the database connection, migrations, and file
+access.
 
-## Problemy z bazą
+## Database problems
 
 ### SQLite: `database is locked` / timeout
 
-- nie otwieraj aktywnej bazy narzędziem zapisującym;
-- upewnij się, że tylko jedna instancja serwera używa pliku;
-- nie kopiuj na żywo samego `.db`;
-- zachowaj `-wal` i `-shm` podczas diagnozy, ale do odtworzenia używaj
-  spójnego pliku z backupu;
-- rozważ zwiększenie `sqlite.busy-timeout-millis`, potem restart.
+- Do not open the live database with a tool that writes to it.
+- Ensure only one server instance uses the file.
+- Do not copy only the `.db` file while the server is running.
+- Preserve `-wal` and `-shm` during diagnosis, but restore from a consistent
+  backup file.
+- Consider increasing `sqlite.busy-timeout-millis`, then restart.
 
-### MySQL/MariaDB: brak połączenia
+### MySQL/MariaDB: connection failure
 
-Sprawdź host, port, nazwę bazy, konto, hasło, firewall, TLS i prawa do
-tworzenia/modyfikowania tabel. `database.yml` nie przeładowuje się na żywo —
-wykonaj pełny restart.
+Check the host, port, database name, account, password, firewall, TLS, and
+permissions to create and alter tables. `database.yml` cannot be reloaded
+at runtime: perform a full restart.
 
-`retry.attempts` dotyczy przejściowych operacji, ale nie naprawi złych danych
-logowania.
+`retry.attempts` applies to transient operations; it will not repair
+incorrect credentials.
 
-### Kolejka DB rośnie
+### The database queue keeps growing
 
-Sprawdź `/vv admin database`. Dla baz sieciowych można ostrożnie dostosować
-`pool.maximum-size`, `executor.threads` i `executor.queue-capacity`. SQLite
-celowo używa jednego workera, więc najpierw zmniejsz obciążenie:
+Check `/vv admin database`. For network databases, cautiously adjust
+`pool.maximum-size`, `executor.threads`, and `executor.queue-capacity`.
+SQLite deliberately uses one worker, so reduce the load first:
 
-- `plants-per-cycle`;
-- liczbę roślin/workerów;
-- częstość zapisów i aktualizacji.
+- `plants-per-cycle`.
+- Plant and worker counts.
+- Save and update frequency.
 
-Nie zwiększaj executorów SQLite — kod i tak wymusza jeden.
+Do not increase SQLite executors: the code enforces a single worker anyway.
 
-### Błąd checksumy, luka lub `success = 0`
+### Checksum mismatch, a version gap, or `success = 0`
 
-Nie edytuj `vv_schema_history`. Odtwórz spójny backup lub zainstaluj JAR
-zgodny z wersją bazy. Procedura: [MIGRATION.md](MIGRATION.md).
+Do not edit `vv_schema_history`. Restore a consistent backup or install a
+JAR compatible with the database version. See [MIGRATION.md](MIGRATION.md).
 
-## Przedmiot jest odrzucany jako nieprawidłowy/duplikat
+## An item is rejected as invalid or duplicated
 
-VerdantVice sprawdza jednocześnie podpis PDC i stan instancji w
-`item_registry`. Przedmiot zostanie odrzucony po modyfikacji, skopiowaniu,
-ponownym użyciu lub odtworzeniu bazy z innego punktu niż ekwipunki graczy.
+VerdantVice checks both the PDC signature and the instance state in
+`item_registry`. An item is rejected after modification, copying, reuse, or
+restoring the database to a different point in time from player inventories.
 
-Sprawdź:
+Check:
 
-1. czy nie zmienił się `data/signing.key`;
-2. czy baza i klucz pochodzą z tego samego backupu;
-3. czy nie działa plugin modyfikujący PDC/`CustomModelData`;
-4. czy gracz nie próbuje użyć wejścia już zużytego przez transakcję.
+1. Whether `data/signing.key` has changed.
+2. Whether the database and key come from the same backup.
+3. Whether another plugin modifies PDC/`CustomModelData`.
+4. Whether the player is attempting to use an input already consumed by a
+   transaction.
 
-Nie regeneruj klucza jako „naprawy”. To unieważni wszystkie pozostałe
-przedmioty.
+Do not regenerate the key as a fix. Doing so invalidates all remaining
+items.
 
-## Roślina nie rośnie
+## A plant is not growing
 
-Sprawdź `/vv admin inspect`:
+Check `/vv admin inspect`:
 
-- etap, zdrowie, nawodnienie, odżywienie i stres;
-- minimalne zdrowie wzrostu;
-- problem `GROWTH_LOCK`;
-- wartości światła i czystości;
-- `performance.offline-growth` i `unloaded-chunk-growth`;
-- czy scheduler nie ma błędu w logu.
+- Stage, health, hydration, nutrition, and stress.
+- Minimum health required for growth.
+- The `GROWTH_LOCK` problem.
+- Light and cleanliness values.
+- `performance.offline-growth` and `unloaded-chunk-growth`.
+- Whether the scheduler reports an error in the log.
 
-Aktualizacja odbywa się porcjami, więc przy wielu roślinach wynik może nie
-pojawić się natychmiast.
+Updates are batched, so changes may not appear immediately when many plants
+are present.
 
-## Nie można posadzić lub utworzyć plantacji
+## Planting or farm creation is blocked
 
-- nasiono, donica i różdżka muszą być podpisane;
-- stanowisko musi zachować minimalny odstęp;
-- obowiązuje limit gracza i chunka;
-- akcja musi przejść prawa roli plantacji;
-- aktywny WorldGuard/GriefPrevention/Lands musi zezwolić;
-- przy błędzie adaptera domyślny `DENY_IF_UNKNOWN` blokuje akcję.
+- Seeds, pots, and the selection wand must be signed.
+- Stations must meet minimum spacing requirements.
+- Player and chunk limits apply.
+- The action must pass farm-role permissions.
+- Active WorldGuard/GriefPrevention/Lands integrations must permit it.
+- If an adapter fails, the default `DENY_IF_UNKNOWN` blocks the action.
 
-Sprawdź log ostrzeżenia adaptera. Tylko po świadomej ocenie ryzyka zmień
-fallback na tryb inny niż `DENY_IF_UNKNOWN`.
+Check the adapter warning in the log. Change the fallback away from
+`DENY_IF_UNKNOWN` only after deliberately assessing the risk.
 
-## Stacja przetwarzania jest zajęta
+## A processing station is occupied
 
-Nie można rozbić stacji z aktywną partią. Poczekaj na zakończenie i odbierz
-wynik właścicielem. Stan joba jest w DB, a pozycja stacji w
-`data/processing-stations.yml`; oba muszą pochodzić z tego samego backupu.
+A station with an active batch cannot be broken. Wait for completion and
+collect the output as its owner. The job state is in the database and the
+station location is in `data/processing-stations.yml`; both must come from
+the same backup.
 
-Po awarii minigra powinna oddać wejścia przez kontrolowaną ścieżkę. Jeśli
-operacja ma niejednoznaczny commit DB, nie wydawaj ręcznie duplikatu przed
-sprawdzeniem rejestru i logu.
+After a failure, the minigame should return inputs through its controlled
+recovery path. If an operation has an ambiguous database commit, do not
+manually issue a duplicate before checking the registry and log.
 
-## Worker stoi lub nie wykonuje zadania
+## A worker is standing still or not performing a task
 
-Sprawdź:
+Check:
 
-- harmonogram czasu świata w `workers.yml`;
-- drogę, drzwi, wysokość i załadowany chunk;
-- `path-retry-count` oraz `path-timeout-seconds`;
-- rezerwację celu i limit roślin na workera;
-- morale, zaległe pensje, łóżko, jedzenie i przeciążenie;
-- prawa `MANAGE_WORKERS` oraz limit workerów plantacji.
+- The world-time schedule in `workers.yml`.
+- The path, doors, elevation, and whether the chunk is loaded.
+- `path-retry-count` and `path-timeout-seconds`.
+- Target reservations and the plant limit per worker.
+- Morale, unpaid salaries, a bed, food, and workload.
+- `MANAGE_WORKERS` permissions and the farm's worker limit.
 
-Awaryjny teleport jest domyślnie wyłączony. Włączenie
-`emergency-worker-teleport` powinno być ostatnim zabezpieczeniem, nie
-zamiennikiem poprawnej nawigacji.
+Emergency teleportation is disabled by default. Enabling
+`emergency-worker-teleport` should be a final safeguard, not a substitute
+for correct navigation.
 
-## Zielarz się nie pojawia
+## A herbalist does not appear
 
-Tylko villager z profesją `FARMER` przechodzi jednorazową ewaluację.
-Obowiązuje `conversion-chance`, limit w promieniu wioski i zapisany marker
-ewaluacji. Zmiana szansy nie losuje ponownie już ocenionych villagerów.
-Do kontrolowanego testu użyj komendy administracyjnej.
+Only a villager with the `FARMER` profession undergoes a one-time evaluation.
+The `conversion-chance`, village-radius limit, and saved evaluation marker
+apply. Changing the chance does not re-evaluate villagers already checked.
+Use the administrative command for a controlled test.
 
-`/vv admin spawnherbalist [poziom]` nadal respektuje limit wioski. Jeśli nie
-patrzysz na villagera, komenda tworzy nowego farmera nad wskazanym blokiem.
+`/vv admin spawnherbalist [tier]` still respects the village limit. If you
+are not looking at a villager, the command creates a new farmer above the
+targeted block.
 
-## Nie można zatrudnić workera
+## A worker cannot be hired
 
-Samo `verdantvice.admin` nie omija warunków domenowych. `/vv admin
-hireworker` wymaga jednocześnie:
+`verdantvice.admin` alone does not bypass domain rules. `/vv admin hireworker`
+requires all of the following:
 
-- celowanego do 8 bloków, zarejestrowanego zielarza
-  `VERDANT_EXPERT`;
-- poprawnie podpisanego `PLANTATION_CONTRACT` w głównej ręce;
-- plantacji gracza, którą może zarządzać;
-- wolnego miejsca poniżej limitu workerów;
-- zielarza, który nie jest już zatrudniony.
+- A registered `VERDANT_EXPERT` herbalist targeted within 8 blocks.
+- A correctly signed `PLANTATION_CONTRACT` in the main hand.
+- The player's farm, with permission to manage it.
+- Available capacity below the worker limit.
+- A herbalist that is not already hired.
 
-Nie wydawaj drugiego kontraktu po niejednoznacznym błędzie DB bez sprawdzenia
-rejestru przedmiotów.
+Do not issue a second contract after an ambiguous database error without
+checking the item registry.
 
-## Vault nie działa
+## Vault does not work
 
-Samo Vault nie jest providerem ekonomii. Zainstaluj również provider, ustaw
-`provider: VAULT` lub `vault.enabled: true`, wykonaj `/vv admin reload` i
-sprawdź w logu wiersz `Economy: Vault.`. Przy braku usługi VerdantVice
-bezpiecznie pozostaje przy szmaragdach.
+Vault itself is not an economy provider. Install a provider as well, set
+`provider: VAULT` or `vault.enabled: true`, run `/vv admin reload`, and check
+the log for `Economy: Vault.`. If no service is available, VerdantVice safely
+continues using emeralds.
 
-## PlaceholderAPI zwraca pustą wartość
+## PlaceholderAPI returns an empty value
 
-PlaceholderAPI musi być aktywne podczas finalizacji startu VerdantVice.
-Identyfikator to `verdantvice`. Dostępne placeholdery:
+PlaceholderAPI must be active when VerdantVice completes startup. The
+identifier is `verdantvice`. Available placeholders:
 
 ```text
 %verdantvice_farm_name%
@@ -222,31 +225,33 @@ Identyfikator to `verdantvice`. Dostępne placeholdery:
 %verdantvice_market_<strain_id>%
 ```
 
-Nieznany parametr zwraca `null`, a brak gracza pusty tekst.
+An unknown parameter returns `null`; a missing player returns empty text.
 
-## Paczka zasobów nie działa
+## The resource pack does not work
 
-- wybierz właściwy wariant 1.21.4 albo 26.2;
-- `pack.mcmeta` musi być w korzeniu ZIP-a;
-- URL musi prowadzić bezpośrednio do ZIP-a przez HTTPS;
-- SHA-1 ma dokładnie 40 znaków hex i odpowiada bieżącemu plikowi;
-- po zmianie pliku wyczyść cache klienta albo zmień URL;
-- sprawdź `enabled` oraz `send-on-join`.
+- Select the correct 1.21.4 or 26.2 variant.
+- `pack.mcmeta` must be at the ZIP root.
+- The URL must lead directly to the ZIP over HTTPS.
+- SHA-1 must contain exactly 40 hexadecimal characters and match the current
+  file.
+- After changing the file, clear the client cache or change the URL.
+- Check `enabled` and `send-on-join`.
 
-Bez paczki przedmioty mają wyglądać jak poprawne materiały vanilla. Pełna
-instrukcja: [RESOURCE_PACK.md](RESOURCE_PACK.md).
+Without the pack, items should appear as valid vanilla materials. Complete
+instructions: [RESOURCE_PACK.md](RESOURCE_PACK.md).
 
-## API jest `null`
+## The API is `null`
 
-To może być prawidłowe w `onEnable()` pluginu zależnego, ponieważ VerdantVice
-rejestruje usługę dopiero po załadowaniu DB i cache. Pobieraj ją leniwie z
-`ServicesManager` i ponów próbę po komunikacie gotowości. Nie rzutuj obiektu
-pluginu. Zobacz [API.md](API.md).
+This may be normal during a dependent plugin's `onEnable()` because
+VerdantVice registers the service only after loading the database and cache.
+Resolve it lazily through `ServicesManager` and retry after the readiness
+message. Do not cast the plugin object. See [API.md](API.md).
 
-## `runServer` nie startuje
+## `runServer` does not start
 
-- użyj JDK 25;
-- zapewnij dostęp do repozytoriów Gradle i Paper;
-- przeczytaj EULA i w razie wymagania ustaw `eula=true` w `run/eula.txt`;
-- usuń tylko uszkodzone pliki testowego `run/`, nie katalog produkcyjny;
-- nie próbuj tym zadaniem uruchomić 1.21.4 — jest skonfigurowane na 26.2.
+- Use JDK 25.
+- Ensure access to Gradle and Paper repositories.
+- Read the EULA and, if required, set `eula=true` in `run/eula.txt`.
+- Remove only corrupt files from the test `run/` environment, not a production
+  directory.
+- Do not use this task to run 1.21.4: it is configured for 26.2.

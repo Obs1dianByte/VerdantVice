@@ -62,7 +62,7 @@ public final class HerbalistConversionService {
     }
 
     public CompletableFuture<HerbalistEvaluation> evaluate(Villager villager) {
-        return evaluate(villager, false);
+        return evaluate(villager, false, false, Optional.empty());
     }
 
     /**
@@ -71,12 +71,32 @@ public final class HerbalistConversionService {
      * enforced.
      */
     public CompletableFuture<HerbalistEvaluation> force(Villager villager) {
-        return evaluate(villager, true);
+        return evaluate(villager, true, false, Optional.empty());
+    }
+
+    public CompletableFuture<HerbalistEvaluation> force(
+            Villager villager,
+            HerbalistTier requestedTier
+    ) {
+        return evaluate(villager, true, false, Optional.of(requestedTier));
+    }
+
+    public CompletableFuture<HerbalistEvaluation> forceIgnoringVillageLimit(Villager villager) {
+        return evaluate(villager, true, true, Optional.empty());
+    }
+
+    public CompletableFuture<HerbalistEvaluation> forceIgnoringVillageLimit(
+            Villager villager,
+            HerbalistTier requestedTier
+    ) {
+        return evaluate(villager, true, true, Optional.of(requestedTier));
     }
 
     private CompletableFuture<HerbalistEvaluation> evaluate(
             Villager villager,
-            boolean forced
+            boolean forced,
+            boolean ignoreVillageLimit,
+            Optional<HerbalistTier> requestedTier
     ) {
         requireMainThread();
         if (!villager.isValid() || villager.isDead()) {
@@ -86,16 +106,17 @@ public final class HerbalistConversionService {
         PersistentDataContainer pdc = villager.getPersistentDataContainer();
         Optional<UUID> marked = markedId(villager);
         if (marked.isPresent()) {
-            return repository.find(marked.get()).thenCompose(record -> onMain(() -> {
-                if (record.isPresent() && villager.isValid() && !villager.isDead()) {
-                    refreshName(villager);
-                }
-                return new HerbalistEvaluation(
-                        record.isPresent()
-                                ? HerbalistEvaluation.Status.EXISTING
-                                : HerbalistEvaluation.Status.INVALID_ENTITY,
-                        record);
-            }));
+            return requestedRecord(repository.find(marked.get()), requestedTier)
+                    .thenCompose(record -> onMain(() -> {
+                        if (record.isPresent() && villager.isValid() && !villager.isDead()) {
+                            refreshName(villager);
+                        }
+                        return new HerbalistEvaluation(
+                                record.isPresent()
+                                        ? HerbalistEvaluation.Status.EXISTING
+                                        : HerbalistEvaluation.Status.INVALID_ENTITY,
+                                record);
+                    }));
         }
         if (villager.getProfession() != Villager.Profession.FARMER) {
             return CompletableFuture.completedFuture(new HerbalistEvaluation(
@@ -119,8 +140,11 @@ public final class HerbalistConversionService {
         CompletableFuture<HerbalistEvaluation> evaluation = serialize(() ->
                 repository.findByEntity(entityUuid).thenCompose(existing -> {
                     if (existing.isPresent()) {
-                        return CompletableFuture.completedFuture(new HerbalistEvaluation(
-                                HerbalistEvaluation.Status.EXISTING, existing));
+                        return requestedRecord(
+                                CompletableFuture.completedFuture(existing),
+                                requestedTier
+                        ).thenApply(updated -> new HerbalistEvaluation(
+                                HerbalistEvaluation.Status.EXISTING, updated));
                     }
                     if (!forced && pdc.has(evaluatedKey, PersistentDataType.BYTE)) {
                         return CompletableFuture.completedFuture(new HerbalistEvaluation(
@@ -131,15 +155,29 @@ public final class HerbalistConversionService {
                                 HerbalistEvaluation.Status.NORMAL, Optional.empty()));
                     }
                     UUID herbalistId = UUID.randomUUID();
-                    return repository.createIfBelowLimit(
-                            herbalistId, entityUuid, worldUuid, x, y, z, radius,
-                            maximum, reputation, Instant.now()).thenApply(created -> switch (created.status()) {
+                    CompletableFuture<HerbalistRepository.CreationResult> creation =
+                            ignoreVillageLimit
+                                    ? repository.createIgnoringVillageLimit(
+                                            herbalistId, entityUuid, worldUuid, x, y, z, radius,
+                                            maximum, reputation,
+                                            requestedTier.orElse(HerbalistTier.NOVICE),
+                                            configs.get("villagers.yml"), Instant.now())
+                                    : repository.createIfBelowLimit(
+                                            herbalistId, entityUuid, worldUuid, x, y, z, radius,
+                                            maximum, reputation,
+                                            requestedTier.orElse(HerbalistTier.NOVICE),
+                                            configs.get("villagers.yml"), Instant.now());
+                    return creation.thenApply(created -> switch (created.status()) {
                         case CREATED -> new HerbalistEvaluation(
                                 HerbalistEvaluation.Status.CREATED, created.optionalRecord());
+                        case CREATED_FORCED -> new HerbalistEvaluation(
+                                HerbalistEvaluation.Status.CREATED_FORCED, created.optionalRecord());
                         case ALREADY_EXISTS -> new HerbalistEvaluation(
                                 HerbalistEvaluation.Status.EXISTING, created.optionalRecord());
                         case VILLAGE_LIMIT -> new HerbalistEvaluation(
                                 HerbalistEvaluation.Status.VILLAGE_LIMIT, Optional.empty());
+                        case WORKER -> new HerbalistEvaluation(
+                                HerbalistEvaluation.Status.WORKER, Optional.empty());
                     });
                 }));
         return evaluation.thenCompose(result -> onMain(() -> {
@@ -178,6 +216,23 @@ public final class HerbalistConversionService {
         return id.isPresent()
                 ? repository.find(id.get())
                 : repository.findByEntity(villager.getUniqueId());
+    }
+
+    private CompletableFuture<Optional<HerbalistRecord>> requestedRecord(
+            CompletableFuture<Optional<HerbalistRecord>> lookup,
+            Optional<HerbalistTier> requestedTier
+    ) {
+        return lookup.thenCompose(record -> {
+            if (record.isEmpty() || requestedTier.isEmpty()) {
+                return CompletableFuture.completedFuture(record);
+            }
+            return repository.setTierAtLeast(
+                    record.orElseThrow().herbalistUuid(),
+                    requestedTier.orElseThrow(),
+                    configs.get("villagers.yml"),
+                    Instant.now()
+            ).thenApply(Optional::of);
+        });
     }
 
     private void applyMarker(Villager villager, HerbalistEvaluation result) {

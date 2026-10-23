@@ -1,0 +1,10 @@
+name: VerdantViceIntegrationProbe
+version: 1.0.0
+main: com.verdantvice.integrationprobe.IntegrationSmoke
+api-version: '1.21.4'
+depend: [VerdantVice, Vault, PlaceholderAPI, Essentials, WorldGuard, WorldEdit, GriefPrevention]
+description: Real optional-provider checks on an isolated loopback server.
+commands:
+  vvintegrations:
+    description: Runs the isolated optional-provider checks for VVClientTest.
+    usage: /vvintegrations

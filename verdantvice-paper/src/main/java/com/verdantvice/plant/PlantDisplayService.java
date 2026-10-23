@@ -3,6 +3,7 @@ package com.verdantvice.plant;
 import com.verdantvice.config.ConfigManager;
 import com.verdantvice.i18n.TranslationService;
 import com.verdantvice.resourcepack.ResourcePackService;
+import com.verdantvice.resourcepack.ResourcePackModels;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -38,17 +39,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * plants. They are never the source of gameplay state.
  */
 public final class PlantDisplayService {
-    private static final Map<GrowthStage, Integer> MODEL_DATA = Map.of(
-            GrowthStage.SEED, 12101,
-            GrowthStage.SPROUT, 12102,
-            GrowthStage.SEEDLING, 12103,
-            GrowthStage.VEGETATIVE, 12104,
-            GrowthStage.MATURING, 12105,
-            GrowthStage.READY, 12106,
-            GrowthStage.OVERRIPE, 12107,
-            GrowthStage.SPOILED, 12108
-    );
-
     private final JavaPlugin plugin;
     private final ConfigManager configs;
     private final TranslationService translations;
@@ -138,7 +128,7 @@ public final class PlantDisplayService {
                     scale(plant.growthStage()),
                     new AxisAngle4f()
             ));
-            entity.setItemStack(displayItem(plant.growthStage()));
+            entity.setItemStack(displayItem(plant.growthStage(), plant.strainId()));
         });
 
         Interaction hitbox = world.spawn(center, Interaction.class, entity -> {
@@ -244,11 +234,13 @@ public final class PlantDisplayService {
         }
     }
 
-    private ItemStack displayItem(GrowthStage stage) {
+    private ItemStack displayItem(GrowthStage stage, String strainId) {
         if (resourcePack.enabled()) {
             ItemStack item = new ItemStack(Material.AMETHYST_SHARD);
             ItemMeta meta = item.getItemMeta();
-            meta.setCustomModelData(MODEL_DATA.get(stage));
+            String visualModel = configs.get("strains.yml").getString(
+                    "strains." + strainId + ".visual-model", strainId);
+            meta.setCustomModelData(ResourcePackModels.plant(visualModel, stage));
             item.setItemMeta(meta);
             return item;
         }

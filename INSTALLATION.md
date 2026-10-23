@@ -1,40 +1,41 @@
-# Instalacja VerdantVice
+# Installing VerdantVice
 
-## 1. Dobór środowiska
+## 1. Choose the environment
 
-Obsługiwane warianty:
+Supported configurations:
 
-- Paper/Purpur 1.21.4 na Javie 21;
-- Paper/Purpur 26.2 na Javie 25.
+- Paper/Purpur 1.21.4 on Java 21;
+- Paper/Purpur 26.2 on Java 25.
 
-Ten sam produkcyjny JAR działa w obu wariantach. Plugin nie deklaruje obsługi
-Folia, Spigot ani CraftBukkit. Przed instalacją wykonaj pełną kopię świata,
-katalogu `plugins/` i bazy serwera.
+The same production JAR works in both configurations. The plugin does not
+claim support for Folia, Spigot or CraftBukkit. Before installation, make
+a complete backup of the world, the `plugins/` directory and the server
+database.
 
-## 2. Instalacja podstawowa z SQLite
+## 2. Basic installation with SQLite
 
-1. Zatrzymaj serwer.
-2. Skopiuj `VerdantVice-1.0.0.jar` do `plugins/`.
-3. Usuń ewentualny `VerdantVice-1.0.0-thin.jar`; nie powinien znajdować się
-   na serwerze.
-4. Uruchom serwer.
-5. Obserwuj konsolę aż do komunikatu:
+1. Stop the server.
+2. Copy `VerdantVice-1.0.0.jar` to `plugins/`.
+3. Remove any `VerdantVice-1.0.0-thin.jar`; it must not be installed on the
+   server.
+4. Start the server.
+5. Watch the console until this message appears:
 
    ```text
    Plugin enabled successfully.
    ```
 
-6. Wykonaj `/vv admin database`. Oczekiwany typ to `SQLITE`, a stan bazy
-   powinien przyjmować pracę.
-7. Wejdź jako gracz i sprawdź `/vv guide`.
+6. Run `/vv admin database`. The expected type is `SQLITE`, and the database
+   state should be accepting work.
+7. Join as a player and check `/vv guide`.
 
-Przy pierwszym starcie powstają:
+The first startup creates:
 
 ```text
 plugins/VerdantVice/
 ├── *.yml
 ├── languages/
-│   ├── pl_PL.yml
+│   ├── en_US.yml
 │   └── ...
 ├── data/
 │   ├── verdantvice.db
@@ -44,24 +45,24 @@ plugins/VerdantVice/
 └── logs/
 ```
 
-`processing-stations.yml` powstaje dopiero po zapisaniu stacji. Baza SQLite
-może mieć podczas pracy pliki `-wal` i `-shm`; nie kopiuj samego pliku `.db`
-na żywo bez bezpiecznego mechanizmu backupu.
+`processing-stations.yml` is created only after a station has been saved.
+SQLite may have `-wal` and `-shm` files while running; do not copy only the
+live `.db` file without a safe backup mechanism.
 
-## 3. Instalacja z MySQL lub MariaDB
+## 3. Installation with MySQL or MariaDB
 
-Najpierw utwórz pustą bazę i konto z prawem tworzenia oraz modyfikowania tabel
-w tej bazie. VerdantVice używa tabel InnoDB i `utf8mb4`.
+First create an empty database and an account allowed to create and modify
+tables in that database. VerdantVice uses InnoDB tables and `utf8mb4`.
 
-1. Uruchom plugin raz, aby wygenerował pliki, po czym zatrzymaj serwer.
-2. Ustaw `type: MYSQL` albo `type: MARIADB` w
+1. Start the plugin once to generate its files, then stop the server.
+2. Set `type: MYSQL` or `type: MARIADB` in
    `plugins/VerdantVice/database.yml`.
-3. W odpowiedniej sekcji wpisz `host`, `port`, `database`, `username`,
-   `password` i parametry JDBC.
-4. Nie publikuj tego pliku ani raportów zawierających jego zawartość.
-5. Uruchom serwer i sprawdź migracje oraz `/vv admin database`.
+3. In the corresponding section, enter `host`, `port`, `database`,
+   `username`, `password` and JDBC parameters.
+4. Do not publish this file or reports containing its contents.
+5. Start the server and check migrations and `/vv admin database`.
 
-Przykład:
+Example:
 
 ```yaml
 type: MARIADB
@@ -70,82 +71,84 @@ mariadb:
   port: 3306
   database: verdantvice
   username: verdantvice
-  password: "długie-losowe-hasło"
+  password: "long-random-password"
   parameters: useUnicode=true&characterEncoding=utf8&useSSL=true
 ```
 
-Zmiana typu lub danych połączenia zawsze wymaga pełnego restartu. Samo
-`/vv admin reload` celowo pomija `database.yml`.
+Changing the type or connection details always requires a full restart.
+`/vv admin reload` deliberately skips `database.yml`.
 
-VerdantVice nie przenosi automatycznie danych pomiędzy SQLite, MySQL i
-MariaDB. Zmiana typu bez migracji danych tworzy niezależny stan gry.
+VerdantVice does not automatically transfer data between SQLite, MySQL and
+MariaDB. Changing the type without migrating data creates an independent
+game state.
 
-## 4. Opcjonalne pluginy
+## 4. Optional plugins
 
-Wszystkie integracje są miękkie — brak pluginu nie blokuje VerdantVice.
+All integrations are soft dependencies: a missing plugin does not prevent
+VerdantVice from loading.
 
-- Vault wymaga również zgodnego providera ekonomii. Ustaw
-  `economy.yml` → `provider: VAULT` albo `vault.enabled: true`.
-- PlaceholderAPI udostępnia placeholdery po wykryciu pluginu.
-- WorldGuard, GriefPrevention i Lands są wykrywane, jeśli odpowiadający wpis
-  w `integrations.yml` ma wartość `true`.
+- Vault also requires a compatible economy provider. Set
+  `economy.yml` → `provider: VAULT` or `vault.enabled: true`.
+- PlaceholderAPI exposes placeholders when the plugin is detected.
+- WorldGuard, GriefPrevention and Lands are detected when the corresponding
+  entry in `integrations.yml` is `true`.
 
-W razie błędu adaptera ochrony decyzja staje się `UNKNOWN`. Domyślne
-`region-protection-fallback: DENY_IF_UNKNOWN` bezpiecznie blokuje wtedy
-budowę.
+If a protection adapter fails, its decision becomes `UNKNOWN`. The default
+`region-protection-fallback: DENY_IF_UNKNOWN` safely blocks building in this
+case.
 
-## 5. Paczka zasobów
+## 5. Resource pack
 
-Paczka nie jest częścią JAR-a serwerowego i nie jest wymagana. Wybierz
-wariant z `resource-pack/1.21.4/` albo `resource-pack/26.2/`, spakuj jego
-zawartość, umieść ZIP pod publicznym adresem HTTPS i skonfiguruj
-`resourcepack.yml`.
+The pack is not part of the server JAR and is optional. Choose the variant
+in `resource-pack/1.21.4/` or `resource-pack/26.2/`, ZIP its contents, host the
+ZIP at a public HTTPS address and configure `resourcepack.yml`.
 
-Instrukcja wraz z obliczeniem SHA-1: [RESOURCE_PACK.md](RESOURCE_PACK.md).
+For instructions, including SHA-1 calculation, see
+[RESOURCE_PACK.md](RESOURCE_PACK.md).
 
-## 6. Pierwsza konfiguracja
+## 6. Initial configuration
 
-Przed udostępnieniem serwera:
+Before opening the server to players:
 
-1. wybierz `default-language`;
-2. sprawdź limity roślin, plantacji, workerów i wyświetlaczy w `config.yml`;
-3. wybierz ekonomię w `economy.yml`;
-4. ustaw zasady regionów w `integrations.yml`;
-5. dostosuj okres kopii SQLite;
-6. skonfiguruj uprawnienia w pluginie permissions;
-7. wykonaj pełny scenariusz z [TESTING.md](TESTING.md).
+1. choose `default-language`;
+2. check plant, farm, worker and display limits in `config.yml`;
+3. choose the economy in `economy.yml`;
+4. set region rules in `integrations.yml`;
+5. adjust the SQLite backup interval;
+6. configure permissions in your permissions plugin;
+7. complete the full scenario in [TESTING.md](TESTING.md).
 
-## 7. Aktualizacja
+## 7. Updating
 
-1. Zatrzymaj serwer — nie używaj `/reload`.
-2. Skopiuj razem:
-   - bazę lub jej spójny dump,
+1. Stop the server; do not use `/reload`.
+2. Back up the following together:
+   - the database or a consistent dump,
    - `data/signing.key`,
    - `data/processing-stations.yml`,
-   - wszystkie pliki YAML i języki.
-3. Zamień JAR na nowy produkcyjny JAR.
-4. Uruchom serwer i pozwól wykonać automatyczne migracje.
-5. Sprawdź log, `/vv admin database`, `/vv admin performance` i podstawowy
-   cykl rozgrywki.
+   - all YAML files and languages.
+3. Replace the JAR with the new production JAR.
+4. Start the server and allow automatic migrations to run.
+5. Check the log, `/vv admin database`, `/vv admin performance` and the
+   basic gameplay cycle.
 
-Nie zmieniaj ręcznie tabeli `vv_schema_history`. Pełna procedura:
+Do not modify `vv_schema_history` manually. For the complete procedure, see
 [MIGRATION.md](MIGRATION.md).
 
-## 8. Przeniesienie na inny host
+## 8. Moving to another host
 
-Przenieś cały `plugins/VerdantVice/`, nie tylko bazę. Szczególnie ważny jest
-`data/signing.key`: odpowiada za wiarygodność istniejących przedmiotów,
-partii i operacji. Ustaw prawa plików tak, aby konto serwera mogło czytać i
-zapisywać katalog, ale inni użytkownicy hosta nie mogli odczytać klucza ani
-hasła bazy.
+Move the entire `plugins/VerdantVice/` directory, not just the database.
+`data/signing.key` is particularly important: it authenticates existing
+items, batches and operations. Set file permissions so that the server
+account can read and write the directory, but other host users cannot read
+the key or database password.
 
-Po przeniesieniu bazy sieciowej zmień wyłącznie dane połączenia, a następnie
-wykonaj restart. Dla SQLite sprawdź, czy ścieżka pozostaje wewnątrz
-`plugins/VerdantVice/`; kod odrzuca ścieżki wychodzące poza katalog pluginu.
+After moving a network database, change only the connection details and
+restart. For SQLite, verify that the path remains inside
+`plugins/VerdantVice/`; the code rejects paths outside the plugin directory.
 
-## 9. Usunięcie
+## 9. Uninstalling
 
-Zatrzymaj serwer, usuń JAR, a dane zarchiwizuj. Usunięcie
-`plugins/VerdantVice/` jest trwałym skasowaniem profili, plantacji, roślin,
-partii, rynku, kontraktów i klucza podpisu. Przed takim krokiem zachowaj
-kopię zgodną z polityką prywatności serwera.
+Stop the server, remove the JAR and archive the data. Deleting
+`plugins/VerdantVice/` permanently removes profiles, farms, plants, batches,
+the market, contracts and the signing key. Before doing so, retain a backup
+consistent with the server's privacy policy.

@@ -1,5 +1,5 @@
 # VerdantVice main configuration. Durations are deliberately fictional game values.
-default-language: pl_PL
+default-language: en_US
 auto-detect-client-language: true
 debug: false
 

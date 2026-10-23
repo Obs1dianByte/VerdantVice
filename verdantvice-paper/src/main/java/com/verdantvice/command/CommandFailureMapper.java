@@ -2,6 +2,7 @@ package com.verdantvice.command;
 
 import com.verdantvice.database.DatabaseUnavailableException;
 import com.verdantvice.storage.ConcurrentPlantModificationException;
+import com.verdantvice.storage.StoragePersistenceException;
 
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
@@ -21,6 +22,16 @@ final class CommandFailureMapper {
         if (cause instanceof ConcurrentPlantModificationException) {
             return new FailureMapping("errors.database-conflict", false, cause);
         }
+        if (cause instanceof StoragePersistenceException storage) {
+            String key = switch (storage.status()) {
+                case ALREADY_LINKED -> "farm.storage.already-linked";
+                case NOT_LINKED -> "farm.storage.not-linked";
+                case SALARY_STORAGE_ALREADY_EXISTS -> "farm.storage.salary-exists";
+                case OTHER_FARM -> "farm.storage.other-farm";
+                default -> "errors.internal";
+            };
+            return new FailureMapping(key, key.equals("errors.internal"), cause);
+        }
         String message = Objects.toString(cause.getMessage(), "");
         String key = switch (message) {
             case "farm_region_overlap", "Farm region overlaps an existing farm" ->
@@ -31,12 +42,18 @@ final class CommandFailureMapper {
             case "farm_name_required" -> "errors.farm-name-required";
             case "invalid_farm_name", "invalid_name" -> "errors.invalid-name";
             case "farm_limit", "limit_reached", "chunk_limit" -> "errors.limit-reached";
-            case "region_denied" -> "errors.protected-region";
+            case "region_denied", "protected_region" -> "errors.protected-region";
             case "farm_permission_denied", "farm_permission" -> "errors.farm-permission";
             case "no_permission", "permission_denied", "missing_permission" ->
                     "errors.no-permission";
-            case "invalid_or_wrong_item", "invalid_item", "same_parent_strain",
-                 "not_a_container" -> "errors.invalid-item";
+            case "invalid_or_wrong_item", "invalid_item", "same_parent_strain" ->
+                    "errors.invalid-item";
+            case "not_a_container" -> "farm.storage.not-container";
+            case "storage_already_linked", "Storage position is already assigned" ->
+                    "farm.storage.already-linked";
+            case "Storage must be inside the farm" -> "farm.storage.outside-farm";
+            case "Farm already has a salary storage" -> "farm.storage.salary-exists";
+            case "unknown_farm" -> "farm.storage.no-owned-farm";
             case "item_already_used_or_modified", "item_reservation_failed",
                  "item_consumption_failed" -> "errors.duplicate-item";
             case "wrong_owner" -> "errors.wrong-owner";

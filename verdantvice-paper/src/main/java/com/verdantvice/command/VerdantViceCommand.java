@@ -4,6 +4,7 @@ import com.verdantvice.VerdantVicePlugin;
 import com.verdantvice.database.DatabaseDiagnostics;
 import com.verdantvice.farm.Farm;
 import com.verdantvice.farm.FarmRole;
+import com.verdantvice.farm.StorageLinkResult;
 import com.verdantvice.farm.StorageType;
 import com.verdantvice.gui.MenuType;
 import com.verdantvice.herbalist.HerbalistEvaluation;
@@ -16,6 +17,7 @@ import com.verdantvice.processing.QualityGrade;
 import com.verdantvice.resourcepack.ResourcePackService;
 import com.verdantvice.security.CustomItemType;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
@@ -46,7 +48,7 @@ import java.time.Instant;
 
 public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
     private static final List<String> PLAYER_COMMANDS = List.of(
-            "help", "guide", "profile", "skills", "strains", "recipes",
+            "help", "guide", "profile", "skills", "strains", "recipes", "roll",
             "market", "contracts", "genetics", "farm", "workers", "language",
             "notifications", "resourcepack"
     );
@@ -89,7 +91,8 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
                 case "profile" -> open(sender, MenuType.SKILLS);
                 case "skills" -> open(sender, MenuType.SKILLS);
                 case "strains" -> open(sender, MenuType.STRAINS);
-                case "recipes" -> recipes(sender);
+                case "recipes" -> recipes(sender, args);
+                case "roll" -> roll(sender);
                 case "market" -> open(sender, MenuType.MARKET, "verdantvice.trade");
                 case "contracts" -> open(
                         sender,
@@ -109,17 +112,8 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
                 case "admin" -> admin(sender, args);
                 default -> usage(sender, "commands.root.usage");
             }
-        } catch (IllegalArgumentException failure) {
-            sender.sendMessage(translation().component(sender, "errors.invalid-usage",
-                    Map.of("usage", translation().plain(sender, "commands." + sub + ".usage"))));
-        } catch (IllegalStateException failure) {
-            sender.sendMessage(translation().component(sender, "errors.internal",
-                    Map.of("error_id", shortErrorId())));
-            plugin.getLogger().log(
-                    Level.WARNING,
-                    "Command failed: /" + label + " " + String.join(" ", args),
-                    failure
-            );
+        } catch (IllegalArgumentException | IllegalStateException failure) {
+            commandFailure(sender, failure, label, args);
         }
         return true;
     }
@@ -157,9 +151,14 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
                 }));
     }
 
-    private void recipes(CommandSender sender) {
+    private void recipes(CommandSender sender, String[] args) {
         if (!sender.hasPermission("verdantvice.process")) {
             deny(sender);
+            return;
+        }
+        RecipeCommandRoute.Action action = RecipeCommandRoute.resolve(args);
+        if (action == RecipeCommandRoute.Action.START_ROLLING) {
+            roll(sender);
             return;
         }
         Player player = player(sender);
@@ -168,7 +167,7 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
         }
         TutorialBookService.PreparedBook prepared = plugin.books().advanced(
                 player,
-                TutorialBookService.BookType.PERFECT_BATCH
+                TutorialBookService.BookType.RECIPES
         );
         plugin.secureItems().register(prepared.stack()).whenComplete((book, failure) ->
                 onMain(() -> {
@@ -178,6 +177,52 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
                         player.openBook(book);
                     }
                 }));
+    }
+
+    private void roll(CommandSender sender) {
+        if (!sender.hasPermission("verdantvice.process")) {
+            deny(sender);
+            return;
+        }
+        Player player = player(sender);
+        if (player == null) {
+            return;
+        }
+        plugin.processing().startRolling(player).whenComplete((ignored, failure) ->
+                onMain(() -> {
+                    if (failure != null) {
+                        rollingFailure(player, failure);
+                    }
+                }));
+    }
+
+    private void rollingFailure(Player player, Throwable failure) {
+        Throwable cause = unwrap(failure);
+        if (cause instanceof com.verdantvice.processing.ProcessingFailureException processing) {
+            String key = processing.reason()
+                    == com.verdantvice.processing.ProcessingFailureReason.WRONG_BATCH_STATE
+                    ? "rolling.errors.wrong-product-state"
+                    : processing.reason().translationKey();
+            player.sendMessage(translation().component(player, key));
+            return;
+        }
+        if (cause instanceof com.verdantvice.storage.BatchAccessException batch) {
+            String key = switch (batch.reason()) {
+                case MISSING_BATCH -> "processing.errors.missing-batch";
+                case INVALID_BATCH_SIGNATURE -> "processing.errors.invalid-batch-signature";
+                case WRONG_OWNER -> "processing.errors.wrong-owner";
+                case WRONG_BATCH_STATE -> "rolling.errors.wrong-product-state";
+            };
+            player.sendMessage(translation().component(player, key));
+            return;
+        }
+        if (cause instanceof com.verdantvice.database.DatabaseUnavailableException
+                || cause instanceof java.sql.SQLException) {
+            plugin.getLogger().log(Level.WARNING, "Could not start rolling", cause);
+            player.sendMessage(translation().component(player, "errors.database-unavailable"));
+            return;
+        }
+        asyncFailure(player, cause);
     }
 
     private void open(CommandSender sender, MenuType type) {
@@ -205,6 +250,10 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length == 1) {
+            plugin.genetics().deliverPending(player).exceptionally(failure -> {
+                plugin.getLogger().log(Level.WARNING, "Could not restore genetic seed delivery", failure);
+                return 0;
+            });
             plugin.gui().open(player, MenuType.GENETICS, 0);
             return;
         }
@@ -212,14 +261,16 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
         ItemStack firstSeed = player.getInventory().getItemInMainHand().clone();
         ItemStack secondSeed = player.getInventory().getItemInOffHand().clone();
         plugin.genetics().cross(player, requestedName, firstSeed, secondSeed)
+                .thenCompose(result -> plugin.genetics().deliverPending(player)
+                        .thenApply(ignored -> result))
                 .whenComplete((result, failure) -> onMain(() -> {
                     if (failure != null) {
                         asyncFailure(player, failure);
                         return;
                     }
-                    removeInventoryInstance(player, result.firstSeedId());
-                    removeInventoryInstance(player, result.secondSeedId());
-                    give(player, result.seed());
+                    if (!player.isOnline()) {
+                        return;
+                    }
                     player.sendMessage(translation().component(
                             player,
                             "genetics.crossing.success",
@@ -239,7 +290,8 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
         }
         if (args.length == 1) {
             if (!player.hasPermission("verdantvice.farm.member")
-                    && !player.hasPermission("verdantvice.farm.manage")) {
+                    && !player.hasPermission("verdantvice.farm.manage")
+                    && !player.hasPermission("verdantvice.admin")) {
                 deny(player);
                 return;
             }
@@ -346,40 +398,52 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
                 }));
             }
             case "storage" -> {
-                if (args.length != 3) {
-                    usage(player, "commands.farm.usage");
+                if (!player.hasPermission("verdantvice.farm.manage")
+                        && !player.hasPermission("verdantvice.admin")) {
+                    storageResult(player, StorageLinkResult.failure(
+                            StorageLinkResult.Status.NO_PERMISSION));
+                    return;
+                }
+                FarmStorageCommandRoute.Result route = FarmStorageCommandRoute.resolve(args);
+                if (route.action() == FarmStorageCommandRoute.Action.INVALID_USAGE) {
+                    usage(player, "commands.farm.storage.usage");
+                    return;
+                }
+                if (route.action() == FarmStorageCommandRoute.Action.INVALID_TYPE) {
+                    player.sendMessage(translation().component(
+                            player,
+                            "farm.storage.invalid-type",
+                            Map.of("types", String.join(", ", StorageType.arguments()))
+                    ));
                     return;
                 }
                 Farm owned = plugin.farms().owned(player.getUniqueId()).orElse(null);
-                Block target = player.getTargetBlockExact(6);
-                if (owned == null || target == null) {
-                    player.sendMessage(
-                            translation().component(player, "errors.target-not-found")
-                    );
+                if (owned == null) {
+                    storageResult(player, StorageLinkResult.failure(
+                            StorageLinkResult.Status.NO_OWNED_FARM));
                     return;
                 }
-                StorageType type = StorageType.valueOf(
-                        args[2].toUpperCase(Locale.ROOT).replace('-', '_')
-                );
-                plugin.farms().linkStorage(
-                        player,
-                        owned.farmId(),
-                        target,
-                        type
-                ).whenComplete((storage, failure) -> onMain(() -> {
+                Block target = player.getTargetBlockExact(6);
+                if (target == null) {
+                    storageResult(player, StorageLinkResult.failure(
+                            StorageLinkResult.Status.NO_TARGET));
+                    return;
+                }
+                CompletableFuture<StorageLinkResult> operation =
+                        route.action() == FarmStorageCommandRoute.Action.UNLINK
+                                ? plugin.farms().unlinkStorage(player, owned.farmId(), target)
+                                : plugin.farms().linkStorage(
+                                        player,
+                                        owned.farmId(),
+                                        target,
+                                        route.type().orElseThrow()
+                                );
+                operation.whenComplete((result, failure) -> onMain(() -> {
                     if (failure != null) {
                         asyncFailure(player, failure);
                         return;
                     }
-                    player.sendMessage(translation().component(
-                            player,
-                            "farm.storage.linked",
-                            Map.of(
-                                    "type",
-                                    type.name().toLowerCase(Locale.ROOT)
-                                            .replace('_', '-')
-                            )
-                    ));
+                    storageResult(player, result);
                 }));
             }
             default -> usage(player, "commands.farm.usage");
@@ -393,6 +457,17 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
         }
         Player player = player(sender);
         if (player == null) {
+            return;
+        }
+        if (args.length == 1) {
+            player.sendMessage(translation().component(player, "gui.settings.language"));
+            for (LanguageCommandChoices.Choice choice : LanguageCommandChoices.choices(
+                    translation().supportedLocales())) {
+                player.sendMessage(Component.text("• ")
+                        .append(translation().component(choice.locale(), "meta.language-name", Map.of()))
+                        .append(Component.text(" [" + choice.locale() + "]"))
+                        .clickEvent(ClickEvent.runCommand(choice.command())));
+            }
             return;
         }
         if (args.length != 2
@@ -542,16 +617,40 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
         if (player == null) {
             return;
         }
-        HerbalistTier tier = args.length >= 3
-                ? HerbalistTier.valueOf(args[2].toUpperCase(Locale.ROOT))
-                : HerbalistTier.NOVICE;
+
+        HerbalistSpawnRequest request = HerbalistSpawnRequest.parse(args);
+        HerbalistTier requestedTier = request.tier().orElse(null);
+        boolean ignoreVillageLimit = request.force();
+        if (ignoreVillageLimit
+                && !sender.hasPermission("verdantvice.admin.spawnherbalist.force")) {
+            sender.sendMessage(translation().component(
+                    sender,
+                    "herbalist.force-no-permission"
+            ));
+            return;
+        }
+
         Entity target = player.getTargetEntity(8);
         Villager villager;
         boolean spawned;
+        Villager.Profession originalProfession;
+        boolean professionChanged;
         if (target instanceof Villager existing) {
+            if (plugin.workers().isWorker(existing)) {
+                sender.sendMessage(translation().component(
+                        sender,
+                        "herbalist.worker-conflict"
+                ));
+                return;
+            }
             villager = existing;
             spawned = false;
-            villager.setProfession(Villager.Profession.FARMER);
+            originalProfession = villager.getProfession();
+            professionChanged = !plugin.herbalists().isHerbalist(villager)
+                    && originalProfession != Villager.Profession.FARMER;
+            if (professionChanged) {
+                villager.setProfession(Villager.Profession.FARMER);
+            }
         } else {
             var targetBlock = player.getTargetBlockExact(8);
             var location = targetBlock == null
@@ -563,52 +662,115 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
                     created -> created.setProfession(Villager.Profession.FARMER)
             );
             spawned = true;
+            originalProfession = Villager.Profession.FARMER;
+            professionChanged = false;
         }
-        plugin.herbalists().forceCreate(villager)
-                .thenCompose(evaluation -> {
-                    if (evaluation.herbalist().isEmpty()
-                            || tier == HerbalistTier.NOVICE) {
-                        return CompletableFuture.completedFuture(evaluation);
-                    }
-                    return plugin.herbalists().herbalistRepository().addProgress(
-                            evaluation.herbalist().orElseThrow().herbalistUuid(),
-                            0L,
-                            0,
-                            tier,
-                            Instant.now()
-                    ).thenApply(ignored -> evaluation);
-                })
+
+        HerbalistTier finalRequestedTier = requestedTier;
+        plugin.herbalists().forceCreate(
+                villager,
+                ignoreVillageLimit,
+                java.util.Optional.ofNullable(requestedTier)
+        )
                 .whenComplete((evaluation, failure) -> onMain(() -> {
                     if (failure != null) {
-                        if (spawned && villager.isValid()) {
-                            villager.remove();
-                        }
+                        rollbackHerbalistTarget(
+                                villager,
+                                spawned,
+                                professionChanged,
+                                originalProfession
+                        );
                         asyncFailure(sender, failure);
                         return;
                     }
-                    if (evaluation.status()
-                            == HerbalistEvaluation.Status.VILLAGE_LIMIT) {
-                        if (spawned && villager.isValid()) {
-                            villager.remove();
+                    switch (evaluation.status()) {
+                        case VILLAGE_LIMIT -> {
+                            rollbackHerbalistTarget(
+                                    villager,
+                                    spawned,
+                                    professionChanged,
+                                    originalProfession
+                            );
+                            sender.sendMessage(translation().component(
+                                    sender,
+                                    "herbalist.village-limit"
+                            ));
                         }
-                        sender.sendMessage(
-                                translation().component(sender, "herbalist.village-limit")
-                        );
-                        return;
-                    }
-                    if (evaluation.herbalist().isEmpty()) {
-                        if (spawned && villager.isValid()) {
-                            villager.remove();
+                        case WORKER -> {
+                            rollbackHerbalistTarget(
+                                    villager,
+                                    spawned,
+                                    professionChanged,
+                                    originalProfession
+                            );
+                            sender.sendMessage(translation().component(
+                                    sender,
+                                    "herbalist.worker-conflict"
+                            ));
                         }
-                        sender.sendMessage(
-                                translation().component(sender, "errors.target-not-found")
+                        case NOT_FARMER, INVALID_ENTITY, NORMAL -> {
+                            rollbackHerbalistTarget(
+                                    villager,
+                                    spawned,
+                                    professionChanged,
+                                    originalProfession
+                            );
+                            sender.sendMessage(translation().component(
+                                    sender,
+                                    "errors.target-not-found"
+                            ));
+                        }
+                        case EXISTING -> {
+                            if (finalRequestedTier == null) {
+                                sender.sendMessage(translation().component(
+                                        sender,
+                                        "herbalist.already-herbalist"
+                                ));
+                            } else {
+                                var record = evaluation.herbalist().orElseThrow();
+                                sender.sendMessage(translation().component(
+                                        sender,
+                                        "herbalist.tier-updated",
+                                        Map.of(
+                                                "tier",
+                                                translation().plain(
+                                                        sender,
+                                                        record.tier().translationKey()
+                                                ),
+                                                "experience",
+                                                record.experience()
+                                        )
+                                ));
+                            }
+                        }
+                        case CREATED_FORCED -> sender.sendMessage(
+                                translation().component(
+                                        sender,
+                                        "herbalist.force-created"
+                                )
                         );
-                        return;
+                        case CREATED -> sender.sendMessage(
+                                translation().component(sender, "herbalist.created")
+                        );
                     }
-                    sender.sendMessage(
-                            translation().component(sender, "herbalist.created")
-                    );
                 }));
+    }
+
+    private void rollbackHerbalistTarget(
+            Villager villager,
+            boolean spawned,
+            boolean professionChanged,
+            Villager.Profession originalProfession
+    ) {
+        if (spawned) {
+            if (villager.isValid()) {
+                villager.remove();
+            }
+            return;
+        }
+        if (professionChanged && villager.isValid() && !villager.isDead()) {
+            villager.setProfession(originalProfession);
+        }
     }
 
     private void adminHireWorker(CommandSender sender) {
@@ -679,7 +841,7 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (type == CustomItemType.SEED) {
-            plugin.strains().require(strain);
+            strain = plugin.strains().require(strain).id();
         }
         final String issueStrain = strain;
         final int issueAmount = amount;
@@ -721,8 +883,7 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
             usage(sender, "commands.admin.plant.usage");
             return;
         }
-        String strain = args[2].toLowerCase(Locale.ROOT);
-        plugin.strains().require(strain);
+        String strain = plugin.strains().require(args[2]).id();
         Block target = player.getTargetBlockExact(6);
         if (target == null || !plugin.plants().isStation(target)) {
             sender.sendMessage(translation().component(sender, "errors.target-not-found"));
@@ -949,6 +1110,53 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
         ));
     }
 
+    private void storageResult(CommandSender sender, StorageLinkResult result) {
+        String key = switch (result.status()) {
+            case LINKED -> "farm.storage.linked";
+            case UNLINKED -> "farm.storage.unlinked";
+            case NO_OWNED_FARM -> "farm.storage.no-owned-farm";
+            case NO_TARGET -> "farm.storage.no-target";
+            case NOT_A_CONTAINER -> "farm.storage.not-container";
+            case OUTSIDE_FARM -> "farm.storage.outside-farm";
+            case ALREADY_LINKED -> "farm.storage.already-linked";
+            case NOT_LINKED -> "farm.storage.not-linked";
+            case SALARY_STORAGE_ALREADY_EXISTS -> "farm.storage.salary-exists";
+            case NO_PERMISSION -> "errors.no-permission";
+            case PROTECTED_REGION -> "errors.protected-region";
+            case INVALID_STORAGE_TYPE -> "farm.storage.invalid-type";
+            case OTHER_FARM -> "farm.storage.other-farm";
+            case DATABASE_FAILURE -> "errors.database-unavailable";
+        };
+        Map<String, Object> placeholders = new java.util.HashMap<>();
+        result.storage().ifPresent(storage ->
+                placeholders.put("type", storage.type().argument()));
+        placeholders.put("types", String.join(", ", StorageType.arguments()));
+        sender.sendMessage(translation().component(sender, key, placeholders));
+    }
+
+    private void commandFailure(
+            CommandSender sender,
+            Throwable failure,
+            String label,
+            String[] args
+    ) {
+        CommandFailureMapper.FailureMapping mapping = CommandFailureMapper.map(failure);
+        Map<String, Object> placeholders = new java.util.HashMap<>();
+        placeholders.put("limit", "configured");
+        if (mapping.translationKey().equals("errors.internal")) {
+            placeholders.put("error_id", shortErrorId());
+        }
+        sender.sendMessage(translation().component(
+                sender, mapping.translationKey(), placeholders));
+        if (mapping.logStackTrace()) {
+            plugin.getLogger().log(
+                    Level.WARNING,
+                    "Command failed: /" + label + " " + String.join(" ", args),
+                    mapping.cause()
+            );
+        }
+    }
+
     private void asyncFailure(CommandSender sender, Throwable failure) {
         CommandFailureMapper.FailureMapping mapping = CommandFailureMapper.map(failure);
         sender.sendMessage(translation().component(
@@ -1017,6 +1225,9 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
             }
             return filter(values, args[0]);
         }
+        if (args[0].equalsIgnoreCase("recipes") && args.length == 2) {
+            return filter(List.of("roll"), args[1]);
+        }
         if (args[0].equalsIgnoreCase("farm") && args.length == 2) {
             return filter(
                     List.of("create", "delete", "invite", "remove", "storage"),
@@ -1026,13 +1237,7 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
         if (args[0].equalsIgnoreCase("farm")
                 && args.length == 3
                 && args[1].equalsIgnoreCase("storage")) {
-            return filter(
-                    Arrays.stream(StorageType.values())
-                            .map(value -> value.name().toLowerCase(Locale.ROOT)
-                                    .replace('_', '-'))
-                            .toList(),
-                    args[2]
-            );
+            return filter(FarmStorageCommandRoute.arguments(), args[2]);
         }
         if (args[0].equalsIgnoreCase("language") && args.length == 2) {
             return filter(plugin.translations().supportedLocales(), args[1]);
@@ -1072,10 +1277,17 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
             return filter(Arrays.stream(QualityGrade.values()).map(Enum::name).toList(), args[2]);
         }
         if (args.length == 3 && args[1].equalsIgnoreCase("spawnherbalist")) {
-            return filter(
-                    Arrays.stream(HerbalistTier.values()).map(Enum::name).toList(),
-                    args[2]
+            List<String> values = new ArrayList<>(
+                    Arrays.stream(HerbalistTier.values()).map(Enum::name).toList()
             );
+            values.add("--force");
+            return filter(values, args[2]);
+        }
+        if (args.length == 4 && args[1].equalsIgnoreCase("spawnherbalist")) {
+            List<String> values = args[2].equalsIgnoreCase("--force")
+                    ? Arrays.stream(HerbalistTier.values()).map(Enum::name).toList()
+                    : List.of("--force");
+            return filter(values, args[3]);
         }
         if (args.length == 4 && args[1].equalsIgnoreCase("give")) {
             return filter(Arrays.stream(CustomItemType.values())
@@ -1083,10 +1295,14 @@ public final class VerdantViceCommand implements CommandExecutor, TabCompleter {
                     .toList(), args[3]);
         }
         if (args.length == 4 && args[1].equalsIgnoreCase("seed")) {
-            return filter(plugin.strains().all().stream().map(value -> value.id()).toList(), args[3]);
+            return filter(plugin.strains().commandSuggestions(), args[3]);
         }
         if (args.length == 3 && args[1].equalsIgnoreCase("plant")) {
-            return filter(plugin.strains().all().stream().map(value -> value.id()).toList(), args[2]);
+            return filter(plugin.strains().commandSuggestions(), args[2]);
+        }
+        if (args.length == 5 && args[1].equalsIgnoreCase("give")
+                && args[3].equalsIgnoreCase("seed")) {
+            return filter(plugin.strains().commandSuggestions(), args[4]);
         }
         if (args.length == 4 && args[1].equalsIgnoreCase("resetplayer")) {
             return filter(List.of("confirm"), args[3]);

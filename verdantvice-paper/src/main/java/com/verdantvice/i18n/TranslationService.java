@@ -12,6 +12,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -51,10 +54,35 @@ public final class TranslationService {
 
     public void load() {
         Map<String, YamlConfiguration> loaded = new LinkedHashMap<>();
+        LanguageFileMerger merger = new LanguageFileMerger();
         for (String resource : ConfigManager.LANGUAGE_FILES) {
             String locale = resource.substring(0, resource.length() - 4);
             File file = configs.dataPath("languages/" + resource).toFile();
-            loaded.put(locale, YamlConfiguration.loadConfiguration(file));
+            YamlConfiguration bundled = bundledLanguage(resource);
+            LanguageFileMerger.MergeReport report = merger.merge(
+                    file.toPath(),
+                    bundled,
+                    configs.dataPath("backups/languages")
+            );
+            if (report.changed()) {
+                plugin.getLogger().log(
+                        Level.INFO,
+                        "Added {0} missing translation key(s) to {1}; backup: {2}",
+                        new Object[] {
+                                report.addedKeys().size(),
+                                resource,
+                                report.backup().getFileName()
+                        }
+                );
+            }
+            try {
+                YamlConfiguration local = LanguageFileMerger.loadUtf8(file.toPath());
+                mergeMissingTranslations(local, bundled);
+                loaded.put(locale, local);
+            } catch (java.io.IOException
+                     | org.bukkit.configuration.InvalidConfigurationException exception) {
+                throw new IllegalStateException("Could not reload language " + resource, exception);
+            }
         }
         languages.clear();
         languages.putAll(loaded);
@@ -109,13 +137,23 @@ public final class TranslationService {
     public Component component(String locale, String key, Map<String, ?> placeholders) {
         String template = raw(locale, key);
         List<TagResolver> resolvers = new ArrayList<>(placeholders.size());
-        placeholders.forEach((name, value) ->
-                resolvers.add(Placeholder.unparsed(name, String.valueOf(value))));
+        placeholders.forEach((name, value) -> {
+            if (value instanceof Component component) {
+                resolvers.add(Placeholder.component(name, component));
+            } else {
+                resolvers.add(Placeholder.unparsed(name, Objects.toString(value, "")));
+            }
+        });
         return miniMessage.deserialize(template, TagResolver.resolver(resolvers));
     }
 
     public String plain(CommandSender sender, String key) {
         return PlainTextComponentSerializer.plainText().serialize(component(sender, key));
+    }
+
+    public String plain(String locale, String key) {
+        return PlainTextComponentSerializer.plainText()
+                .serialize(component(locale, key, Map.of()));
     }
 
     public String raw(String locale, String key) {
@@ -148,7 +186,7 @@ public final class TranslationService {
     }
 
     private String configuredDefault() {
-        return normalize(configs.main().getString("default-language", "pl_PL"));
+        return normalize(configs.main().getString("default-language", ENGLISH));
     }
 
     private String get(YamlConfiguration language, String key) {
@@ -170,7 +208,34 @@ public final class TranslationService {
 
     private String configuredDefaultWithoutRecursion() {
         String value = configs.main().getString("default-language");
-        return value == null || value.isBlank() ? "pl_PL" : value.replace('-', '_');
+        return value == null || value.isBlank() ? ENGLISH : value.replace('-', '_');
+    }
+
+    private YamlConfiguration bundledLanguage(String resource) {
+        String path = "languages/" + resource;
+        try (InputStream input = plugin.getResource(path)) {
+            if (input == null) {
+                throw new IllegalStateException("Bundled language resource is missing: " + path);
+            }
+            return YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(input, StandardCharsets.UTF_8));
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("Could not read bundled language resource: " + path,
+                    exception);
+        }
+    }
+
+    static void mergeMissingTranslations(
+            YamlConfiguration local,
+            YamlConfiguration bundled
+    ) {
+        Objects.requireNonNull(local, "local");
+        Objects.requireNonNull(bundled, "bundled");
+        for (String key : bundled.getKeys(true)) {
+            if (bundled.isString(key) && !local.contains(key)) {
+                local.set(key, bundled.getString(key));
+            }
+        }
     }
 
     private void validateAgainstEnglish() {

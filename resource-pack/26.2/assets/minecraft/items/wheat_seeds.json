@@ -10,6 +10,104 @@
           "type": "minecraft:model",
           "model": "verdantvice:item/seed"
         }
+      },
+      {
+        "threshold": 12002,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/wheat_seeds"
+        }
+      },
+      {
+        "threshold": 13001,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed_berry_fog"
+        }
+      },
+      {
+        "threshold": 13002,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed_concrete_kush"
+        }
+      },
+      {
+        "threshold": 13003,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed_lemon_static"
+        }
+      },
+      {
+        "threshold": 13004,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed_green_alley"
+        }
+      },
+      {
+        "threshold": 13005,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed_neon_haze"
+        }
+      },
+      {
+        "threshold": 13006,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed_night_widow"
+        }
+      },
+      {
+        "threshold": 13007,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed_purple_crash"
+        }
+      },
+      {
+        "threshold": 13008,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed_velvet_smoke"
+        }
+      },
+      {
+        "threshold": 13009,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed_ghost_garden"
+        }
+      },
+      {
+        "threshold": 13010,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed_royal_static"
+        }
+      },
+      {
+        "threshold": 13011,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed_black_orchard"
+        }
+      },
+      {
+        "threshold": 13012,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/seed_verdant_vice"
+        }
+      },
+      {
+        "threshold": 13013,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/wheat_seeds"
+        }
       }
     ],
     "fallback": {

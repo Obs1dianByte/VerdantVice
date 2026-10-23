@@ -10,11 +10,24 @@
           "type": "minecraft:model",
           "model": "verdantvice:item/planting_pot"
         }
+      },
+      {
+        "threshold": 12003,
+        "model": {
+          "type": "minecraft:special",
+          "base": "minecraft:item/decorated_pot",
+          "model": {
+            "type": "minecraft:decorated_pot"
+          }
+        }
       }
     ],
     "fallback": {
-      "type": "minecraft:model",
-      "model": "minecraft:item/decorated_pot"
+      "type": "minecraft:special",
+      "base": "minecraft:item/decorated_pot",
+      "model": {
+        "type": "minecraft:decorated_pot"
+      }
     }
   }
 }

@@ -7,12 +7,24 @@ import com.verdantvice.processing.ProcessingFailureReason;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
 /** Validates a signed item reference against its durable registry identity. */
 public final class ProcessingItemValidator {
+    private final Clock clock;
+
+    public ProcessingItemValidator() {
+        this(Clock.systemUTC());
+    }
+
+    ProcessingItemValidator(Clock clock) {
+        this.clock = Objects.requireNonNull(clock, "clock");
+    }
+
     public void validateData(
             SignedItemData data,
             Set<CustomItemType> accepted,
@@ -21,7 +33,10 @@ public final class ProcessingItemValidator {
         Objects.requireNonNull(data, "data");
         Objects.requireNonNull(accepted, "accepted");
         Objects.requireNonNull(actor, "actor");
-        if (!accepted.contains(data.itemType()) || data.batchId() == null) {
+        if (!accepted.contains(data.itemType())) {
+            throw new ProcessingFailureException(ProcessingFailureReason.WRONG_BATCH_STATE);
+        }
+        if (data.itemType().batchBound() && data.batchId() == null) {
             throw new ProcessingFailureException(ProcessingFailureReason.WRONG_BATCH_STATE);
         }
         if (!actor.equals(data.ownerUuid())) {
@@ -39,7 +54,10 @@ public final class ProcessingItemValidator {
         Objects.requireNonNull(data, "data");
         Objects.requireNonNull(payloadHash, "payloadHash");
         Objects.requireNonNull(actor, "actor");
-        if (record.state() != ItemRegistryState.ACTIVE) {
+        boolean expiredReservation = record.state() == ItemRegistryState.RESERVED
+                && (record.reservedUntil() == null
+                || !record.reservedUntil().isAfter(Instant.now(clock)));
+        if (record.state() != ItemRegistryState.ACTIVE && !expiredReservation) {
             throw new ProcessingFailureException(ProcessingFailureReason.ITEM_ALREADY_USED);
         }
         if (!constantEquals(record.signature(), payloadHash)

@@ -1,141 +1,155 @@
-# Migracje, aktualizacje i kopie danych
+# Migrations, updates and data backups
 
-## Model migracji
+## Migration model
 
-VerdantVice wykonuje migracje automatycznie podczas asynchronicznego startu,
-zanim zarejestruje publiczne API i ogłosi gotowość. Historia znajduje się w
-tabeli:
+VerdantVice runs migrations automatically during asynchronous startup,
+before registering the public API and announcing readiness. History is
+stored in:
 
 ```text
 vv_schema_history
 ```
 
-Każdy wpis przechowuje wersję, opis, SHA-256 SQL, czas instalacji, czas
-wykonania i flagę sukcesu. Katalog wersji jest ciągły.
+Each entry stores a version, description, SQL SHA-256, installation time,
+execution duration and success flag. The version catalog is contiguous.
 
-Aktualny schemat:
+Current schema:
 
-| Wersja | Zakres |
+| Version | Scope |
 |---:|---|
-| 1 | gracze, umiejętności, tolerancja, plantacje, członkowie, magazyny, genetyka, odmiany, rośliny i ich zdarzenia |
-| 2 | partie, suszenie, dojrzewanie, zielarze, workerzy, zadania, pensje, kontrakty, handel i rynek |
-| 3 | atomowy `item_registry` i idempotentny `operation_journal` |
+| 1 | Players, skills, tolerance, farms, members, storages, genetics, strains, plants and plant events |
+| 2 | Batches, drying, curing, herbalists, workers, tasks, salaries, contracts, trading and market |
+| 3 | Atomic `item_registry` and idempotent `operation_journal` |
+| 4 | Durable worker harvest delivery outbox, `worker_harvest_deliveries` |
+| 5 | Atomic worker processing delivery outbox, `processing_deliveries` |
 
-Już wydanej migracji nie wolno edytować. Zmiana checksumy, luka, nieznana
-wersja lub wpis `success = 0` zatrzymuje start zamiast ryzykować uszkodzenie
-danych.
+Never edit an already released migration. A checksum change, gap, unknown
+version or `success = 0` entry stops startup rather than risking data
+corruption.
 
-## Co należy kopiować
+## What to back up
 
-Pełny stan składa się z:
+The complete state consists of:
 
-- bazy SQLite albo bazy MySQL/MariaDB;
+- the SQLite database or MySQL/MariaDB database;
 - `plugins/VerdantVice/data/signing.key`;
 - `plugins/VerdantVice/data/processing-stations.yml`;
-- plików konfiguracyjnych i własnych tłumaczeń;
-- opcjonalnie logów diagnostycznych.
+- configuration files and custom translations;
+- optionally, diagnostic logs.
 
-Sam dump SQL nie wystarcza do pełnego odtworzenia. `signing.key` musi być
-zgodny z bazą, ponieważ podpisuje tożsamość przedmiotów i partii.
-`processing-stations.yml` przechowuje pozycje fizycznych stacji, podczas gdy
-same partie i joby znajdują się w SQL.
+A SQL dump alone is not enough for a full restore. `signing.key` must match
+the database because it signs item and batch identities.
+`processing-stations.yml` stores physical station positions, while batches
+and jobs are stored in SQL.
 
-## Kopie SQLite
+## SQLite backups
 
-Przy domyślnym `backup-on-start: true` plugin:
+With the default `backup-on-start: true`, the plugin:
 
-1. sprawdza, czy istnieje niepusty plik bazy;
-2. otwiera bazę z WAL;
-3. wykonuje checkpoint pasywny;
-4. tworzy spójną kopię przez SQLite `VACUUM INTO`;
-5. atomowo przenosi plik `.partial` do katalogu backupów;
-6. usuwa kopie starsze niż limit retencji.
+1. checks whether a nonempty database file exists;
+2. opens the database with WAL;
+3. performs a passive checkpoint;
+4. creates a consistent copy with SQLite `VACUUM INTO`;
+5. atomically moves the `.partial` file to the backup directory;
+6. removes backups beyond the retention limit.
 
-Nazwy wyglądają podobnie do:
+Names look similar to:
 
 ```text
 verdantvice-20260727-120000-000-startup.db
-verdantvice-20260727-240000-000-manual.db
+verdantvice-20260727-180000-000-manual.db
 ```
 
-Kopie cykliczne mają domyślnie odstęp 12 godzin. Kod rozpoznaje
-`sqlite.max-backups` z wartością domyślną 14. Wbudowane kopie nie obejmują
-`signing.key`, stacji ani YAML-i — archiwizuj cały katalog osobno.
+Periodic backups default to a 12-hour interval. The code recognizes
+`sqlite.max-backups`, which defaults to 14. Built-in backups do not include
+`signing.key`, stations or YAML files; archive the entire directory
+separately.
 
-## Kopie MySQL/MariaDB
+## MySQL/MariaDB backups
 
-Plugin nie wykonuje dumpów baz sieciowych. Użyj narzędzi i polityki backupu
-administratora bazy. Dump powinien być transakcyjnie spójny i zachowywać
-kodowanie `utf8mb4`, indeksy, klucze obce oraz tabelę historii.
+The plugin does not create network database dumps. Use the database
+administrator's backup tools and policy. A dump should be transactionally
+consistent and preserve `utf8mb4` encoding, indexes, foreign keys and the
+history table.
 
-Przed aktualizacją zatrzymaj serwer albo zapewnij spójny snapshot bazy i
-pliku klucza. Nie uruchamiaj równolegle dwóch instancji wykonujących migracje
-na tej samej bazie.
+Before updating, stop the server or ensure a consistent snapshot of the
+database and key file. Do not run two instances migrating the same database
+at the same time.
 
-## Bezpieczna aktualizacja JAR-a
+## Safely updating the JAR
 
-1. Przeczytaj uwagi do wersji i wymagania Javy/Paper.
-2. Wykonaj `clean build` i zachowaj produkcyjny JAR.
-3. Zatrzymaj serwer.
-4. Wykonaj pełną kopię opisaną wyżej.
-5. Zamień tylko JAR VerdantVice; usuń stare i `-thin.jar`.
-6. Nie kopiuj domyślnych YAML-i na istniejące pliki w ciemno.
-7. Uruchom serwer.
-8. W logu sprawdź każdą `Applying database migration ...`, wynik schematu i
-   `Plugin enabled successfully.`.
-9. Wykonaj `/vv admin database` i test odczytu istniejącej rośliny, partii,
-   plantacji, kontraktu i workera.
-10. Zachowaj backup do końca okresu obserwacji.
+1. Read the release notes and Java/Paper requirements.
+2. Run `clean build` and retain the production JAR.
+3. Stop the server.
+4. Make the complete backup described above.
+5. Replace only the VerdantVice JAR; remove old copies and `-thin.jar`.
+6. Do not blindly copy default YAML files over existing files.
+7. Start the server.
+8. Check each `Applying database migration ...` log entry, the schema
+   result and `Plugin enabled successfully.`.
+9. Run `/vv admin database` and test reading an existing plant, batch, farm,
+   contract and worker.
+10. Keep the backup until the observation period ends.
 
-`/vv admin migrate` wywołuje bieżący manager bazy, który pamięta future
-inicjalizacji. Nie służy do zastosowania migracji z nowego JAR-a bez
-restartu. Migracja wersji pluginu zawsze odbywa się podczas pełnego startu.
+`/vv admin migrate` invokes the current database manager, which retains its
+initialization future. It does not apply migrations from a new JAR without
+a restart. Plugin-version migrations always run during a full startup.
 
-## Odtworzenie SQLite
+## Restoring SQLite
 
-1. Zatrzymaj serwer i potwierdź brak procesu Java korzystającego z bazy.
-2. Zachowaj uszkodzony katalog do analizy.
-3. Wybierz kopię odpowiadającą kopii `signing.key` i stacji.
-4. Zastąp `data/verdantvice.db` wybraną kopią.
-5. Nie przenoś starych plików `verdantvice.db-wal` ani
-   `verdantvice.db-shm`.
-6. Przywróć odpowiadające `signing.key` i `processing-stations.yml`.
-7. Uruchom serwer i sprawdź historię/migracje.
-8. Wykonaj scenariusz integralności przed ponownym wpuszczeniem graczy.
+1. Stop the server and confirm that no Java process is using the database.
+2. Preserve the damaged directory for analysis.
+3. Choose a backup matching the signing-key and station backups.
+4. Replace `data/verdantvice.db` with the selected backup.
+5. Do not transfer old `verdantvice.db-wal` or `verdantvice.db-shm` files.
+6. Restore the corresponding `signing.key` and `processing-stations.yml`.
+7. Start the server and check history/migrations.
+8. Run the integrity scenario before reopening the server to players.
 
-Nie usuwaj ręcznie wpisu `success = 0`. Nie ma gwarancji, które instrukcje
-DDL zostały wykonane przez dany silnik przed rollbackiem.
+Do not manually delete a `success = 0` entry. There is no guarantee about
+which DDL statements a particular engine executed before rollback.
 
-## Odtworzenie MySQL/MariaDB
+## Restoring MySQL/MariaDB
 
-1. Zatrzymaj serwer.
-2. Przywróć dump do pustej bazy lub w kontrolowany sposób zastąp całą bazę.
-3. Przywróć klucz i stacje z tego samego punktu w czasie.
-4. Zweryfikuj konto, TLS/parametry i prawa do tabel.
-5. Uruchom VerdantVice i sprawdź `vv_schema_history`.
+1. Stop the server.
+2. Restore the dump into an empty database, or replace the entire database
+   in a controlled manner.
+3. Restore the key and stations from the same point in time.
+4. Verify the account, TLS/parameters and table permissions.
+5. Start VerdantVice and check `vv_schema_history`.
 
-Jeśli baza zawiera wersję nowszą niż katalog w JAR-ze, używasz zbyt starego
-pluginu. Zainstaluj zgodną lub nowszą wersję; nie obniżaj ręcznie numeru.
+If the database contains a version newer than the catalog in the JAR, the
+plugin is too old. Install a matching or newer version; do not lower the
+version number manually.
 
-## Zmiana silnika bazy
+## Changing the database engine
 
-Zmiana `type` nie kopiuje danych. VerdantVice nie zawiera automatycznego
-konwertera SQLite ↔ MySQL ↔ MariaDB. Do migracji między silnikami potrzebny
-jest kontrolowany eksport/import zachowujący:
+Changing `type` does not copy data. VerdantVice has no automatic
+SQLite ↔ MySQL ↔ MariaDB converter. Migration between engines requires
+a controlled export/import preserving:
 
-- tekstowe UUID;
-- milisekundy epoch w polach czasu;
+- text UUIDs;
+- epoch milliseconds in timestamp fields;
 - JSON;
-- wszystkie constraints i indeksy;
+- all constraints and indexes;
 - `row_version`;
-- historię schematu;
-- rejestr przedmiotów i dziennik operacji.
+- schema history;
+- the item registry and operation journal.
 
-Przetestuj konwersję offline na kopii i nie uruchamiaj starego oraz nowego
-silnika równocześnie.
+Test the conversion offline on a copy, and do not run the old and new
+engines simultaneously.
 
-## Downgrade
+## Downgrading
 
-Migracje są jednokierunkowe. Starszy JAR odrzuci nieznaną wersję schematu.
-Jedyną bezpieczną ścieżką downgrade jest odtworzenie kompletnego backupu
-wykonanego przed aktualizacją, wraz z kluczem, stacjami i właściwym JAR-em.
+Migrations are one-way. An older JAR rejects an unknown schema version.
+The only safe downgrade path is restoring a complete backup made before
+the update, including the key, stations and matching JAR.
+
+## Worker reliability schema 4
+
+Schema migration 4 adds `worker_harvest_deliveries`, a durable outbox between
+the atomic plant/batch transaction and Bukkit inventory delivery. Startup runs
+a worker integrity pass before runtime maps are populated. When SQLite repairs
+interrupted task pointers, a standard database backup is created first. Valid
+worker UUIDs, entity UUIDs, wages, morale, experience and storage assignments
+are preserved.

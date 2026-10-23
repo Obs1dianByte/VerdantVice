@@ -1,6 +1,8 @@
 package com.verdantvice.command;
 
 import com.verdantvice.database.DatabaseUnavailableException;
+import com.verdantvice.farm.StorageLinkResult;
+import com.verdantvice.storage.StoragePersistenceException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,6 +35,14 @@ class CommandFailureMapperTest {
         );
         assertEquals("errors.database-unavailable", mapping.translationKey());
         assertTrue(mapping.logStackTrace());
+    }
+
+    @Test
+    void storageDomainFailureIsNotMisclassifiedAsInvalidUsage() {
+        var mapping = CommandFailureMapper.map(new StoragePersistenceException(
+                StorageLinkResult.Status.SALARY_STORAGE_ALREADY_EXISTS));
+        assertEquals("farm.storage.salary-exists", mapping.translationKey());
+        assertFalse(mapping.logStackTrace());
     }
 
     @Test

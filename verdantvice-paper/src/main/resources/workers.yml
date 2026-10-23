@@ -17,6 +17,10 @@ salary:
   slowdown-days: 2
   refusal-days: 3
   leave-chance-per-extra-day: 0.08
+  retry-initial-seconds: 5
+  retry-maximum-seconds: 60
+  warning-interval-seconds: 60
+state-transition-warning-interval-seconds: 60
 morale:
   paid: 4.0
   has-bed: 1.5

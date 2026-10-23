@@ -36,12 +36,20 @@ public enum HerbalistTier {
         Objects.requireNonNull(configuration, "configuration");
         HerbalistTier result = NOVICE;
         for (HerbalistTier tier : values()) {
-            long threshold = configuration.getLong("levels." + tier.name(), defaultThreshold(tier));
-            if (experience >= Math.max(0L, threshold)) {
+            if (experience >= threshold(tier, configuration)) {
                 result = tier;
             }
         }
         return result;
+    }
+
+    public static long threshold(HerbalistTier tier, YamlConfiguration configuration) {
+        Objects.requireNonNull(tier, "tier");
+        Objects.requireNonNull(configuration, "configuration");
+        return Math.max(0L, configuration.getLong(
+                "levels." + tier.name(),
+                defaultThreshold(tier)
+        ));
     }
 
     private static long defaultThreshold(HerbalistTier tier) {

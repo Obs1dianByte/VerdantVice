@@ -9,6 +9,10 @@ public enum ProcessingFailureReason {
     INVALID_BATCH_SIGNATURE("invalid_batch_signature", "processing.errors.invalid-batch-signature"),
     WRONG_BATCH_STATE("wrong_batch_state", "processing.errors.wrong-batch-state"),
     STATION_BUSY("station_busy", "processing.errors.station-busy"),
+    MISSING_ROLLING_PAPER("missing_rolling_paper", "rolling.errors.missing-paper"),
+    MISSING_ROLLING_FILTER("missing_rolling_filter", "rolling.errors.missing-filter"),
+    MISSING_ROLLING_PRODUCT("missing_rolling_product", "rolling.errors.missing-product"),
+    ROLLING_BUSY("rolling_busy", "rolling.errors.busy"),
     DATABASE_UNAVAILABLE("database_unavailable", "errors.database-unavailable");
 
     private final String code;

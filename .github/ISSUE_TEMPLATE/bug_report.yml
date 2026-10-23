@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a reproducible plugin problem.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check existing issues first. Do not attach signing.key, database.yml,
+        database dumps, tokens or player data. Redact logs before uploading.
+  - type: input
+    id: version
+    attributes:
+      label: VerdantVice version
+      description: Include a commit or artifact hash if using a source build.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Server build, Minecraft/Java versions, database type and optional plugin/provider versions.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include commands, relevant settings and whether it occurs on a clean test server.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Expected and actual result
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log excerpt or diagnostic report
+      description: Use /vv admin debug when available. Include the full exception, not only its last line. Remove private information.
+      render: text

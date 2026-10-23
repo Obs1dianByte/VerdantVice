@@ -1,0 +1,22 @@
+name: Feature request
+description: Propose a focused gameplay or server-management improvement.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the player or administrator workflow and its current limitation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include expected commands, UI or configuration changes where relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and compatibility
+      description: Mention workarounds and effects on existing data or other plugins.

@@ -8,6 +8,7 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -54,8 +55,9 @@ public final class WorkerStateMachine {
     public boolean needsStorage(WorkerTaskType type) {
         return switch (type) {
             case INSPECT, HARVEST -> false;
+            case UNLOAD_DRYING_RACK -> false;
             case WATER, TREAT_DISEASE, SAVE_DYING_PLANTS, PLANT, PACKAGE,
-                    CLEAN, MOVE_BATCH, LOAD_DRYING_RACK, UNLOAD_DRYING_RACK -> true;
+                    CLEAN, MOVE_BATCH, LOAD_DRYING_RACK -> true;
         };
     }
 
@@ -80,6 +82,46 @@ public final class WorkerStateMachine {
                     ? ScheduleDirective.SLEEP
                     : ScheduleDirective.RETURN_HOME;
         };
+    }
+
+    /** Converts a schedule directive into a legal state request without
+     * overwriting exceptional states such as WAITING_FOR_PAYMENT or BLOCKED. */
+    public Optional<WorkerState> scheduledTransition(
+            WorkerState current,
+            ScheduleDirective directive,
+            boolean hasActiveTask,
+            boolean atHome,
+            boolean workAllowed
+    ) {
+        Objects.requireNonNull(current, "current");
+        Objects.requireNonNull(directive, "directive");
+        if (hasActiveTask || directive == ScheduleDirective.FINISH_CURRENT) {
+            return Optional.empty();
+        }
+        if (current == WorkerState.WAITING_FOR_PAYMENT) {
+            return directive == ScheduleDirective.WORK && workAllowed
+                    ? Optional.of(WorkerState.SEARCHING_TASK)
+                    : Optional.empty();
+        }
+        if (current == WorkerState.BLOCKED) {
+            return Optional.empty();
+        }
+        Optional<WorkerState> requested = switch (directive) {
+            case WORK -> current == WorkerState.IDLE
+                    || current == WorkerState.RESTING
+                    || current == WorkerState.SLEEPING
+                    ? Optional.of(WorkerState.SEARCHING_TASK)
+                    : Optional.empty();
+            case RETURN_HOME -> current == WorkerState.RETURNING_HOME
+                    ? Optional.empty() : Optional.of(WorkerState.RETURNING_HOME);
+            case REST -> current == WorkerState.RESTING
+                    ? Optional.empty() : Optional.of(WorkerState.RESTING);
+            case SLEEP -> atHome && current != WorkerState.SLEEPING
+                    ? Optional.of(WorkerState.SLEEPING) : Optional.empty();
+            case FINISH_CURRENT -> Optional.empty();
+        };
+        return requested.filter(target -> TRANSITIONS
+                .getOrDefault(current, Set.of()).contains(target));
     }
 
     public boolean isAction(WorkerState state) {

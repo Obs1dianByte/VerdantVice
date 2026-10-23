@@ -18,7 +18,7 @@ public interface ItemConsumptionGateway {
 
     SecureItemService.ConsumedItem consume(
             SqlSession session,
-            SecureItemService.ValidatedItem validated,
+            SecureItemService.ValidatedIdentity validated,
             Set<CustomItemType> accepted,
             UUID actor,
             String operationId,

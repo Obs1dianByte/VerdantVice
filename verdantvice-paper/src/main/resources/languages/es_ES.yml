@@ -78,6 +78,7 @@ errors:
   no-space: "<red>No hay suficiente espacio libre aquí.</red>"
   too-far: "<red>Estás demasiado lejos.</red>"
 
+  operation-cancelled: "<yellow>La operación fue cancelada.</yellow>"
 success:
   reload: "<green>Se recargaron los ajustes seguros, traducciones y catálogos.</green>"
   save: "<green>Todos los datos modificados están en la cola de guardado.</green>"
@@ -108,8 +109,11 @@ commands:
   guide: { description: "Abre la guía del juego.", usage: "/vv guide" }
   profile: { description: "Muestra un perfil de VerdantVice.", usage: "/vv profile [jugador]" }
   skills: { description: "Abre los cuatro árboles de habilidades.", usage: "/vv skills" }
-  strains: { description: "Consulta variedades ficticias descubiertas.", usage: "/vv strains [variedad]" }
-  recipes: { description: "Muestra recetas de procesado desbloqueadas.", usage: "/vv recipes" }
+  strains: { description: "Consulta variedades descubiertas.", usage: "/vv strains [variedad]" }
+  recipes: { description: "Muestra recetas de procesado desbloqueadas.", usage: "/vv recipes [roll]" }
+  roll:
+    description: "Inicia el minijuego de liado autenticado."
+    usage: "/vv roll"
   market: { description: "Muestra la demanda y los precios actuales.", usage: "/vv market [variedad]" }
   contracts: { description: "Abre tus contratos.", usage: "/vv contracts" }
   farm:
@@ -119,6 +123,7 @@ commands:
     delete: { description: "Elimina una plantación tras confirmarlo.", usage: "/vv farm delete <nombre>" }
     invite: { description: "Invita a un jugador a tu plantación.", usage: "/vv farm invite <jugador>" }
     remove: { description: "Expulsa a un miembro de tu plantación.", usage: "/vv farm remove <jugador>" }
+    storage: { description: "Vincula o desvincula el contenedor al que estás mirando.", usage: "/vv farm storage <seed-storage|tool-storage|fresh-harvest-storage|dry-product-storage|packaged-product-storage|salary-storage|water-storage|general-storage|unlink>" }
   workers: { description: "Abre la gestión de trabajadores.", usage: "/vv workers" }
   language: { description: "Elige un idioma compatible.", usage: "/vv language <pl_PL|en_US|de_DE|es_ES|cs_CZ|uk_UA>" }
   notifications: { description: "Configura temas y canales de avisos.", usage: "/vv notifications" }
@@ -134,7 +139,7 @@ commands:
     plant: { description: "Crea una planta en la estación señalada.", usage: "/vv admin plant <variedad>" }
     setstage: { description: "Cambia la fase de la planta señalada.", usage: "/vv admin setstage <fase>" }
     setquality: { description: "Cambia la calidad del lote en la mano.", usage: "/vv admin setquality <clase>" }
-    spawnherbalist: { description: "Invoca un herbolario registrado.", usage: "/vv admin spawnherbalist [nivel]" }
+    spawnherbalist: { description: "Invoca un herbolario registrado.", usage: "/vv admin spawnherbalist [nivel] [--force]" }
     hireworker: { description: "Contrata al herbolario señalado.", usage: "/vv admin hireworker <plantación>" }
     removeplant: { description: "Retira con seguridad la planta señalada.", usage: "/vv admin removeplant" }
     inspect: { description: "Inspecciona un objeto y su registro.", usage: "/vv admin inspect" }
@@ -177,6 +182,207 @@ gui:
     income: "<gray>Ingresos recientes:</gray> <green><income></green>"
     missing-tools: "<gray>Herramientas que faltan:</gray> <red><count></red>"
     recent-problems: "<gray>Problemas recientes:</gray> <white><count></white>"
+  navigation:
+    refresh: <green>Actualizar</green>
+  empty:
+    generic: <gray>No hay nada que mostrar.</gray>
+  farm-panel:
+    common:
+      'yes': Sí
+      'no': 'No'
+      enabled: Activado
+      disabled: Desactivado
+      unavailable: "No disponible"
+      position: <gray>Posición:</gray> <world> <x>, <y>, <z>
+    errors:
+      no-access: <red>No tienes acceso a esta pantalla de la granja.</red>
+      no-context: <red>El contexto de la granja ya no está disponible.</red>
+    empty:
+      no-farm: <yellow>No se encontró una granja accesible.</yellow>
+      plants: <gray>Esta granja no tiene plantas activas.</gray>
+      workers: <gray>Esta granja no tiene trabajadores.</gray>
+      storages: <gray>No hay almacenes vinculados.</gray>
+      drying: <gray>No hay secaderos asignados.</gray>
+      curing: <gray>No hay contenedores de curado asignados.</gray>
+      priorities: <gray>Ningún trabajador tiene una prioridad activa.</gray>
+      permissions: <gray>No hay miembros de la granja.</gray>
+    dashboard:
+      plants-limit: <gray>Plantas:</gray> <count>/<limit>
+      plants-ready: <gray>Listas:</gray> <ready>
+      plants-sick: <gray>Enfermas:</gray> <sick>
+      plants-water: <gray>Necesitan agua:</gray> <count>
+      plants-treatment: <gray>Necesitan tratamiento:</gray> <count>
+      plants-cleaning: <gray>Necesitan limpieza:</gray> <count>
+      workers-limit: <gray>Trabajadores:</gray> <count>/<limit>
+      workers-working: <gray>Trabajando:</gray> <count>
+      workers-idle: <gray>Sin tarea:</gray> <count>
+      workers-unpaid: <gray>Sin pagar:</gray> <count>
+      workers-morale: <gray>Moral media:</gray> <morale>
+      workers-blocked: <gray>Bloqueados o en negativa:</gray> <count>
+      storage-total: <gray>Almacenes:</gray> <count>
+      storage-type: <gray><type>:</gray> <count>
+      storage-salary: <gray>Almacén salarial:</gray> <state>
+      storage-unavailable: <gray>Contenedores no disponibles:</gray> <count>
+      processing-total: <gray>Estaciones:</gray> <count>
+      processing-active: <gray>Procesando:</gray> <count>
+      processing-ready: <gray>Listas:</gray> <count>
+      processing-free: <gray>Libres:</gray> <count>
+      priorities: <gray>Prioridades activas:</gray> <count>
+      owner: <gray>Propietario:</gray> <owner>
+      members: <gray>Miembros:</gray> <count>
+      salary-storage: <gray>Almacén salarial:</gray> <state>
+      salary-emeralds: <gray>Esmeraldas disponibles:</gray> <count>
+      salary-cost: <gray>Coste de la próxima nómina:</gray> <count>
+      salary-paid: <gray>Trabajadores pagados:</gray> <count>
+      salary-unpaid: <gray>Trabajadores sin pagar:</gray> <count>
+      statistics-current: <gray>Solo muestra datos persistentes y de ejecución actuales.</gray>
+      notifications: <gray>Configura cada aviso de la granja.</gray>
+    plants:
+      disease: <gray>Estado:</gray> <condition>
+      healthy: <green>Sana</green>
+      diseased: '<red>Enfermedad: <disease></red>'
+      pests: '<yellow>Plagas: <level></yellow>'
+      ready-time: <gray>Lista en:</gray> <time>
+      ready-now: <green>LISTA</green>
+      owner: <gray>Propietario:</gray> <owner>
+    storages:
+      title: Almacenes de la granja
+      entry-title: <yellow><type></yellow>
+      type: <gray>Tipo:</gray> <type>
+      exists: <gray>Existe el contenedor:</gray> <state>
+      slots: <gray>Espacios ocupados:</gray> <used>/<total>
+      slots-unavailable: "<gray>Espacios ocupados:</gray> no disponible"
+      worker-access: <gray>Acceso del trabajador:</gray> <state>
+      salary: <gray>Almacén salarial:</gray> <state>
+      unlink-hint: <yellow>Haz clic para desvincular de forma segura.</yellow>
+    storage-confirm:
+      title: <red>Desvincular almacén</red>
+      confirm: <red>Confirmar desvinculación</red>
+      warning: <gray>El contenedor y su contenido permanecerán intactos.</gray>
+      cancel: <green>Cancelar</green>
+    processing:
+      entry-title: <status>
+      status: <gray>Estado:</gray> <status>
+      exists: <gray>Existe la estación:</gray> <state>
+      batch: <gray>Lote:</gray> <batch>
+      strain: <gray>Variedad:</gray> <strain>
+      weight: <gray>Peso:</gray> <weight>
+      quality: <gray>Calidad:</gray> <quality> (<grade>)
+      remaining: <gray>Tiempo restante:</gray> <time>
+      owner: <gray>Propietario del proceso:</gray> <owner>
+      statuses:
+        free: Libre
+        processing: Procesando
+        ready: Lista
+    worker:
+      state: <gray>Estado:</gray> <state>
+      salary: <gray>Salario:</gray> <salary> esmeraldas
+      entity: <gray>Entidad cargada:</gray> <state>
+      last-task: <gray>Última tarea completada:</gray> <task>
+      no-task: Sin tarea
+      states:
+        idle: Inactivo
+        resting: Descansando
+        searching-task: Buscando tarea
+        reserving-task: Reservando tarea
+        walking-to-storage: Yendo al almacén
+        collecting-resource: Recogiendo recurso
+        walking-to-target: Yendo al objetivo
+        inspecting-plant: Inspeccionando planta
+        watering: Regando
+        treating: Tratando
+        planting: Plantando
+        harvesting: Cosechando
+        moving-batch: Moviendo lote
+        loading-dryer: Cargando secadero
+        unloading-dryer: Vaciando secadero
+        packaging: Empaquetando
+        returning-home: Volviendo a casa
+        sleeping: Durmiendo
+        waiting-for-payment: Esperando el pago
+        blocked: Bloqueado
+      specializations:
+        grower: Cultivador
+        harvester: Cosechador
+        drying-master: Maestro de secado
+        geneticist: Genetista
+        packager: Empaquetador
+        foreman: Capataz
+      tasks:
+        save-dying-plants: Salvar plantas críticas
+        treat-disease: Tratar problemas
+        water: Regar
+        harvest: Cosechar
+        load-drying-rack: Cargar secadero
+        unload-drying-rack: Vaciar secadero
+        plant: Plantar
+        package: Empaquetar
+        clean: Limpiar
+        inspect: Inspeccionar
+        move-batch: Mover lote
+    priorities:
+      title: Prioridades de trabajadores
+      entry-title: <aqua><worker></aqua>
+      value: <gray>Prioridad:</gray> <priority>
+    permissions:
+      title: Permisos de la granja
+      entry-title: <blue><member></blue>
+      role: <gray>Rol:</gray> <role>
+      effective: <gray>Permisos efectivos:</gray> <permissions>
+      roles:
+        owner: Propietario
+        manager: Gerente
+        member: Miembro
+        viewer: Observador
+      values:
+        view: Ver
+        plant: Plantar
+        water: Regar
+        harvest: Cosechar
+        process: Procesar
+        access-storage: Acceder a almacenes
+        manage-storage: Gestionar almacenes
+        manage-workers: Gestionar trabajadores
+        manage-members: Gestionar miembros
+        manage-settings: Gestionar ajustes
+        delete: Eliminar
+    salary:
+      title: Salarios de la granja
+      summary-title: <green>Próxima nómina</green>
+    statistics:
+      title: Estadísticas de la granja
+      current-title: <white>Estado actual de la granja</white>
+      level: <gray>Nivel de granja:</gray> <level>
+      active-plants: <gray>Plantas activas:</gray> <count>
+      average-quality: <gray>Potencial de calidad medio:</gray> <quality>
+      workers: <gray>Trabajadores:</gray> <count>
+      storages: <gray>Almacenes:</gray> <count>
+      processes: <gray>Procesos activos:</gray> <count>
+    notifications:
+      title: Notificaciones de la granja
+      state: <gray>Estado:</gray> <state>
+      types:
+        plant-ready: Planta lista
+        disease: Enfermedad de planta
+        low-water: Agua baja
+        drying-complete: Secado completo
+        curing-complete: Curado completo
+        unpaid-worker: Trabajador sin pagar
+        blocked-worker: Trabajador bloqueado
+        contract-complete: Contrato completo
+        market-change: Cambio de mercado
+    upgrades:
+      title: Mejoras de la granja
+      unavailable: <yellow>Esta función no está disponible en esta versión.</yellow>
+    storage-types:
+      seed-storage: Almacén de semillas
+      tool-storage: Almacén de herramientas
+      fresh-harvest-storage: Almacén de cosecha fresca
+      dry-product-storage: Almacén de producto seco
+      packaged-product-storage: Almacén de paquetes
+      salary-storage: Cofre de salarios
+      water-storage: Almacén de agua
+      general-storage: Almacén general
   plants:
     title: "<green>Plantas</green>"
     details-title: "<green><strain></green> <dark_gray>•</dark_gray> <stage>"
@@ -402,25 +608,59 @@ curing:
   interrupted: "<yellow>La maduración terminó antes; se conservó la calidad actual.</yellow>"
   container-full: "<red>Este recipiente está lleno.</red>"
 rolling:
-  results: { failed: "<dark_red>Fallido</dark_red>", spilled: "<red>Derramado</red>", crooked: "<gold>Torcido</gold>", loose: "<yellow>Flojo</yellow>", normal: "<white>Normal</white>", good: "<green>Bueno</green>", perfect: "<light_purple>Perfecto</light_purple>", overfilled: "<red>Demasiado lleno</red>" }
-  steps: { place-paper: "Coloca el papel", add-filter: "Pon el filtro", add-product: "Añade el producto molido", distribute: "Reparte el relleno", finish-roll: "Termina el rollo" }
-  complete: "<green>Enrollado terminado:</green> <result>"
-  aborted: "<yellow>El minijuego acabó con seguridad; se devolvieron los ingredientes recuperables.</yellow>"
-
+  results:
+    failed: <dark_red>Fallido</dark_red>
+    spilled: <red>Derramado</red>
+    crooked: <gold>Torcido</gold>
+    loose: <yellow>Flojo</yellow>
+    normal: <white>Normal</white>
+    good: <green>Bueno</green>
+    perfect: <light_purple>Perfecto</light_purple>
+    overfilled: <red>Demasiado lleno</red>
+  steps:
+    place-paper: Coloca el papel
+    add-filter: Pon el filtro
+    add-product: Añade el producto molido
+    distribute: Reparte el relleno
+    finish-roll: Termina el rollo
+  complete: <green>Enrollado terminado:</green> <result>
+  aborted: <yellow>El minijuego acabó con seguridad; se devolvieron los ingredientes recuperables.</yellow>
+  errors:
+    missing-paper: <red>Necesitas un Rolling Paper auténtico.</red>
+    missing-filter: <red>Necesitas un Filter auténtico.</red>
+    missing-product: <red>Necesitas un Ground Product o Mixture auténtico.</red>
+    busy: <yellow>Ya hay una sesión de liado iniciándose o abierta.</yellow>
+    session-active: <yellow>Ya tienes una sesión de liado iniciándose o abierta.</yellow>
+    wrong-product-state: <red>Este producto no puede liarse en su estado actual.</red>
 herbalist:
-  title: "<dark_green>Herbolario</dark_green>"
-  created: "<green>Este granjero ha descubierto el oficio de herbolario Verdant.</green>"
-  evaluated-normal: "<gray>Este granjero no es herbolario Verdant.</gray>"
-  village-limit: "<yellow>Este poblado ya tiene el máximo de herbolarios.</yellow>"
-  reputation-up: "<green>Tu reputación aumentó en <amount>.</green>"
-  tiers: { novice: "Novato", apprentice: "Aprendiz", journeyman: "Oficial", expert: "Experto", master: "Maestro", verdant-expert: "Experto Verdant" }
-  specializations: { seeds: "Mercader de semillas", tools: "Proveedor de equipo", buyer: "Comprador de calidad", contracts: "Agente de contratos" }
+  title: <dark_green>Herbolario</dark_green>
+  created: <green>Este granjero ha descubierto el oficio de herbolario Verdant.</green>
+  evaluated-normal: <gray>Este granjero no es herbolario Verdant.</gray>
+  village-limit: <yellow>Este poblado ya tiene el máximo de herbolarios.</yellow>
+  reputation-up: <green>Tu reputación aumentó en <amount>.</green>
+  tiers:
+    novice: Novato
+    apprentice: Aprendiz
+    journeyman: Oficial
+    expert: Experto
+    master: Maestro
+    verdant-expert: Experto Verdant
+  specializations:
+    seeds: Mercader de semillas
+    tools: Proveedor de equipo
+    buyer: Comprador de calidad
+    contracts: Agente de contratos
   hire:
-    unavailable: "<red>Solo puede contratarse a un Experto Verdant.</red>"
-    already-employed: "<red>Este herbolario ya está contratado.</red>"
-    contract-required: "<yellow>Necesitas un Contrato de plantación válido.</yellow>"
-    signed: "<green><worker> firmó para la plantación <farm>.</green>"
-    dismissed: "<yellow><worker> ha sido despedido.</yellow>"
+    unavailable: <red>Solo puede contratarse a un Experto Verdant.</red>
+    already-employed: <red>Este herbolario ya está contratado.</red>
+    contract-required: <yellow>Necesitas un Contrato de plantación válido.</yellow>
+    signed: <green><worker> firmó para la plantación <farm>.</green>
+    dismissed: <yellow><worker> ha sido despedido.</yellow>
+  force-created: <green>El herbolario se creó pese al límite del asentamiento.</green>
+  already-herbalist: <yellow>Esta entidad ya es un herbolario registrado.</yellow>
+  worker-conflict: <red>Este aldeano ya está registrado como trabajador.</red>
+  force-no-permission: <red>No tienes permiso para ignorar el límite del asentamiento.</red>
+  tier-updated: '<green>Nivel establecido en <tier>; experiencia: <experience>.</green>'
 trade:
   authentic-only: "<red>El herbolario solo acepta lotes auténticos y registrados.</red>"
   dry-only: "<red>Solo compra lotes bien secos o madurados.</red>"
@@ -453,7 +693,15 @@ farm:
     expired: "<yellow>La selección ha caducado.</yellow>"
   storage:
     linked: "<green>Cofre vinculado como <type>.</green>"
-    unlinked: "<yellow>Vínculo del almacén eliminado.</yellow>"
+    unlinked: "<green>Vínculo del almacén eliminado.</green>"
+    no-owned-farm: "<red>No tienes una granja propia.</red>"
+    no-target: "<yellow>Mira directamente a un cofre u otro contenedor a una distancia máxima de 6 bloques.</yellow>"
+    not-container: "<red>Ese bloque no es un contenedor.</red>"
+    outside-farm: "<red>Todo el contenedor debe estar dentro de tu granja.</red>"
+    not-linked: "<yellow>Este contenedor no está vinculado a tu granja.</yellow>"
+    salary-exists: "<red>Tu granja ya tiene un almacén de salarios.</red>"
+    other-farm: "<red>Este contenedor pertenece a otra granja.</red>"
+    invalid-type: "<red>Tipo de almacén desconocido. Valores válidos: <types>.</red>"
     already-linked: "<red>Este cofre ya pertenece a una plantación.</red>"
     protected: "<red>Los almacenes vinculados no pueden romperse ni moverse.</red>"
   delete-warning: "<red>Esto elimina miembros y vínculos. Resuelve antes plantas y lotes bloqueados.</red>"
@@ -483,6 +731,7 @@ worker:
     blocked: "<red><worker> está bloqueado cerca de <position>.</red>"
     no-path: "No hay una ruta segura"
     missing-resource: "Falta el recurso necesario"
+    harvest-storage-full: "El almacén de cosecha fresca no existe o está lleno"
     target-unavailable: "Objetivo no disponible"
     reservation-expired: "La reserva de la tarea caducó"
 
@@ -598,6 +847,14 @@ book:
     page_1: "<dark_green><bold>Región y funciones</bold></dark_green><newline><newline>Da a cada miembro solo los permisos que necesita."
     page_2: "<dark_green><bold>Almacenes y prioridades</bold></dark_green><newline><newline>Vincula cofres por tipo, prioriza plantas en peligro y protege semillas raras."
     page_3: "<dark_green><bold>Personas primero</bold></dark_green><newline><newline>Cama, comida, rutas, pausas, herramientas y salario mantienen una buena moral."
+  recipes:
+    title: "Recetas de procesado"
+    author: "VerdantVice"
+    page_1: "Fresh Batch → Drying Rack → Dry Batch. Solo una partida fresca verificada y propia puede empezar a secarse."
+    page_2: "Dry Batch → Curing Container → Cured Batch. El curado es opcional y conserva la identidad de la partida."
+    page_3: "Dry o Cured Batch → Grinder → Ground Product. Agáchate y haz clic derecho con dos productos para crear una Mixture."
+    page_4: "Dos Ground Product → Mixture. Las dos fuentes registradas se consumen una sola vez y conservan su linaje."
+    page_5: "Rolling Paper + Filter + Ground Product o Mixture → Joint. Usa /vv roll o /vv recipes roll para iniciar el minijuego."
   perfect_batch:
     title: "Secretos del lote perfecto"
     author: "VerdantVice"

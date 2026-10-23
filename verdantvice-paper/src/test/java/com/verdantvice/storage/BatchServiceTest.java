@@ -166,6 +166,12 @@ final class BatchServiceTest {
         }
 
         @Override
+        public void create(SqlSession session, ProductBatch batch, Instant now)
+                throws SQLException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public CompletableFuture<Void> save(ProductBatch batch) {
             return saveFuture;
         }

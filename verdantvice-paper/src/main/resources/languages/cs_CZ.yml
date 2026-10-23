@@ -75,6 +75,7 @@ errors:
   strong-effect-active: "<red>Během silného účinku nelze použít další silný produkt.</red>"
   no-space: "<red>Není zde dost volného místa.</red>"
   too-far: "<red>Jsi příliš daleko.</red>"
+  operation-cancelled: "<yellow>Operace byla zrušena.</yellow>"
 success:
   reload: "<green>Bezpečná nastavení, překlady a katalogy byly načteny.</green>"
   save: "<green>Změněná data byla zařazena k uložení.</green>"
@@ -104,8 +105,11 @@ commands:
   guide: { description: "Otevře herní průvodce.", usage: "/vv guide" }
   profile: { description: "Ukáže profil VerdantVice.", usage: "/vv profile [hráč]" }
   skills: { description: "Otevře čtyři stromy dovedností.", usage: "/vv skills" }
-  strains: { description: "Ukáže objevené fiktivní odrůdy.", usage: "/vv strains [odrůda]" }
-  recipes: { description: "Ukáže odemčené recepty.", usage: "/vv recipes" }
+  strains: { description: "Ukáže objevené odrůdy.", usage: "/vv strains [odrůda]" }
+  recipes: { description: "Ukáže odemčené recepty.", usage: "/vv recipes [roll]" }
+  roll:
+    description: "Spustí zabezpečenou minihru balení."
+    usage: "/vv roll"
   market: { description: "Ukáže poptávku a ceny.", usage: "/vv market [odrůda]" }
   contracts: { description: "Otevře zakázky.", usage: "/vv contracts" }
   farm:
@@ -115,6 +119,7 @@ commands:
     delete: { description: "Po potvrzení farmu odstraní.", usage: "/vv farm delete <název>" }
     invite: { description: "Pozve hráče na farmu.", usage: "/vv farm invite <hráč>" }
     remove: { description: "Odebere člena farmy.", usage: "/vv farm remove <hráč>" }
+    storage: { description: "Připojí nebo odpojí kontejner, na který se díváš.", usage: "/vv farm storage <seed-storage|tool-storage|fresh-harvest-storage|dry-product-storage|packaged-product-storage|salary-storage|water-storage|general-storage|unlink>" }
   workers: { description: "Otevře správu pracovníků.", usage: "/vv workers" }
   language: { description: "Zvolí podporovaný jazyk.", usage: "/vv language <pl_PL|en_US|de_DE|es_ES|cs_CZ|uk_UA>" }
   notifications: { description: "Nastaví témata a kanály upozornění.", usage: "/vv notifications" }
@@ -130,7 +135,7 @@ commands:
     plant: { description: "Vytvoří rostlinu na cílové stanici.", usage: "/vv admin plant <odrůda>" }
     setstage: { description: "Změní fázi cílové rostliny.", usage: "/vv admin setstage <fáze>" }
     setquality: { description: "Změní kvalitu držené várky.", usage: "/vv admin setquality <třída>" }
-    spawnherbalist: { description: "Vytvoří bylinkáře.", usage: "/vv admin spawnherbalist [úroveň]" }
+    spawnherbalist: { description: "Vytvoří bylinkáře.", usage: "/vv admin spawnherbalist [úroveň] [--force]" }
     hireworker: { description: "Najme cílového bylinkáře.", usage: "/vv admin hireworker <farma>" }
     removeplant: { description: "Bezpečně odstraní cílovou rostlinu.", usage: "/vv admin removeplant" }
     inspect: { description: "Prověří objekt a registr.", usage: "/vv admin inspect" }
@@ -147,7 +152,7 @@ gui:
     my-farm: { name: "<green>Moje farma</green>", description: "<gray>Přehled, zařízení, práva a vylepšení.</gray>" }
     plants: { name: "<green>Rostliny</green>", description: "<gray>Růst, péče a sklizňová okna.</gray>" }
     workers: { name: "<gold>Pracovníci</gold>", description: "<gray>Úkoly, morálka, rozvrh a mzdy.</gray>" }
-    strains: { name: "<light_purple>Odrůdy</light_purple>", description: "<gray>Fiktivní odrůdy a objevy.</gray>" }
+    strains: { name: "<light_purple>Odrůdy</light_purple>", description: "<gray>Katalog odrůd a objevy.</gray>" }
     genetics: { name: "<aqua>Genetika</aqua>", description: "<gray>Profily, křížení a vlastní linie.</gray>" }
     contracts: { name: "<yellow>Zakázky</yellow>", description: "<gray>Dodávky, termíny a odměny.</gray>" }
     market: { name: "<green>Trh</green>", description: "<gray>Poptávka, události a ceny.</gray>" }
@@ -172,6 +177,207 @@ gui:
     income: "<gray>Nedávný příjem:</gray> <green><income></green>"
     missing-tools: "<gray>Chybějící nástroje:</gray> <red><count></red>"
     recent-problems: "<gray>Nedávné problémy:</gray> <white><count></white>"
+  navigation:
+    refresh: <green>Obnovit</green>
+  empty:
+    generic: <gray>Není co zobrazit.</gray>
+  farm-panel:
+    common:
+      'yes': Ano
+      'no': Ne
+      enabled: Zapnuto
+      disabled: Vypnuto
+      unavailable: "Nedostupné"
+      position: <gray>Pozice:</gray> <world> <x>, <y>, <z>
+    errors:
+      no-access: <red>K této obrazovce farmy nemáš přístup.</red>
+      no-context: <red>Kontext farmy již není dostupný.</red>
+    empty:
+      no-farm: <yellow>Nebyla nalezena přístupná farma.</yellow>
+      plants: <gray>Tato farma nemá aktivní rostliny.</gray>
+      workers: <gray>Tato farma nemá pracovníky.</gray>
+      storages: <gray>Nejsou přiřazeny žádné sklady.</gray>
+      drying: <gray>Nejsou přiřazeny žádné sušáky.</gray>
+      curing: <gray>Nejsou přiřazeny žádné nádoby na zrání.</gray>
+      priorities: <gray>Žádný pracovník nemá aktivní prioritu.</gray>
+      permissions: <gray>Nejsou dostupní členové farmy.</gray>
+    dashboard:
+      plants-limit: <gray>Rostliny:</gray> <count>/<limit>
+      plants-ready: <gray>Připravené:</gray> <ready>
+      plants-sick: <gray>Nemocné:</gray> <sick>
+      plants-water: <gray>Potřebují vodu:</gray> <count>
+      plants-treatment: <gray>Potřebují léčbu:</gray> <count>
+      plants-cleaning: <gray>Potřebují čištění:</gray> <count>
+      workers-limit: <gray>Pracovníci:</gray> <count>/<limit>
+      workers-working: <gray>Pracují:</gray> <count>
+      workers-idle: <gray>Bez úkolu:</gray> <count>
+      workers-unpaid: <gray>Nezaplacení:</gray> <count>
+      workers-morale: <gray>Průměrná morálka:</gray> <morale>
+      workers-blocked: <gray>Zablokovaní nebo odmítající:</gray> <count>
+      storage-total: <gray>Sklady:</gray> <count>
+      storage-type: <gray><type>:</gray> <count>
+      storage-salary: <gray>Mzdový sklad:</gray> <state>
+      storage-unavailable: <gray>Nedostupné kontejnery:</gray> <count>
+      processing-total: <gray>Stanice:</gray> <count>
+      processing-active: <gray>Zpracovává:</gray> <count>
+      processing-ready: <gray>Připravené:</gray> <count>
+      processing-free: <gray>Volné:</gray> <count>
+      priorities: <gray>Aktivní priority:</gray> <count>
+      owner: <gray>Vlastník:</gray> <owner>
+      members: <gray>Členové:</gray> <count>
+      salary-storage: <gray>Mzdový sklad:</gray> <state>
+      salary-emeralds: <gray>Dostupné smaragdy:</gray> <count>
+      salary-cost: <gray>Cena další výplaty:</gray> <count>
+      salary-paid: <gray>Zaplacení pracovníci:</gray> <count>
+      salary-unpaid: <gray>Nezaplacení pracovníci:</gray> <count>
+      statistics-current: <gray>Zobrazuje pouze aktuální trvalá a runtime data.</gray>
+      notifications: <gray>Nastav každé upozornění farmy.</gray>
+    plants:
+      disease: <gray>Stav:</gray> <condition>
+      healthy: <green>Zdravá</green>
+      diseased: '<red>Nemoc: <disease></red>'
+      pests: '<yellow>Škůdci: <level></yellow>'
+      ready-time: <gray>Připravena za:</gray> <time>
+      ready-now: <green>PŘIPRAVENA</green>
+      owner: <gray>Vlastník:</gray> <owner>
+    storages:
+      title: Sklady farmy
+      entry-title: <yellow><type></yellow>
+      type: <gray>Typ:</gray> <type>
+      exists: <gray>Kontejner existuje:</gray> <state>
+      slots: <gray>Obsazené sloty:</gray> <used>/<total>
+      slots-unavailable: "<gray>Obsazené sloty:</gray> nedostupné"
+      worker-access: <gray>Přístup pracovníka:</gray> <state>
+      salary: <gray>Mzdový sklad:</gray> <state>
+      unlink-hint: <yellow>Klikni pro bezpečné odpojení.</yellow>
+    storage-confirm:
+      title: <red>Odpojit sklad</red>
+      confirm: <red>Potvrdit odpojení</red>
+      warning: <gray>Kontejner i jeho obsah zůstanou nedotčeny.</gray>
+      cancel: <green>Zrušit</green>
+    processing:
+      entry-title: <status>
+      status: <gray>Stav:</gray> <status>
+      exists: <gray>Stanice existuje:</gray> <state>
+      batch: <gray>Várka:</gray> <batch>
+      strain: <gray>Odrůda:</gray> <strain>
+      weight: <gray>Hmotnost:</gray> <weight>
+      quality: <gray>Kvalita:</gray> <quality> (<grade>)
+      remaining: <gray>Zbývá:</gray> <time>
+      owner: <gray>Vlastník procesu:</gray> <owner>
+      statuses:
+        free: Volná
+        processing: Zpracovává
+        ready: Připravená
+    worker:
+      state: <gray>Stav:</gray> <state>
+      salary: <gray>Mzda:</gray> <salary> smaragdů
+      entity: <gray>Entita načtena:</gray> <state>
+      last-task: <gray>Poslední dokončený úkol:</gray> <task>
+      no-task: Bez úkolu
+      states:
+        idle: Nečinný
+        resting: Odpočívá
+        searching-task: Hledá úkol
+        reserving-task: Rezervuje úkol
+        walking-to-storage: Jde do skladu
+        collecting-resource: Vyzvedává zdroj
+        walking-to-target: Jde k cíli
+        inspecting-plant: Kontroluje rostlinu
+        watering: Zalévá
+        treating: Ošetřuje
+        planting: Sází
+        harvesting: Sklízí
+        moving-batch: Přenáší várku
+        loading-dryer: Plní sušák
+        unloading-dryer: Vyprazdňuje sušák
+        packaging: Balí
+        returning-home: Vrací se
+        sleeping: Spí
+        waiting-for-payment: Čeká na mzdu
+        blocked: Zablokovaný
+      specializations:
+        grower: Pěstitel
+        harvester: Sklízeč
+        drying-master: Mistr sušení
+        geneticist: Genetik
+        packager: Balič
+        foreman: Předák
+      tasks:
+        save-dying-plants: Zachránit kritické rostliny
+        treat-disease: Léčit problémy
+        water: Zalévat
+        harvest: Sklízet
+        load-drying-rack: Naplnit sušák
+        unload-drying-rack: Vyprázdnit sušák
+        plant: Sázet
+        package: Balit
+        clean: Čistit
+        inspect: Kontrolovat
+        move-batch: Přenést várku
+    priorities:
+      title: Priority pracovníků
+      entry-title: <aqua><worker></aqua>
+      value: <gray>Priorita:</gray> <priority>
+    permissions:
+      title: Oprávnění farmy
+      entry-title: <blue><member></blue>
+      role: <gray>Role:</gray> <role>
+      effective: <gray>Účinná oprávnění:</gray> <permissions>
+      roles:
+        owner: Vlastník
+        manager: Správce
+        member: Člen
+        viewer: Pozorovatel
+      values:
+        view: Zobrazit
+        plant: Sázet
+        water: Zalévat
+        harvest: Sklízet
+        process: Zpracovat
+        access-storage: Používat sklady
+        manage-storage: Spravovat sklady
+        manage-workers: Spravovat pracovníky
+        manage-members: Spravovat členy
+        manage-settings: Spravovat nastavení
+        delete: Smazat
+    salary:
+      title: Mzdy farmy
+      summary-title: <green>Další výplata</green>
+    statistics:
+      title: Statistiky farmy
+      current-title: <white>Aktuální stav farmy</white>
+      level: <gray>Úroveň farmy:</gray> <level>
+      active-plants: <gray>Aktivní rostliny:</gray> <count>
+      average-quality: <gray>Průměrný potenciál kvality:</gray> <quality>
+      workers: <gray>Pracovníci:</gray> <count>
+      storages: <gray>Sklady:</gray> <count>
+      processes: <gray>Aktivní procesy:</gray> <count>
+    notifications:
+      title: Upozornění farmy
+      state: <gray>Stav:</gray> <state>
+      types:
+        plant-ready: Rostlina připravena
+        disease: Nemoc rostliny
+        low-water: Málo vody
+        drying-complete: Sušení dokončeno
+        curing-complete: Zrání dokončeno
+        unpaid-worker: Nezaplacený pracovník
+        blocked-worker: Zablokovaný pracovník
+        contract-complete: Kontrakt dokončen
+        market-change: Změna trhu
+    upgrades:
+      title: Vylepšení farmy
+      unavailable: <yellow>Tato funkce není v této verzi dostupná.</yellow>
+    storage-types:
+      seed-storage: Sklad semen
+      tool-storage: Sklad nástrojů
+      fresh-harvest-storage: Sklad čerstvé sklizně
+      dry-product-storage: Sklad suchých produktů
+      packaged-product-storage: Sklad balení
+      salary-storage: Mzdová truhla
+      water-storage: Sklad vody
+      general-storage: Obecný sklad
   plants:
     title: "<green>Rostliny</green>"
     details-title: "<green><strain></green> <dark_gray>•</dark_gray> <stage>"
@@ -308,19 +514,59 @@ curing:
   interrupted: "<yellow>Zrání bylo ukončeno dříve.</yellow>"
   container-full: "<red>Zrací nádoba je plná.</red>"
 rolling:
-  results: { failed: "<dark_red>Neúspěch</dark_red>", spilled: "<red>Rozsypané</red>", crooked: "<gold>Křivé</gold>", loose: "<yellow>Volné</yellow>", normal: "<white>Normální</white>", good: "<green>Dobré</green>", perfect: "<light_purple>Dokonalé</light_purple>", overfilled: "<red>Přeplněné</red>" }
-  steps: { place-paper: "Polož papír", add-filter: "Přidej filtr", add-product: "Přidej drcený produkt", distribute: "Rozlož náplň", finish-roll: "Dokonči rolku" }
-  complete: "<green>Minihra dokončena:</green> <result>"
-  aborted: "<yellow>Minihra skončila bezpečně; suroviny byly vráceny.</yellow>"
+  results:
+    failed: <dark_red>Neúspěch</dark_red>
+    spilled: <red>Rozsypané</red>
+    crooked: <gold>Křivé</gold>
+    loose: <yellow>Volné</yellow>
+    normal: <white>Normální</white>
+    good: <green>Dobré</green>
+    perfect: <light_purple>Dokonalé</light_purple>
+    overfilled: <red>Přeplněné</red>
+  steps:
+    place-paper: Polož papír
+    add-filter: Přidej filtr
+    add-product: Přidej drcený produkt
+    distribute: Rozlož náplň
+    finish-roll: Dokonči rolku
+  complete: <green>Minihra dokončena:</green> <result>
+  aborted: <yellow>Minihra skončila bezpečně; suroviny byly vráceny.</yellow>
+  errors:
+    missing-paper: <red>Potřebuješ platný Rolling Paper.</red>
+    missing-filter: <red>Potřebuješ platný Filter.</red>
+    missing-product: <red>Potřebuješ platný Ground Product nebo Mixture.</red>
+    busy: <yellow>Minihra balení se už spouští nebo je otevřená.</yellow>
+    session-active: <yellow>Už máš spuštěnou nebo otevřenou relaci balení.</yellow>
+    wrong-product-state: <red>Tento produkt nelze v aktuálním stavu zabalit.</red>
 herbalist:
-  title: "<dark_green>Bylinkář</dark_green>"
-  created: "<green>Tento farmář objevil obchod bylinkáře.</green>"
-  evaluated-normal: "<gray>Tento farmář není bylinkář.</gray>"
-  village-limit: "<yellow>Osada už má maximum bylinkářů.</yellow>"
-  reputation-up: "<green>Pověst vzrostla o <amount>.</green>"
-  tiers: { novice: "Nováček", apprentice: "Učeň", journeyman: "Tovaryš", expert: "Expert", master: "Mistr", verdant-expert: "Expert Verdant" }
-  specializations: { seeds: "Prodejce semen", tools: "Dodavatel vybavení", buyer: "Výkupce kvality", contracts: "Zprostředkovatel zakázek" }
-  hire: { unavailable: "<red>Najmout lze jen Experta Verdant.</red>", already-employed: "<red>Bylinkář už pracuje.</red>", contract-required: "<yellow>Potřebuješ platnou smlouvu.</yellow>", signed: "<green><worker> podepsal smlouvu pro <farm>.</green>", dismissed: "<yellow><worker> byl propuštěn.</yellow>" }
+  title: <dark_green>Bylinkář</dark_green>
+  created: <green>Tento farmář objevil obchod bylinkáře.</green>
+  evaluated-normal: <gray>Tento farmář není bylinkář.</gray>
+  village-limit: <yellow>Osada už má maximum bylinkářů.</yellow>
+  reputation-up: <green>Pověst vzrostla o <amount>.</green>
+  tiers:
+    novice: Nováček
+    apprentice: Učeň
+    journeyman: Tovaryš
+    expert: Expert
+    master: Mistr
+    verdant-expert: Expert Verdant
+  specializations:
+    seeds: Prodejce semen
+    tools: Dodavatel vybavení
+    buyer: Výkupce kvality
+    contracts: Zprostředkovatel zakázek
+  hire:
+    unavailable: <red>Najmout lze jen Experta Verdant.</red>
+    already-employed: <red>Bylinkář už pracuje.</red>
+    contract-required: <yellow>Potřebuješ platnou smlouvu.</yellow>
+    signed: <green><worker> podepsal smlouvu pro <farm>.</green>
+    dismissed: <yellow><worker> byl propuštěn.</yellow>
+  force-created: <green>Bylinkář byl vytvořen navzdory limitu osady.</green>
+  already-herbalist: <yellow>Tato entita už je registrovaný bylinkář.</yellow>
+  worker-conflict: <red>Tento vesničan už je registrovaný pracovník.</red>
+  force-no-permission: <red>Nemáš oprávnění obejít limit osady.</red>
+  tier-updated: '<green>Úroveň nastavena na <tier>; zkušenost: <experience>.</green>'
 trade:
   authentic-only: "<red>Přijímány jsou jen pravé registrované várky.</red>"
   dry-only: "<red>Výkup je jen pro správně suché nebo vyzrálé várky.</red>"
@@ -345,7 +591,7 @@ farm:
   permissions: { plant: "Sázet", water: "Zalévat", harvest: "Sklízet", use-storage: "Používat sklady", use-processing: "Používat zařízení", manage-workers: "Spravovat pracovníky", manage-members: "Spravovat členy", manage-settings: "Měnit nastavení", upgrade: "Vylepšovat farmu" }
   storages: { seed-storage: "Sklad semen", tool-storage: "Sklad nástrojů", fresh-harvest-storage: "Sklad čerstvé sklizně", dry-product-storage: "Sklad suchých produktů", packaged-product-storage: "Sklad balení", salary-storage: "Mzdová truhla", water-storage: "Sklad vody", general-storage: "Obecný sklad" }
   selection: { first-point: "<green>První roh: <position>.</green>", second-point: "<green>Druhý roh: <position>.</green>", overlap: "<red>Region se překrývá s <farm>.</red>", too-large: "<red>Region překračuje limit <limit>.</red>", expired: "<yellow>Výběr vypršel.</yellow>" }
-  storage: { linked: "<green>Truhla propojena jako <type>.</green>", unlinked: "<yellow>Propojení odstraněno.</yellow>", already-linked: "<red>Truhla už je přiřazena.</red>", protected: "<red>Propojený sklad nelze zničit ani přesunout.</red>" }
+  storage: { linked: "<green>Úložiště bylo připojeno jako <type>.</green>", unlinked: "<green>Úložiště bylo odpojeno.</green>", no-owned-farm: "<red>Nevlastníš farmu.</red>", no-target: "<yellow>Dívej se přímo na truhlu nebo jiný kontejner nejvýše 6 bloků daleko.</yellow>", not-container: "<red>Tento blok není kontejner.</red>", outside-farm: "<red>Celý kontejner musí být uvnitř tvé farmy.</red>", already-linked: "<yellow>Tento kontejner je už připojen.</yellow>", not-linked: "<yellow>Tento kontejner není připojen k tvé farmě.</yellow>", salary-exists: "<red>Farma už má úložiště výplat.</red>", other-farm: "<red>Tento kontejner patří jiné farmě.</red>", invalid-type: "<red>Neznámý typ úložiště. Platné hodnoty: <types>.</red>", protected: "<red>Připojená farmářská úložiště nelze zničit ani přesunout.</red>" }
   delete-warning: "<red>Nejprve vyřeš rostliny a blokované várky.</red>"
 worker:
   states: { idle: "Nečinný", resting: "Odpočívá", searching-task: "Hledá úkol", reserving-task: "Rezervuje úkol", walking-to-storage: "Jde do skladu", collecting-resource: "Vyzvedává zdroj", walking-to-target: "Jde k cíli", inspecting-plant: "Kontroluje rostlinu", watering: "Zalévá", treating: "Ošetřuje", planting: "Sází", harvesting: "Sklízí", moving-batch: "Přenáší várku", loading-dryer: "Plní sušák", unloading-dryer: "Vyprazdňuje sušák", packaging: "Balí", returning-home: "Vrací se", sleeping: "Spí", waiting-for-payment: "Čeká na mzdu", blocked: "Zablokovaný" }
@@ -359,7 +605,7 @@ worker:
   priorities: { save-dying-plants: "Zachránit kritické rostliny", treat-disease: "Léčit problémy", water: "Zalévat", harvest: "Sklízet", load-drying-rack: "Naplnit sušák", unload-drying-rack: "Vyprázdnit sušák", plant: "Sázet", package: "Balit", clean: "Čistit" }
   salary: { paid: "<green><worker> dostal <amount> smaragdů za den <day>.</green>", missing-one: "<yellow><worker> dnes nedostal mzdu; morálka klesla.</yellow>", missing-two: "<gold><worker> je dva dny bez mzdy a pracuje pomaleji.</gold>", missing-three: "<red><worker> po třech dnech odmítá úkoly.</red>", left: "<red><worker> opustil <farm> kvůli neplacení.</red>", chest-empty: "<red>V mzdové truhle není dost smaragdů.</red>" }
   morale: { excellent: "<green>Výborná</green>", good: "<green>Dobrá</green>", neutral: "<yellow>Neutrální</yellow>", low: "<gold>Nízká</gold>", critical: "<red>Kritická</red>" }
-  task: { reserved: "<gray><worker> rezervoval <task>.</gray>", completed: "<green><worker> dokončil <task>.</green>", failed: "<red><worker> nezvládl <task>: <reason>.</red>", blocked: "<red><worker> uvízl u <position>.</red>", no-path: "Žádná bezpečná cesta", missing-resource: "Chybí zdroj", target-unavailable: "Cíl není dostupný", reservation-expired: "Rezervace vypršela" }
+  task: { reserved: "<gray><worker> rezervoval <task>.</gray>", completed: "<green><worker> dokončil <task>.</green>", failed: "<red><worker> nezvládl <task>: <reason>.</red>", blocked: "<red><worker> uvízl u <position>.</red>", no-path: "Žádná bezpečná cesta", missing-resource: "Chybí zdroj", target-unavailable: "Cíl není dostupný", reservation-expired: "Rezervace vypršela" , harvest-storage-full: "Sklad čerstvé sklizně chybí nebo je plný" }
 market:
   trends: { crashing: "Prudce klesá", falling: "Klesá", stable: "Stabilní", rising: "Roste", surging: "Prudce roste" }
   events:
@@ -408,7 +654,7 @@ book:
   basics:
     title: "Základy VerdantVice"
     author: "VerdantVice"
-    page_1: "<dark_green><bold>1. Semena</bold></dark_green><newline><newline>Najdi ověřeného bylinkáře. Vyšší úrovně nabízí vzácnější fiktivní odrůdy; každé semeno má podpis a genetiku."
+    page_1: "<dark_green><bold>1. Semena</bold></dark_green><newline><newline>Najdi ověřeného bylinkáře. Vyšší úrovně nabízí vzácnější odrůdy; každé semeno má podpis a genetiku."
     page_2: "<dark_green><bold>2. Sázení</bold></dark_green><newline><newline>Umísti květináč s oprávněním a použij platné semeno. Kontrolují se limity, odstup a region."
     page_3: "<dark_green><bold>3. Kontrola</bold></dark_green><newline><newline>Prázdná ruka ukáže souhrn, skener údaje podle dovednosti a knih."
     page_4: "<dark_green><bold>4. Zálivka</bold></dark_green><newline><newline>Zálivka je fiktivní ukazatel; škodí její nedostatek i přebytek."
@@ -429,6 +675,14 @@ book:
   drying_curing: { title: "Sušení a zrání", author: "VerdantVice", page_1: "<gold><bold>Příprava</bold></gold><newline><newline>Zkontroluj kapacitu, čistotu a stav zařízení.", page_2: "<gold><bold>Čas</bold></gold><newline><newline>Fáze postupují podle časových značek, volitelně i bez chunku.", page_3: "<gold><bold>Výsledek</bold></gold><newline><newline>Hotová je bezpečná fáze; prodlení ničí a správné zrání zlepšuje." }
   advanced_genetics: { title: "Pokročilá genetika", author: "VerdantVice", page_1: "<aqua><bold>Třídy</bold></aqua><newline><newline>Třída shrnuje sedm nezávislých modifikátorů.", page_2: "<aqua><bold>Křížení</bold></aqua><newline><newline>Hra váží rysy, přidá odchylku a uloží rodiče.", page_3: "<aqua><bold>Stabilita</bold></aqua><newline><newline>Stabilita omezuje náhodu; filtrovaný název nemění podepsané rysy." }
   farm_management: { title: "Správa farmy", author: "VerdantVice", page_1: "<dark_green><bold>Role</bold></dark_green><newline><newline>Členům dej jen potřebná oprávnění.", page_2: "<dark_green><bold>Sklady</bold></dark_green><newline><newline>Propojuj truhly podle typu a chraň vzácná semena.", page_3: "<dark_green><bold>Lidé</bold></dark_green><newline><newline>Lůžko, jídlo, cesta, odpočinek a mzda udržují morálku." }
+  recipes:
+    title: "Recepty zpracování"
+    author: "VerdantVice"
+    page_1: "Fresh Batch → Drying Rack → Dry Batch. Sušení může zahájit jen ověřená vlastní čerstvá várka."
+    page_2: "Dry Batch → Curing Container → Cured Batch. Zrání je volitelné a zachová identitu várky."
+    page_3: "Dry nebo Cured Batch → Grinder → Ground Product. Přikrčení + pravý klik se dvěma produkty vytvoří Mixture."
+    page_4: "Dva Ground Product → Mixture. Oba registrované zdroje se spotřebují právě jednou a původ zůstane uložen."
+    page_5: "Rolling Paper + Filter + Ground Product nebo Mixture → Joint. Spusť přes /vv roll nebo /vv recipes roll."
   perfect_batch: { title: "Tajemství dokonalé várky", author: "VerdantVice", page_1: "<yellow><bold>Bez zkratky</bold></yellow><newline><newline>Genetika nevymaže špatnou péči ani kontaminaci.", page_2: "<yellow><bold>Potenciál</bold></yellow><newline><newline>Udržuj zdraví a čistotu a sklízej ve správném okně.", page_3: "<yellow><bold>Dohledatelnost</bold></yellow><newline><newline>Každá změna ukládá ztrátu a původ; kopie lore kvalitu nezmění." }
 
 processing:

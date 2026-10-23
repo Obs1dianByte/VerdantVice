@@ -1,0 +1,10 @@
+name: VerdantViceClientProbe
+version: 1.0.0
+main: com.verdantvice.clientprobe.MinecraftClientProbe
+api-version: '1.21.4'
+depend: [VerdantVice]
+description: Real Minecraft client evidence on an isolated loopback test server only.
+commands:
+  vvclient:
+    description: Controls the isolated real-client verification session.
+    usage: /vvclient <check|gallery|menu <type>|status|finish>

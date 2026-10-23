@@ -221,7 +221,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
                         return;
                     }
                     switch (evaluation.status()) {
-                        case CREATED -> {
+                        case CREATED, CREATED_FORCED -> {
                             plugin.getServer().getPluginManager().callEvent(
                                     new VerdantHerbalistCreatedEvent(villager));
                             player.sendMessage(translations.component(player, "herbalist.created"));
@@ -234,6 +234,8 @@ public final class HerbalistMarketManager implements AutoCloseable {
                                 translations.component(player, "herbalist.evaluated-normal"));
                         case VILLAGE_LIMIT -> player.sendMessage(
                                 translations.component(player, "herbalist.village-limit"));
+                        case WORKER -> player.sendMessage(
+                                translations.component(player, "herbalist.worker-conflict"));
                         case NOT_FARMER, INVALID_ENTITY -> player.sendMessage(
                                 translations.component(player, "errors.target-not-found"));
                     }
@@ -256,11 +258,27 @@ public final class HerbalistMarketManager implements AutoCloseable {
                 }));
     }
 
-    public CompletableFuture<HerbalistEvaluation> forceCreate(Villager villager) {
+    public CompletableFuture<HerbalistEvaluation> forceCreate(
+            Villager villager,
+            boolean ignoreVillageLimit,
+            Optional<HerbalistTier> requestedTier
+    ) {
         requireMainThread();
-        return conversion.force(villager).thenApply(evaluation -> {
+        Objects.requireNonNull(requestedTier, "requestedTier");
+        CompletableFuture<HerbalistEvaluation> result;
+        if (ignoreVillageLimit) {
+            result = requestedTier.isPresent()
+                    ? conversion.forceIgnoringVillageLimit(villager, requestedTier.orElseThrow())
+                    : conversion.forceIgnoringVillageLimit(villager);
+        } else {
+            result = requestedTier.isPresent()
+                    ? conversion.force(villager, requestedTier.orElseThrow())
+                    : conversion.force(villager);
+        }
+        return result.thenApply(evaluation -> {
             runMain(() -> {
-                if (evaluation.status() == HerbalistEvaluation.Status.CREATED
+                if ((evaluation.status() == HerbalistEvaluation.Status.CREATED
+                        || evaluation.status() == HerbalistEvaluation.Status.CREATED_FORCED)
                         && villager.isValid()) {
                     plugin.getServer().getPluginManager().callEvent(
                             new VerdantHerbalistCreatedEvent(villager));
@@ -268,6 +286,17 @@ public final class HerbalistMarketManager implements AutoCloseable {
             });
             return evaluation;
         });
+    }
+
+    public CompletableFuture<HerbalistEvaluation> forceCreate(
+            Villager villager,
+            boolean ignoreVillageLimit
+    ) {
+        return forceCreate(villager, ignoreVillageLimit, Optional.empty());
+    }
+
+    public CompletableFuture<HerbalistEvaluation> forceCreate(Villager villager) {
+        return forceCreate(villager, false, Optional.empty());
     }
 
     public void handleMenuAction(
@@ -460,11 +489,24 @@ public final class HerbalistMarketManager implements AutoCloseable {
                         }
                         switch (result.status()) {
                             case PURCHASED -> {
-                                advanceHerbalist(herbalistUuid, 1L, 1);
                                 player.sendMessage(translations.component(
                                         player, "trade.purchase-complete",
                                         Map.of("item", offerName(player, offer),
                                                 "price", offer.emeraldPrice())));
+                                advanceHerbalist(herbalistUuid, 1L, 1)
+                                        .whenComplete((updated, progressFailure) ->
+                                                runMain(() -> {
+                                                    if (progressFailure != null) {
+                                                        plugin.getLogger().log(
+                                                                Level.WARNING,
+                                                                "Herbalist progress update failed",
+                                                                unwrap(progressFailure)
+                                                        );
+                                                    }
+                                                    if (player.isOnline()) {
+                                                        openBuy(player, herbalistUuid);
+                                                    }
+                                                }));
                             }
                             case INSUFFICIENT_FUNDS -> player.sendMessage(
                                     translations.component(player, "errors.insufficient-items"));
@@ -610,7 +652,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
                 return;
             }
             if (result.newlyCompleted()) {
-                advanceHerbalist(herbalistUuid, 5L, 5);
+                advanceHerbalistSilently(herbalistUuid, 5L, 5);
                 plugin.getServer().getPluginManager().callEvent(
                         new VerdantContractCompleteEvent(
                                 result.contract().contractId(), player.getUniqueId()));
@@ -772,7 +814,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
             boolean newlyCompleted
     ) {
         if (newlyCompleted) {
-            advanceHerbalist(herbalistUuid, 5L, 5);
+            advanceHerbalistSilently(herbalistUuid, 5L, 5);
             plugin.getServer().getPluginManager().callEvent(
                     new VerdantContractCompleteEvent(
                             stored.contract().contractId(), player.getUniqueId()));
@@ -880,15 +922,34 @@ public final class HerbalistMarketManager implements AutoCloseable {
                 player, "item." + offer.id().replace('-', '_') + ".name");
     }
 
-    private void advanceHerbalist(UUID herbalistUuid, long experience, int reputation) {
-        herbalists.addProgress(
-                herbalistUuid, experience, reputation,
-                configs.get("villagers.yml"), Instant.now()
-        ).exceptionally(failure -> {
-            plugin.getLogger().log(
-                    Level.WARNING, "Herbalist progress update failed", unwrap(failure));
-            return null;
-        });
+    private CompletableFuture<HerbalistRecord> advanceHerbalist(
+            UUID herbalistUuid,
+            long experience,
+            int reputation
+    ) {
+        return herbalists.addProgress(
+                herbalistUuid,
+                experience,
+                reputation,
+                configs.get("villagers.yml"),
+                Instant.now()
+        );
+    }
+
+    private void advanceHerbalistSilently(
+            UUID herbalistUuid,
+            long experience,
+            int reputation
+    ) {
+        advanceHerbalist(herbalistUuid, experience, reputation)
+                .exceptionally(failure -> {
+                    plugin.getLogger().log(
+                            Level.WARNING,
+                            "Herbalist progress update failed",
+                            unwrap(failure)
+                    );
+                    return null;
+                });
     }
 
     private String batchName(PreparedSale sale) {

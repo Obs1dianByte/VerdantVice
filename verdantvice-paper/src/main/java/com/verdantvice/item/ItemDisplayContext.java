@@ -42,9 +42,9 @@ public record ItemDisplayContext(
 
     public static ItemDisplayContext simple(String strainId, double quality, StrainRegistry strains) {
         String id = strainId == null ? "" : strainId;
-        String name = id.isBlank()
-                ? ""
-                : strains.find(id).map(Strain::displayName).orElse(id);
+        Strain definition = id.isBlank() ? null : strains.find(id).orElse(null);
+        if (definition != null) id = definition.id();
+        String name = definition == null ? id : definition.displayName();
         return new ItemDisplayContext(
                 null, id, name, 0.0, 0.0, quality, "", "", id.isBlank() ? 0 : 1,
                 Duration.ZERO);

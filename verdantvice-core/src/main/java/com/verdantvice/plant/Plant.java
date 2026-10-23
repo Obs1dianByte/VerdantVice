@@ -139,6 +139,14 @@ public record Plant(
                 DomainChecks.required(workerUuid, "workerUuid"));
     }
 
+    public Plant withFarmId(Optional<UUID> assignedFarmId) {
+        return new Plant(uniqueId, ownerUuid, position, strainId, geneticProfileId, growthStage,
+                growthProgress, health, hydration, nutrition, lightLevel, stress, cleanliness, diseaseId,
+                pestLevel, resistance, yieldPotential, qualityPotential, plantedAt, lastUpdatedAt,
+                lastWateredAt, harvestWindowStart, harvestWindowEnd,
+                DomainChecks.required(assignedFarmId, "assignedFarmId"), workerAssigned);
+    }
+
     private static double percentage(double value, String name) {
         return DomainChecks.range(value, 0.0, 100.0, name);
     }

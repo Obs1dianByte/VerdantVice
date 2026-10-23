@@ -3,7 +3,7 @@ version: '${version}'
 main: com.verdantvice.VerdantVicePlugin
 description: Fictional plant, production, market, and plantation simulation for Paper.
 api-version: '1.21.4'
-authors: [ObsidianByte, VerdantVice]
+authors: [ObsidianByte VerdantVice]
 website: https://github.com/Obs1dianByte/VerdantVice
 load: POSTWORLD
 softdepend:
@@ -18,7 +18,7 @@ softdepend:
 commands:
   verdantvice:
     description: Opens VerdantVice or executes a subcommand.
-    usage: /<command> [help|guide|profile|skills|strains|recipes|market|contracts|genetics|farm|workers|language|notifications|resourcepack|admin]
+    usage: /<command> [help|guide|profile|skills|strains|recipes|market|contracts|genetics|farm|workers|language|notifications|resourcepack|admin|roll]
     aliases: [vv]
     permission: verdantvice.use
 permissions:
@@ -67,4 +67,6 @@ permissions:
   verdantvice.admin.debug:
     default: op
   verdantvice.admin.database:
+    default: op
+  verdantvice.admin.spawnherbalist.force:
     default: op

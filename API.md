@@ -1,24 +1,24 @@
-# Publiczne API VerdantVice
+# VerdantVice public API
 
-## Kontrakt i dostępność
+## Contract and availability
 
-Publicznym punktem wejścia jest:
+The public entry point is:
 
 ```java
 com.verdantvice.api.VerdantViceApi
 ```
 
-Aktualna wartość `VerdantViceApi.API_VERSION` to `1`. Implementacja jest
-rejestrowana z priorytetem `ServicePriority.Normal` w Bukkit
-`ServicesManager`, a przy wyłączeniu pluginu wyrejestrowywana.
+The current value of `VerdantViceApi.API_VERSION` is `1`. The implementation
+is registered with `ServicePriority.Normal` in Bukkit's `ServicesManager`
+and unregistered when the plugin shuts down.
 
-Ważne: VerdantVice uruchamia bazę i ładuje dane asynchronicznie. Rejestracja
-usługi następuje dopiero po zakończeniu tego procesu. Nawet plugin z
-`depend: [VerdantVice]` może podczas własnego `onEnable()` zobaczyć `null`.
-Pobieraj usługę leniwie, ponów próbę po starcie albo wyłącz własną funkcję do
-czasu jej dostępności.
+Important: VerdantVice starts its database and loads data asynchronously.
+The service is registered only after that process completes. Even a plugin
+with `depend: [VerdantVice]` may receive `null` during its own `onEnable()`.
+Resolve the service lazily, retry after startup, or disable the integration
+feature until the service becomes available.
 
-Przykład bezpiecznego pobrania:
+Safe lookup example:
 
 ```java
 import com.verdantvice.api.VerdantViceApi;
@@ -33,21 +33,20 @@ public Optional<VerdantViceApi> verdantViceApi() {
 }
 ```
 
-Nie rzutuj głównej klasy pluginu i nie pobieraj jego prywatnych managerów.
+Do not cast the plugin's main class or access its private managers.
 
-## Zależność pluginu konsumenta
+## Consumer plugin dependency
 
-Do `plugin.yml` konsumenta dodaj:
+Add the following to the consumer's `plugin.yml`:
 
 ```yaml
 depend:
   - VerdantVice
 ```
 
-Jeśli integracja jest opcjonalna, użyj `softdepend` i obsłuż brak usługi.
-VerdantVice nie publikuje w tym repozytorium artefaktu do zewnętrznego
-repozytorium Maven. Podczas lokalnego rozwoju można skompilować przeciwko
-produkcyjnemu JAR-owi:
+For optional integrations, use `softdepend` and handle an unavailable service.
+This repository does not publish a VerdantVice artifact to an external Maven
+repository. During local development, compile against the production JAR:
 
 ```kotlin
 dependencies {
@@ -56,38 +55,37 @@ dependencies {
 }
 ```
 
-Konsument powinien generować bytecode Java 21, jeśli ma działać na obu
-obsługiwanych liniach serwera.
+Consumers should generate Java 21 bytecode to run on both supported server
+lines.
 
-## Metody API v1
+## API v1 methods
 
-| Metoda | Wynik | Charakter |
+| Method | Result | Behavior |
 |---|---|---|
-| `apiVersion()` | `int` | wersja kontraktu, obecnie 1 |
-| `plugin()` | `Plugin` | właściciel usługi |
-| `profile(UUID)` | `CompletableFuture<PlayerProfile>` | ładuje profil; domyślny fallback nowego profilu to `pl_PL` |
-| `farm(UUID)` | `Optional<Farm>` | snapshot plantacji z pamięci |
-| `playerFarm(UUID)` | `Optional<Farm>` | plantacja należąca do gracza |
-| `plant(UUID)` | `Optional<Plant>` | snapshot rośliny z pamięci |
-| `strain(String)` | `Optional<Strain>` | wyszukiwanie odmiany |
-| `createContract(UUID, UUID)` | `CompletableFuture<StoredContract>` | generuje kontrakt gracz–zielarz |
-| `marketQuote(String, double, double, double)` | `CompletableFuture<MarketQuote>` | notowanie dla odmiany, jakości, świeżości i reputacji |
-| `currentPrice(String)` | `CompletableFuture<Double>` | cena referencyjna dla jakości 50, świeżości 100 i reputacji 0 |
-| `registerStrain(Strain)` | `CompletableFuture<Void>` | dodaje odmianę do pamięci i inicjalizuje jej rekord rynku |
+| `apiVersion()` | `int` | Contract version, currently 1 |
+| `plugin()` | `Plugin` | Service owner |
+| `profile(UUID)` | `CompletableFuture<PlayerProfile>` | Loads a profile; new profiles use the configured server locale, which defaults to `en_US` |
+| `farm(UUID)` | `Optional<Farm>` | In-memory farm snapshot |
+| `playerFarm(UUID)` | `Optional<Farm>` | Farm owned by the player |
+| `plant(UUID)` | `Optional<Plant>` | In-memory plant snapshot |
+| `strain(String)` | `Optional<Strain>` | Strain lookup |
+| `createContract(UUID, UUID)` | `CompletableFuture<StoredContract>` | Generates a player–herbalist contract |
+| `marketQuote(String, double, double, double)` | `CompletableFuture<MarketQuote>` | Quote for a strain, quality, freshness, and reputation |
+| `currentPrice(String)` | `CompletableFuture<Double>` | Reference price at quality 50, freshness 100, and reputation 0 |
+| `registerStrain(Strain)` | `CompletableFuture<Void>` | Adds a strain to memory and initializes its market record |
 
-Wszystkie metody poza `plugin()` i `apiVersion()` wymagają gotowego
-VerdantVice. Przy wywołaniu przed gotowością rzucany jest
-`IllegalStateException` albo operacja kończy future wyjątkiem.
+All methods except `plugin()` and `apiVersion()` require VerdantVice to be
+ready. Calling them before readiness throws `IllegalStateException` or
+completes the operation's future exceptionally.
 
-Obiekty domenowe zwracane przez API są niemutowalnymi snapshotami. Zmiana
-lokalnej referencji nie aktualizuje bazy ani cache.
+Domain objects returned by the API are immutable snapshots. Replacing a
+local reference does not update the database or cache.
 
-## Operacje asynchroniczne
+## Asynchronous operations
 
-Metody zwracające `CompletableFuture` mogą kończyć się poza głównym wątkiem.
-Nie wolno w ich callbacku bezpośrednio modyfikować świata, encji,
-ekwipunku ani GUI Bukkit. Przenieś takie działanie na scheduler pluginu
-konsumenta:
+Methods returning `CompletableFuture` may complete off the main thread.
+Do not modify the Bukkit world, entities, inventories, or GUI directly in
+their callbacks. Schedule that work through the consumer plugin's scheduler:
 
 ```java
 VerdantViceApi api = verdantViceApi().orElseThrow();
@@ -95,40 +93,38 @@ VerdantViceApi api = verdantViceApi().orElseThrow();
 api.currentPrice("berry_fog").whenComplete((price, failure) -> {
     Bukkit.getScheduler().runTask(this, () -> {
         if (failure != null) {
-            getLogger().warning("Nie udało się pobrać ceny: "
+            getLogger().warning("Could not fetch the price: "
                     + failure.getMessage());
             return;
         }
-        getLogger().info("Cena Berry Fog: " + price);
+        getLogger().info("Blueberry price: " + price);
     });
 });
 ```
 
-Przekazywane zakresy jakości, świeżości i reputacji są walidowane przez
-warstwę domenową. Nie zakładaj, że dowolne `double` zostanie automatycznie
-przycięte.
+Quality, freshness, and reputation ranges are validated by the domain layer.
+Do not assume that an arbitrary `double` will be clamped automatically.
 
-## Zdarzenia Bukkit
+## Bukkit events
 
-Wszystkie zdarzenia znajdują się w
-`com.verdantvice.api.event`.
+All events are in `com.verdantvice.api.event`.
 
-| Zdarzenie | Dane | Anulowalne |
+| Event | Data | Cancellable |
 |---|---|---:|
-| `VerdantPlantPlacedEvent` | gracz, ID rośliny, lokacja, odmiana | tak |
-| `VerdantPlantStageChangeEvent` | ID rośliny, poprzedni i nowy etap | tak |
-| `VerdantPlantDiseaseEvent` | ID rośliny, ID problemu, nasilenie | nie |
-| `VerdantPlantHarvestEvent` | gracz, ID rośliny, ID partii, moment zbioru | tak |
-| `VerdantBatchDryEvent` | ID partii, etap suszenia | nie |
-| `VerdantBatchCureEvent` | ID partii, etap dojrzewania | nie |
-| `VerdantProductUseEvent` | gracz, ID instancji przedmiotu, ID partii | tak |
-| `VerdantHerbalistCreatedEvent` | encja zielarza | nie |
-| `VerdantMarketPriceChangeEvent` | odmiana, poprzednia i nowa cena | tak |
-| `VerdantContractCompleteEvent` | ID kontraktu, UUID właściciela | nie |
-| `VerdantWorkerHiredEvent` | właściciel, encja workera, ID plantacji | tak |
-| `VerdantWorkerTaskEvent` | ID workera, ID zadania, stan workera | nie |
+| `VerdantPlantPlacedEvent` | Player, plant ID, location, strain | Yes |
+| `VerdantPlantStageChangeEvent` | Plant ID, previous and next stage | Yes |
+| `VerdantPlantDiseaseEvent` | Plant ID, problem ID, severity | No |
+| `VerdantPlantHarvestEvent` | Player, plant ID, batch ID, harvest timing | Yes |
+| `VerdantBatchDryEvent` | Batch ID, drying stage | No |
+| `VerdantBatchCureEvent` | Batch ID, curing stage | No |
+| `VerdantProductUseEvent` | Player, item instance ID, batch ID | Yes |
+| `VerdantHerbalistCreatedEvent` | Herbalist entity | No |
+| `VerdantMarketPriceChangeEvent` | Strain, previous and next price | Yes |
+| `VerdantContractCompleteEvent` | Contract ID, owner UUID | No |
+| `VerdantWorkerHiredEvent` | Owner, worker entity, farm ID | Yes |
+| `VerdantWorkerTaskEvent` | Worker ID, task ID, worker state | No |
 
-Przykład:
+Example:
 
 ```java
 import com.verdantvice.api.event.VerdantPlantHarvestEvent;
@@ -139,30 +135,29 @@ public final class HarvestListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onHarvest(VerdantPlantHarvestEvent event) {
         getLogger().info(event.player().getName()
-                + " zebrał partię " + event.batchId()
-                + " w oknie " + event.timing());
+                + " harvested batch " + event.batchId()
+                + " during " + event.timing());
     }
 }
 ```
 
-Zarejestruj listener standardowo przez `PluginManager`. Dla zdarzeń
-anulowalnych anulowanie jest decyzją ingerującą w rozgrywkę; rób to tylko z
-jasnego powodu i nie wykonuj długich operacji bazodanowych w handlerze.
+Register the listener normally through `PluginManager`. Cancelling a
+cancellable event affects gameplay: do so only for a clear reason, and do
+not perform long database operations in the handler.
 
-## Stabilność API
+## API stability
 
-API v1 obejmuje wyłącznie interfejs `VerdantViceApi`, typy zwracane przez jego
-sygnatury i wymienione zdarzenia. Klasy managerów, repozytoriów, GUI,
-bezpieczeństwa i implementacja `DefaultVerdantViceApi` są detalami
-wewnętrznymi.
+API v1 covers only the `VerdantViceApi` interface, the types returned by its
+signatures, and the listed events. Managers, repositories, GUI and security
+classes, and `DefaultVerdantViceApi` are implementation details.
 
-Przed użyciem funkcji zależnej od nowej wersji sprawdź:
+Before using a feature that depends on a newer version, check:
 
 ```java
 if (api.apiVersion() < 1) {
-    // wyłącz integrację
+    // Disable the integration.
 }
 ```
 
-Nie przechowuj instancji usługi po wyłączeniu VerdantVice. Przy reloadzie
-całego serwera pobierz ją ponownie.
+Do not retain a service instance after VerdantVice shuts down. Resolve it
+again after a full server reload.

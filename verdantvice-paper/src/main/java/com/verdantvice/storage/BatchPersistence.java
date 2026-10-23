@@ -17,6 +17,9 @@ public interface BatchPersistence {
 
     CompletableFuture<Void> create(ProductBatch batch);
 
+    void create(SqlSession session, ProductBatch batch, Instant now)
+            throws SQLException;
+
     CompletableFuture<Void> save(ProductBatch batch);
 
     Optional<StoredBatch> find(SqlSession session, UUID batchId, boolean forUpdate)

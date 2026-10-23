@@ -3,6 +3,8 @@ package com.verdantvice.processing;
 import com.verdantvice.api.event.VerdantBatchCureEvent;
 import com.verdantvice.api.event.VerdantBatchDryEvent;
 import com.verdantvice.config.ConfigManager;
+import com.verdantvice.common.BlockPosition;
+import com.verdantvice.farm.Farm;
 import com.verdantvice.database.DatabaseManager;
 import com.verdantvice.database.DatabaseUnavailableException;
 import com.verdantvice.i18n.TranslationService;
@@ -67,6 +69,12 @@ public final class ProcessingManager {
             Set.of(CustomItemType.DRY_BATCH, CustomItemType.CURED_BATCH);
     private static final Set<CustomItemType> GROUND =
             Set.of(CustomItemType.GROUND_PRODUCT);
+    private static final Set<CustomItemType> ROLLING_PAPER =
+            Set.of(CustomItemType.ROLLING_PAPER);
+    private static final Set<CustomItemType> ROLLING_FILTER =
+            Set.of(CustomItemType.FILTER);
+    private static final Set<CustomItemType> ROLLING_PRODUCT =
+            Set.of(CustomItemType.MIXTURE, CustomItemType.GROUND_PRODUCT);
 
     private final JavaPlugin plugin;
     private final ConfigManager configs;
@@ -87,7 +95,15 @@ public final class ProcessingManager {
     private final Set<UUID> pendingStations = ConcurrentHashMap.newKeySet();
     private final ProcessingStartGuard startGuard = new ProcessingStartGuard(pendingStations);
     private final DryingStartService dryingStarts;
+    private final ProcessingTransferService transfers;
+    private final ProcessingTransactionService transactions;
+    private final com.verdantvice.storage.PerKeyAsyncQueue<UUID> outputQueue =
+            new com.verdantvice.storage.PerKeyAsyncQueue<>();
+    private final Set<UUID> pendingPlayers = ConcurrentHashMap.newKeySet();
     private final Map<UUID, RollingSession> rollingSessions = new ConcurrentHashMap<>();
+    private final Set<UUID> liveRollingSessions = ConcurrentHashMap.newKeySet();
+    private final RollingStartGuard rollingStarts = new RollingStartGuard();
+    private final StationBreakGuard<BlockKey> stationBreaks = new StationBreakGuard<>();
     private final File stationFile;
     private BukkitTask updateTask;
 
@@ -113,6 +129,10 @@ public final class ProcessingManager {
         this.signingSecret = Objects.requireNonNull(signingSecret, "signingSecret").clone();
         this.dryingStarts = new DryingStartService(
                 database, batchService, secureItems, authenticity, this.signingSecret);
+        this.transfers = new ProcessingTransferService(database, batchService, secureItems,
+                new com.verdantvice.database.item.ItemRegistryRepository(database), signer);
+        this.transactions = new ProcessingTransactionService(database, batchService, secureItems,
+                new com.verdantvice.database.item.ItemRegistryRepository(database));
         this.stationFile = configs.dataPath("data/processing-stations.yml").toFile();
     }
 
@@ -173,6 +193,8 @@ public final class ProcessingManager {
         sessions.forEach(session -> abortRolling(session.playerId(), true));
         pendingStations.clear();
         startGuard.clear();
+        rollingStarts.clear();
+        stationBreaks.clear();
         saveStations();
     }
 
@@ -196,17 +218,62 @@ public final class ProcessingManager {
         return Optional.ofNullable(stations.get(BlockKey.of(block.getLocation())));
     }
 
+    public boolean stationBreakPending(Station station) {
+        return stationBreaks.isClaimed(Objects.requireNonNull(station, "station").position());
+    }
+
     public boolean canBreak(Block block) {
-        Station station = stations.get(BlockKey.of(block.getLocation()));
-        return station == null || (!jobs.containsKey(station.stationId())
-                && !pendingStations.contains(station.stationId()));
+        BlockKey key = BlockKey.of(block.getLocation());
+        Station station = stations.get(key);
+        return station == null || ProcessingStationPolicy.breakDecision(
+                station.type(),
+                jobs.containsKey(station.stationId()),
+                pendingStations.contains(station.stationId()) || stationBreaks.isClaimed(key)
+        ) == ProcessingStationPolicy.BreakDecision.ALLOW;
+    }
+
+    public StationBreakResult claimStationForBreak(Block block) {
+        requireMainThread();
+        BlockKey key = BlockKey.of(block.getLocation());
+        Station station = stations.get(key);
+        if (station == null) {
+            return new StationBreakResult(StationBreakStatus.NOT_STATION, null, null);
+        }
+        boolean busy = ProcessingStationPolicy.breakDecision(
+                station.type(),
+                jobs.containsKey(station.stationId()),
+                pendingStations.contains(station.stationId())
+        ) == ProcessingStationPolicy.BreakDecision.BUSY;
+        Optional<StationBreakGuard.Lease<BlockKey>> lease = stationBreaks.acquire(key, busy);
+        if (lease.isEmpty()) {
+            return new StationBreakResult(StationBreakStatus.BUSY, station, null);
+        }
+        return new StationBreakResult(StationBreakStatus.CLAIMED, station, lease.orElseThrow());
+    }
+
+    public boolean completeStationBreak(Block block, StationBreakResult claim) {
+        requireMainThread();
+        Objects.requireNonNull(claim, "claim");
+        if (claim.status() != StationBreakStatus.CLAIMED || claim.lease() == null) {
+            return false;
+        }
+        BlockKey key = BlockKey.of(block.getLocation());
+        Station station = claim.optionalStation().orElseThrow();
+        try {
+            if (!stations.remove(key, station)) {
+                return false;
+            }
+            saveStations();
+            return true;
+        } finally {
+            claim.close();
+        }
     }
 
     public void removeStation(Block block) {
-        requireMainThread();
-        Station removed = stations.remove(BlockKey.of(block.getLocation()));
-        if (removed != null) {
-            saveStations();
+        StationBreakResult claim = claimStationForBreak(block);
+        if (claim.status() == StationBreakStatus.CLAIMED) {
+            completeStationBreak(block, claim);
         }
     }
 
@@ -224,6 +291,7 @@ public final class ProcessingManager {
                 27,
                 translations.component(player, titleKey)
         );
+        holder.attach(inventory);
         ItemStack filler = icon(player, Material.GRAY_STAINED_GLASS_PANE, Component.empty());
         for (int slot = 0; slot < inventory.getSize(); slot++) {
             inventory.setItem(slot, filler);
@@ -262,7 +330,7 @@ public final class ProcessingManager {
         if (rawSlot == 22) {
             player.closeInventory();
         } else if (rawSlot == 11) {
-            if (jobs.containsKey(station.stationId())) {
+            if (stationBreakPending(station) || jobs.containsKey(station.stationId())) {
                 player.sendMessage(translations.component(player, "errors.busy"));
                 return;
             }
@@ -321,75 +389,94 @@ public final class ProcessingManager {
                 Instant.now()
         );
         ProductBatch mixed = batchFromMixture(mixture, firstBatch, secondBatch);
-        String firstOperation = "mix:" + mixed.batchId() + ":1";
-        String secondOperation = "mix:" + mixed.batchId() + ":2";
-        return secureItems.consume(
-                first,
-                GROUND,
-                player.getUniqueId(),
-                firstOperation
-        ).thenCompose(consumed -> secureItems.consume(
-                second,
-                GROUND,
-                player.getUniqueId(),
-                secondOperation
-        )).thenCompose(consumed -> batchService.create(mixed))
-                .thenCompose(ignored -> markSourceConsumed(firstBatch))
-                .thenCompose(ignored -> markSourceConsumed(secondBatch))
-                .thenCompose(ignored -> secureItems.issue(
-                        player,
-                        CustomItemType.MIXTURE,
-                        player.getUniqueId(),
-                        mixed
-                ))
-                .thenCompose(item -> onMain(() -> {
-                    removeInstance(player, firstData.uniqueInstanceId());
-                    removeInstance(player, secondData.uniqueInstanceId());
-                    batchService.remember(mixed);
-                    giveOrDrop(player, item);
-                }));
+        return commitOutput(player, List.of(first, second), List.of(
+                new ProcessingTransactionService.Change(firstBatch, consumedSource(firstBatch)),
+                new ProcessingTransactionService.Change(secondBatch, consumedSource(secondBatch))),
+                mixed, CustomItemType.MIXTURE, mixed, "mix:" + mixed.batchId());
     }
 
     public CompletableFuture<Void> startRolling(Player player) {
         requireMainThread();
-        if (rollingSessions.containsKey(player.getUniqueId())) {
-            return CompletableFuture.failedFuture(new IllegalStateException("busy"));
+        UUID playerId = player.getUniqueId();
+        Optional<RollingStartGuard.Lease> leaseResult = rollingStarts.acquire(
+                playerId,
+                rollingSessions.containsKey(playerId)
+        );
+        if (leaseResult.isEmpty()) {
+            return CompletableFuture.failedFuture(new ProcessingFailureException(
+                    ProcessingFailureReason.ROLLING_BUSY));
         }
+        RollingStartGuard.Lease lease = leaseResult.orElseThrow();
+
         Inventory inventory = player.getInventory();
         LocatedItem paper = find(inventory, CustomItemType.ROLLING_PAPER);
         LocatedItem filter = find(inventory, CustomItemType.FILTER);
-        LocatedItem product = find(inventory, CustomItemType.MIXTURE, CustomItemType.GROUND_PRODUCT);
-        if (paper == null || filter == null || product == null) {
-            return CompletableFuture.failedFuture(new IllegalArgumentException("insufficient_items"));
+        LocatedItem product = find(
+                inventory,
+                CustomItemType.MIXTURE,
+                CustomItemType.GROUND_PRODUCT
+        );
+        Optional<ProcessingFailureReason> missing = RollingIngredientPolicy.missing(
+                paper != null,
+                filter != null,
+                product != null
+        );
+        if (missing.isPresent()) {
+            lease.close();
+            return CompletableFuture.failedFuture(
+                    new ProcessingFailureException(missing.orElseThrow()));
         }
-        SignedItemData productData = product.data();
-        ProductBatch source = batchService.cachedOrNull(productData.batchId());
-        if (source == null || (source.state() != BatchState.MIXED && source.state() != BatchState.GROUND)
-                || !authenticity.verify(source, signingSecret)) {
-            return CompletableFuture.failedFuture(new IllegalArgumentException("wrong_item_state"));
-        }
+
+        LocatedItem requiredPaper = Objects.requireNonNull(paper, "paper");
+        LocatedItem requiredFilter = Objects.requireNonNull(filter, "filter");
+        LocatedItem requiredProduct = Objects.requireNonNull(product, "product");
         UUID sessionId = UUID.randomUUID();
-        return secureItems.consume(
-                paper.item(),
-                Set.of(CustomItemType.ROLLING_PAPER),
-                player.getUniqueId(),
-                "roll:" + sessionId + ":paper"
-        ).thenCompose(ignored -> secureItems.consume(
-                filter.item(),
-                Set.of(CustomItemType.FILTER),
-                player.getUniqueId(),
-                "roll:" + sessionId + ":filter"
-        )).thenCompose(ignored -> secureItems.consume(
-                product.item(),
-                Set.of(product.data().itemType()),
-                player.getUniqueId(),
-                "roll:" + sessionId + ":product"
-        )).thenCompose(ignored -> onMain(() -> {
-            removeInstance(player, paper.data().uniqueInstanceId());
-            removeInstance(player, filter.data().uniqueInstanceId());
-            removeInstance(player, product.data().uniqueInstanceId());
-            beginRollingGui(player, sessionId, source, product.data().itemType());
-        }));
+        liveRollingSessions.add(sessionId);
+        CompletableFuture<SecureItemService.ValidatedItem> paperValidation =
+                secureItems.validateActive(requiredPaper.item(), ROLLING_PAPER, playerId);
+        CompletableFuture<SecureItemService.ValidatedItem> filterValidation =
+                secureItems.validateActive(requiredFilter.item(), ROLLING_FILTER, playerId);
+        CompletableFuture<SecureItemService.ValidatedItem> productValidation =
+                secureItems.validateActive(requiredProduct.item(), ROLLING_PRODUCT, playerId);
+
+        CompletableFuture<Void> result = paperValidation
+                .thenCombine(filterValidation, RollingValidatedPair::new)
+                .thenCombine(productValidation, (pair, validatedProduct) ->
+                        new RollingValidatedInputs(
+                                pair.paper(),
+                                pair.filter(),
+                                validatedProduct
+                        ))
+                .thenCompose(validated -> batchService.require(
+                        validated.product().data().batchId(),
+                        playerId,
+                        Set.of(BatchState.MIXED, BatchState.GROUND)
+                ).thenCompose(source -> transactions.startRolling(
+                        playerId, sessionId, source,
+                        validated.paper().identity(),
+                        validated.filter().identity(),
+                        validated.product().identity(),
+                        Instant.now()
+                ).thenCompose(ignored -> onMain(() -> {
+                    if (!player.isOnline()) throw new IllegalStateException("Player left during rolling start");
+                    removeInstance(player, validated.paper().data().uniqueInstanceId());
+                    removeInstance(player, validated.filter().data().uniqueInstanceId());
+                    removeInstance(player, validated.product().data().uniqueInstanceId());
+                    beginRollingGui(
+                            player,
+                            sessionId,
+                            source,
+                            validated.product().data().itemType()
+                    );
+                }))));
+        return result.exceptionallyCompose(failure -> {
+            liveRollingSessions.remove(sessionId);
+            return transactions.restoreRolling(playerId, sessionId).handle((ignored, refundFailure) -> {
+                if (refundFailure != null) failure.addSuppressed(refundFailure);
+                pendingPlayers.add(playerId);
+                throw new CompletionException(unwrap(failure));
+            });
+        }).whenComplete((ignored, failure) -> lease.close());
     }
 
     public void handleRollingClick(Player player, RollingMenuHolder holder, int rawSlot) {
@@ -399,6 +486,7 @@ public final class ProcessingManager {
             player.closeInventory();
             return;
         }
+        if (session.completing()) return;
         if (rawSlot == 22) {
             abortRolling(player.getUniqueId(), false);
             player.closeInventory();
@@ -443,6 +531,226 @@ public final class ProcessingManager {
         return batchService.cached(id);
     }
 
+    public ProcessingTransferService transfers() {
+        return transfers;
+    }
+
+    private CompletableFuture<Void> commitOutput(Player player, List<ItemStack> inputs,
+            List<ProcessingTransactionService.Change> changes, ProductBatch created,
+            CustomItemType outputType, ProductBatch outputBatch, String operation) {
+        return commitOutput(player, inputs, changes, created, outputType, outputBatch, operation, null, null);
+    }
+
+    private CompletableFuture<Void> commitOutput(Player player, List<ItemStack> inputs,
+            List<ProcessingTransactionService.Change> changes, ProductBatch created,
+            CustomItemType outputType, ProductBatch outputBatch, String operation,
+            ProcessingTransactionService.CompletedJob completedJob, UUID rollingSessionId) {
+        requireMainThread();
+        UUID owner = player.getUniqueId();
+        var prepared = secureItems.prepare(player, outputType, owner, outputBatch);
+        SignedItemData data = prepared.data();
+        var output = new com.verdantvice.database.item.ItemRegistration(data.uniqueInstanceId(),
+                data.itemType().name(), data.itemId(), data.batchId(), data.ownerUuid(), data.quality(),
+                data.strain(), data.createdAt(), prepared.payloadHash(), data.schemaVersion(), null);
+        List<CompletableFuture<SecureItemService.ValidatedItem>> validations = inputs.stream().map(item -> {
+            ItemSigner.Verification verified = signer.verify(item);
+            if (!verified.valid()) throw new IllegalArgumentException("invalid_item");
+            return secureItems.validateActive(item, Set.of(verified.data().itemType()), owner);
+        }).toList();
+        return CompletableFuture.allOf(validations.toArray(CompletableFuture[]::new))
+                .thenCompose(ignored -> {
+                    var plan = new ProcessingTransactionService.Plan(owner,
+                        validations.stream().map(future -> future.join().identity()).toList(), changes,
+                        created, output, null, operation, Instant.now());
+                    return rollingSessionId != null ? transactions.finishRolling(plan, rollingSessionId)
+                            : completedJob != null ? transactions.retrieve(plan, completedJob) : transactions.commit(plan);
+                })
+                .thenCompose(ignored -> {
+                    pendingPlayers.add(owner);
+                    return deliverPending(player).exceptionally(failure -> {
+                    plugin.getLogger().log(Level.WARNING,
+                            "Processing committed; inventory receipt will be replayed", unwrap(failure));
+                    return 0;
+                    });
+                }).thenApply(ignored -> null);
+    }
+
+    /** Replays only DB-committed outputs and acknowledges after saving the actual player inventory. */
+    public CompletableFuture<Integer> deliverPending(Player player) {
+        UUID owner = player.getUniqueId();
+        pendingPlayers.add(owner);
+        return outputQueue.submit(owner, () -> transactions.restoreInterruptedRolling(owner, liveRollingSessions)
+                .thenCompose(ignored -> transactions.pending(owner)).thenCompose(receipts -> {
+            List<UUID> delivered = new ArrayList<>();
+            return onMain(() -> {
+                if (!player.isOnline()) return;
+                for (ProcessingTransactionService.PendingOutput receipt : receipts) {
+                    ProductBatch batch = receipt.data().batchId() == null ? null
+                            : batchService.cachedOrNull(receipt.data().batchId());
+                    if (receipt.data().batchId() != null && batch == null) continue;
+                    receipt.inputs().forEach(id -> removeInstance(player, id));
+                    secureItems.beginDelivery(receipt.data().uniqueInstanceId());
+                    boolean present = false;
+                    for (ItemStack stack : player.getInventory().getContents()) {
+                        var verified = signer.verify(stack);
+                        if (verified.valid() && receipt.data().uniqueInstanceId().equals(
+                                verified.data().uniqueInstanceId())) { present = true; break; }
+                    }
+                    ItemStack output = batch == null ? secureItems.recreate(player, receipt.data())
+                            : secureItems.recreate(player, receipt.data(), batch);
+                    if (present || player.getInventory().addItem(output).isEmpty()) {
+                        delivered.add(receipt.data().uniqueInstanceId());
+                    }
+                }
+                if (!receipts.isEmpty()) player.saveData();
+            }).thenCompose(ignored -> CompletableFuture.allOf(delivered.stream()
+                    .map(id -> transactions.acknowledge(owner, id)
+                            .thenRun(() -> secureItems.endDelivery(id))).toArray(CompletableFuture[]::new)))
+                    .thenCompose(ignored -> transactions.pending(owner))
+                    .thenApply(remaining -> {
+                        if (remaining.isEmpty()) pendingPlayers.remove(owner);
+                        return delivered.size();
+                    });
+        }));
+    }
+
+    public boolean hasPendingDelivery(UUID owner) {
+        return pendingPlayers.contains(owner);
+    }
+
+    /** Starts the same persistent drying process as the player GUI, without a fake player. */
+    public CompletableFuture<ProductBatch> loadDryingByWorker(
+            ItemStack input, UUID owner, UUID stationId) {
+        requireMainThread();
+        Station station = stations.values().stream()
+                .filter(value -> value.stationId().equals(stationId)
+                        && value.type() == ProcessingStationType.DRYING_RACK)
+                .findFirst().orElse(null);
+        ItemSigner.Verification verification = signer.verify(input);
+        if (station == null || stationBreakPending(station) || !verification.valid()
+                || verification.data().itemType() != CustomItemType.FRESH_BATCH) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("invalid_drying_input"));
+        }
+        ProcessingStartGuard.Lease lease = startGuard.tryAcquire(stationId,
+                verification.data().uniqueInstanceId()).orElse(null);
+        if (lease == null) return CompletableFuture.failedFuture(
+                new ProcessingFailureException(ProcessingFailureReason.STATION_BUSY));
+        YamlConfiguration config = quality();
+        DryingStartService.Parameters parameters = new DryingStartService.Parameters(
+                Duration.ofMinutes(config.getLong("processing.drying.duration-minutes", 20L)),
+                config.getDouble("processing.drying.cleanliness", 92.0),
+                config.getDouble("processing.drying.stability", 90.0),
+                config.getDouble("processing.drying.speed", 1.0));
+        return secureItems.validateActive(input, FRESH, owner)
+                .thenCompose(item -> dryingStarts.start(item, owner, stationId,
+                        Instant.now(), parameters))
+                .thenCompose(result -> onMain(() -> jobs.put(stationId, new ProcessJob(
+                        result.jobId(), stationId, result.batch().batchId(), owner,
+                        ProcessingStationType.DRYING_RACK, false)))
+                        .thenApply(ignored -> result.batch()))
+                .whenComplete((ignored, failure) -> lease.close());
+    }
+
+    /** Removes a ready job and queues its signed output in one database transaction. */
+    public CompletableFuture<ProcessingTransferService.Delivery> unloadDryingByWorker(
+            UUID stationId, UUID batchId, UUID owner, UUID farmId,
+            UUID storageId, String operationId) {
+        requireMainThread();
+        if (!pendingStations.add(stationId)) return CompletableFuture.failedFuture(
+                new ProcessingFailureException(ProcessingFailureReason.STATION_BUSY));
+        ProcessJob job = jobs.get(stationId);
+        CompletableFuture<ProductBatch> updated = job != null
+                && job.batchId().equals(batchId) && job.ownerUuid().equals(owner)
+                ? updateOne(job, true)
+                : CompletableFuture.completedFuture(null);
+        return updated.thenCompose(ignored -> transfers.unloadDrying(
+                        stationId, batchId, owner, farmId, storageId, operationId, Instant.now()))
+                .thenCompose(delivery -> onMain(() -> jobs.computeIfPresent(stationId,
+                        (key, current) -> current.batchId().equals(batchId) ? null : current))
+                        .thenApply(ignored -> delivery))
+                .whenComplete((ignored, failure) -> pendingStations.remove(stationId));
+    }
+
+    public List<StationSnapshot> stationSnapshots(
+            Farm farm,
+            ProcessingStationType type
+    ) {
+        requireMainThread();
+        Objects.requireNonNull(farm, "farm");
+        Objects.requireNonNull(type, "type");
+        Instant now = Instant.now();
+        return stations.values().stream()
+                .filter(station -> station.type() == type)
+                .filter(station -> farm.region().contains(new BlockPosition(
+                        station.position().worldUuid(),
+                        station.position().x(),
+                        station.position().y(),
+                        station.position().z()
+                )))
+                .map(station -> stationSnapshot(station, now))
+                .sorted(java.util.Comparator.comparing(value ->
+                        value.station().stationId().toString()))
+                .toList();
+    }
+
+    private StationSnapshot stationSnapshot(Station station, Instant now) {
+        ProcessJob job = jobs.get(station.stationId());
+        ProductBatch batch = job == null
+                ? null
+                : batchService.cachedOrNull(job.batchId());
+        StationStatus status = job == null
+                ? StationStatus.FREE
+                : job.ready() ? StationStatus.READY : StationStatus.PROCESSING;
+        long remainingSeconds = status == StationStatus.PROCESSING && batch != null
+                ? remainingSeconds(batch, station.type(), now)
+                : 0L;
+        Location location = station.position().location();
+        boolean exists = location != null
+                && location.getWorld().isChunkLoaded(
+                        location.getBlockX() >> 4,
+                        location.getBlockZ() >> 4
+                )
+                && location.getBlock().getType() == station.type().material();
+        return new StationSnapshot(
+                station,
+                status,
+                job == null ? Optional.empty() : Optional.of(job.batchId()),
+                job == null ? Optional.empty() : Optional.of(job.ownerUuid()),
+                Optional.ofNullable(batch),
+                remainingSeconds,
+                exists
+        );
+    }
+
+    private long remainingSeconds(
+            ProductBatch batch,
+            ProcessingStationType type,
+            Instant now
+    ) {
+        if (type == ProcessingStationType.DRYING_RACK) {
+            return batch.dryingData().map(data -> {
+                long effectiveMillis = Math.max(1L, Math.round(
+                        data.targetDuration().toMillis() / data.rackSpeed()
+                ));
+                long elapsed = Math.max(0L, Duration.between(
+                        data.startedAt(), now
+                ).toMillis());
+                return Math.max(0L, (effectiveMillis - elapsed + 999L) / 1000L);
+            }).orElse(0L);
+        }
+        if (type == ProcessingStationType.CURING_CONTAINER) {
+            return batch.curingData().map(data -> {
+                long elapsed = Math.max(0L, Duration.between(
+                        data.startedAt(), now
+                ).toMillis());
+                return Math.max(0L, (
+                        data.targetDuration().toMillis() - elapsed + 999L
+                ) / 1000L);
+            }).orElse(0L);
+        }
+        return 0L;
+    }
+
     public CompletableFuture<Void> setQuality(
             Player player,
             ItemStack item,
@@ -482,23 +790,9 @@ public final class ProcessingManager {
                 grade == QualityGrade.SPOILED ? BatchState.SPOILED : source.state()
         ), signingSecret);
         CustomItemType itemType = data.itemType();
-        return secureItems.consume(
-                item.clone(),
-                Set.of(itemType),
-                player.getUniqueId(),
-                "admin-quality:" + UUID.randomUUID()
-        ).thenCompose(ignored -> batchService.save(updated))
-                .thenCompose(ignored -> secureItems.issue(
-                        player,
-                        itemType,
-                        data.ownerUuid(),
-                        updated
-                ))
-                .thenCompose(replacement -> onMain(() -> {
-                    removeInstance(player, data.uniqueInstanceId());
-                    batchService.remember(updated);
-                    giveOrDrop(player, replacement);
-                }));
+        return commitOutput(player, List.of(item.clone()),
+                List.of(new ProcessingTransactionService.Change(source, updated)), null,
+                itemType, updated, "admin-quality:" + UUID.randomUUID());
     }
 
     private void startDrying(Player player, Station station) {
@@ -544,7 +838,6 @@ public final class ProcessingManager {
             return;
         }
         attempt.whenComplete((result, failure) -> {
-            lease.close();
             onMain(() -> {
                 if (failure != null || result == null) {
                     handleProcessingFailure(player, "Could not start drying", failure);
@@ -566,7 +859,7 @@ public final class ProcessingManager {
                         Map.of("batch_id", started.batchId())
                 ));
                 open(player, station);
-            });
+            }).whenComplete((ignored, callbackFailure) -> lease.close());
         });
     }
 
@@ -608,13 +901,12 @@ public final class ProcessingManager {
                 ProcessingStationType.CURING_CONTAINER,
                 false
         );
-        secureItems.consume(
-                input,
-                DRIED,
-                player.getUniqueId(),
-                "cure:" + job.jobId()
-        ).thenCompose(ignored -> batchService.save(started))
-                .thenCompose(ignored -> insertJob(job, started))
+        secureItems.validateActive(input, DRIED, player.getUniqueId())
+                .thenCompose(validated -> transactions.commit(new ProcessingTransactionService.Plan(
+                        player.getUniqueId(), List.of(validated.identity()),
+                        List.of(new ProcessingTransactionService.Change(source, started)), null, null,
+                        new ProcessingTransactionService.CuringJob(job.jobId(), station.stationId()),
+                        "cure:" + job.jobId(), Instant.now())))
                 .whenComplete((ignored, failure) -> onMain(() -> {
                     pendingStations.remove(station.stationId());
                     if (failure != null) {
@@ -682,26 +974,14 @@ public final class ProcessingManager {
                 "",
                 BatchState.GROUND
         ), signingSecret);
-        secureItems.consume(
-                input,
-                GRINDABLE,
-                player.getUniqueId(),
-                "grind:" + ground.productId()
-        ).thenCompose(ignored -> batchService.save(transformed))
-                .thenCompose(ignored -> secureItems.issue(
-                        player,
-                        CustomItemType.GROUND_PRODUCT,
-                        player.getUniqueId(),
-                        transformed
-                ))
-                .whenComplete((output, failure) -> onMain(() -> {
+        commitOutput(player, List.of(input),
+                List.of(new ProcessingTransactionService.Change(source, transformed)), null,
+                CustomItemType.GROUND_PRODUCT, transformed, "grind:" + ground.productId())
+                .whenComplete((ignored, failure) -> onMain(() -> {
                     if (failure != null) {
                         fail(player, "Could not grind batch", failure);
                         return;
                     }
-                    removeInstance(player, data.uniqueInstanceId());
-                    batchService.remember(transformed);
-                    giveOrDrop(player, output);
                     open(player, station);
                 }));
     }
@@ -712,13 +992,17 @@ public final class ProcessingManager {
             player.sendMessage(translations.component(player, "errors.target-not-found"));
             return;
         }
-        if (!job.ownerUuid().equals(player.getUniqueId())
-                && !player.hasPermission("verdantvice.admin")) {
+        if (!job.ownerUuid().equals(player.getUniqueId())) {
             player.sendMessage(translations.component(player, "errors.wrong-owner"));
+            return;
+        }
+        if (!pendingStations.add(station.stationId())) {
+            player.sendMessage(translations.component(player, "errors.busy"));
             return;
         }
         updateOne(job, true).whenComplete((updated, failure) -> onMain(() -> {
             if (failure != null || updated == null) {
+                pendingStations.remove(station.stationId());
                 fail(player, "Could not update process", failure);
                 return;
             }
@@ -726,6 +1010,7 @@ public final class ProcessingManager {
                     ? updated.state() == BatchState.DRIED || updated.state() == BatchState.SPOILED
                     : updated.state() == BatchState.CURED || updated.state() == BatchState.SPOILED;
             if (!ready) {
+                pendingStations.remove(station.stationId());
                 player.sendMessage(translations.component(player, "errors.wrong-item-state"));
                 open(player, station);
                 return;
@@ -735,19 +1020,17 @@ public final class ProcessingManager {
                     : job.type() == ProcessingStationType.DRYING_RACK
                     ? CustomItemType.DRY_BATCH
                     : CustomItemType.CURED_BATCH;
-            secureItems.issue(
-                    player,
-                    outputType,
-                    player.getUniqueId(),
-                    updated
-            ).thenCompose(item -> deleteJob(job).thenApply(ignored -> item))
-                    .whenComplete((item, deliveryFailure) -> onMain(() -> {
+            // The job disappears in the same transaction which records its one durable output.
+            commitOutput(player, List.of(), List.of(), null, outputType, updated,
+                    "retrieve:" + job.jobId(), new ProcessingTransactionService.CompletedJob(
+                            job.jobId(), station.stationId(), job.batchId(), job.type()), null)
+                    .whenComplete((ignored, deliveryFailure) -> onMain(() -> {
+                        pendingStations.remove(station.stationId());
                         if (deliveryFailure != null) {
                             fail(player, "Could not retrieve process", deliveryFailure);
                             return;
                         }
                         jobs.remove(station.stationId());
-                        giveOrDrop(player, item);
                         player.sendMessage(translations.component(
                                 player,
                                 job.type() == ProcessingStationType.DRYING_RACK
@@ -851,46 +1134,6 @@ public final class ProcessingManager {
         }
     }
 
-    private CompletableFuture<Void> insertJob(ProcessJob job, ProductBatch batch) {
-        if (job.type() == ProcessingStationType.DRYING_RACK) {
-            DryingData data = batch.dryingData().orElseThrow();
-            return database.update(
-                    """
-                    INSERT INTO drying_jobs (
-                      drying_job_id, batch_id, owner_uuid, rack_id, drying_stage,
-                      status, started_at, last_updated_at, completes_at,
-                      process_data_json, row_version
-                    ) VALUES (?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?, '{}', 0)
-                    """,
-                    job.jobId(),
-                    batch.batchId(),
-                    job.ownerUuid(),
-                    job.stationId(),
-                    data.stage(),
-                    data.startedAt(),
-                    data.lastUpdatedAt(),
-                    data.startedAt().plus(data.targetDuration())
-            ).thenApply(ignored -> null);
-        }
-        CuringData data = batch.curingData().orElseThrow();
-        return database.update(
-                """
-                INSERT INTO curing_jobs (
-                  curing_job_id, batch_id, owner_uuid, container_id, status,
-                  started_at, last_updated_at, completes_at,
-                  process_data_json, row_version
-                ) VALUES (?, ?, ?, ?, 'ACTIVE', ?, ?, ?, '{}', 0)
-                """,
-                job.jobId(),
-                batch.batchId(),
-                job.ownerUuid(),
-                job.stationId(),
-                data.startedAt(),
-                data.lastUpdatedAt(),
-                data.startedAt().plus(data.targetDuration())
-        ).thenApply(ignored -> null);
-    }
-
     private CompletableFuture<Void> updateJob(
             ProcessJob job,
             ProductBatch batch,
@@ -923,15 +1166,6 @@ public final class ProcessingManager {
         ).thenApply(ignored -> null);
     }
 
-    private CompletableFuture<Void> deleteJob(ProcessJob job) {
-        String table = job.type() == ProcessingStationType.DRYING_RACK
-                ? "drying_jobs" : "curing_jobs";
-        String id = job.type() == ProcessingStationType.DRYING_RACK
-                ? "drying_job_id" : "curing_job_id";
-        return database.update("DELETE FROM " + table + " WHERE " + id + "=?", job.jobId())
-                .thenApply(ignored -> null);
-    }
-
     private ProcessJob job(ResultSet result, ProcessingStationType type) throws SQLException {
         return new ProcessJob(
                 UUID.fromString(result.getString("drying_job_id")),
@@ -953,8 +1187,8 @@ public final class ProcessingManager {
         return batch;
     }
 
-    private CompletableFuture<Void> markSourceConsumed(ProductBatch source) {
-        ProductBatch consumed = authenticity.sign(source.transition(
+    private ProductBatch consumedSource(ProductBatch source) {
+        return authenticity.sign(source.transition(
                 source.dryWeight(),
                 source.qualityScore(),
                 source.contamination(),
@@ -963,8 +1197,6 @@ public final class ProcessingManager {
                 source.curingData(),
                 BatchState.ROLLED
         ), signingSecret);
-        return batchService.save(consumed).thenRun(() ->
-                batchService.remember(consumed));
     }
 
     private GroundProduct ground(ProductBatch batch) {
@@ -1037,6 +1269,7 @@ public final class ProcessingManager {
                 27,
                 translations.component(player, "gui.processing.rolling-title")
         );
+        holder.attach(gui);
         player.openInventory(gui);
         renderRolling(player, session);
     }
@@ -1108,14 +1341,11 @@ public final class ProcessingManager {
                 session.source().curingData(),
                 BatchState.ROLLED
         ), signingSecret);
-        batchService.save(finished)
-                .thenCompose(ignored -> secureItems.issue(
-                        player,
-                        CustomItemType.JOINT,
-                        player.getUniqueId(),
-                        finished
-                ))
-                .whenComplete((item, failure) -> onMain(() -> {
+        commitOutput(player, List.of(),
+                List.of(new ProcessingTransactionService.Change(session.source(), finished)), null,
+                CustomItemType.JOINT, finished, "roll-finish:" + session.sessionId(), null, session.sessionId())
+                .whenComplete((ignored, failure) -> onMain(() -> {
+                    liveRollingSessions.remove(session.sessionId());
                     rollingSessions.remove(player.getUniqueId());
                     player.closeInventory();
                     if (failure != null) {
@@ -1123,8 +1353,6 @@ public final class ProcessingManager {
                         restoreRollingInputs(player, session);
                         return;
                     }
-                    batchService.remember(finished);
-                    giveOrDrop(player, item);
                     player.sendMessage(translations.component(
                             player,
                             "rolling.complete",
@@ -1138,6 +1366,7 @@ public final class ProcessingManager {
         if (session == null || session.completing()) {
             return;
         }
+        liveRollingSessions.remove(session.sessionId());
         Player player = Bukkit.getPlayer(playerId);
         if (player != null) {
             restoreRollingInputs(player, session);
@@ -1148,34 +1377,13 @@ public final class ProcessingManager {
     }
 
     private void restoreRollingInputs(Player player, RollingSession session) {
-        List<CompletableFuture<ItemStack>> futures = List.of(
-                secureItems.issue(
-                        player,
-                        CustomItemType.ROLLING_PAPER,
-                        player.getUniqueId(),
-                        ""
-                ),
-                secureItems.issue(
-                        player,
-                        CustomItemType.FILTER,
-                        player.getUniqueId(),
-                        ""
-                ),
-                secureItems.issue(
-                        player,
-                        session.sourceType(),
-                        player.getUniqueId(),
-                        session.source()
-                )
-        );
-        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
-                .whenComplete((ignored, failure) -> onMain(() -> {
-                    if (failure != null) {
-                        fail(player, "Could not restore rolling inputs", failure);
-                        return;
-                    }
-                    futures.forEach(future -> giveOrDrop(player, future.join()));
-                }));
+        pendingPlayers.add(player.getUniqueId());
+        transactions.restoreRolling(player.getUniqueId(), session.sessionId())
+                .thenCompose(ignored -> deliverPending(player))
+                .whenComplete((ignored, failure) -> {
+                    if (failure != null) plugin.getLogger().log(Level.WARNING,
+                            "Rolling refund remains recoverable from its durable receipt", unwrap(failure));
+                });
     }
 
     private Mixture mixtureFromBatch(ProductBatch batch) {
@@ -1246,12 +1454,6 @@ public final class ProcessingManager {
                 return;
             }
         }
-    }
-
-    private void giveOrDrop(Player player, ItemStack item) {
-        Map<Integer, ItemStack> overflow = player.getInventory().addItem(item);
-        overflow.values().forEach(stack ->
-                player.getWorld().dropItemNaturally(player.getLocation(), stack));
     }
 
     private String dominantStrain(ProductBatch batch) {
@@ -1383,14 +1585,18 @@ public final class ProcessingManager {
             }
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            try {
-                action.run();
-                future.complete(null);
-            } catch (Throwable failure) {
-                future.completeExceptionally(failure);
-            }
-        });
+        try {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                try {
+                    action.run();
+                    future.complete(null);
+                } catch (Throwable failure) {
+                    future.completeExceptionally(failure);
+                }
+            });
+        } catch (RuntimeException failure) {
+            future.completeExceptionally(failure);
+        }
         return future;
     }
 
@@ -1437,6 +1643,71 @@ public final class ProcessingManager {
         private ProcessJob withReady(boolean value) {
             return new ProcessJob(jobId, stationId, batchId, ownerUuid, type, value);
         }
+    }
+
+    public enum StationStatus {
+        FREE,
+        PROCESSING,
+        READY
+    }
+
+    public record StationSnapshot(
+            Station station,
+            StationStatus status,
+            Optional<UUID> batchId,
+            Optional<UUID> ownerUuid,
+            Optional<ProductBatch> batch,
+            long remainingSeconds,
+            boolean exists
+    ) {
+        public StationSnapshot {
+            Objects.requireNonNull(station, "station");
+            Objects.requireNonNull(status, "status");
+            batchId = Objects.requireNonNull(batchId, "batchId");
+            ownerUuid = Objects.requireNonNull(ownerUuid, "ownerUuid");
+            batch = Objects.requireNonNull(batch, "batch");
+            remainingSeconds = Math.max(0L, remainingSeconds);
+        }
+    }
+
+    public enum StationBreakStatus {
+        NOT_STATION,
+        BUSY,
+        CLAIMED
+    }
+
+    public record StationBreakResult(
+            StationBreakStatus status,
+            Station station,
+            StationBreakGuard.Lease<?> lease
+    ) implements AutoCloseable {
+        public StationBreakResult {
+            Objects.requireNonNull(status, "status");
+        }
+
+        public Optional<Station> optionalStation() {
+            return Optional.ofNullable(station);
+        }
+
+        @Override
+        public void close() {
+            if (lease != null) {
+                lease.close();
+            }
+        }
+    }
+
+    private record RollingValidatedPair(
+            SecureItemService.ValidatedItem paper,
+            SecureItemService.ValidatedItem filter
+    ) {
+    }
+
+    private record RollingValidatedInputs(
+            SecureItemService.ValidatedItem paper,
+            SecureItemService.ValidatedItem filter,
+            SecureItemService.ValidatedItem product
+    ) {
     }
 
     private record LocatedItem(int slot, ItemStack item, SignedItemData data) {

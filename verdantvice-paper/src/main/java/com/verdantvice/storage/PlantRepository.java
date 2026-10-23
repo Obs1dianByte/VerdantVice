@@ -5,6 +5,8 @@ import com.verdantvice.database.DatabaseManager;
 import com.verdantvice.genetics.GeneticProfile;
 import com.verdantvice.plant.GrowthStage;
 import com.verdantvice.plant.Plant;
+import com.verdantvice.processing.ProductBatch;
+import com.verdantvice.worker.WorkerHarvestDeliveryRepository;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -205,6 +207,79 @@ public final class PlantRepository {
         });
     }
 
+    /**
+     * Removes one versioned plant, creates its signed batch and records a
+     * durable inventory delivery in one transaction. A competing worker that
+     * loses the row-version delete cannot leave a duplicate batch.
+     */
+    public CompletableFuture<HarvestedBatch> harvestWithBatch(
+            UUID plantId,
+            ProductBatch batch,
+            UUID workerUuid,
+            UUID farmId,
+            UUID storageId,
+            BatchService batches,
+            WorkerHarvestDeliveryRepository deliveries
+    ) {
+        Objects.requireNonNull(plantId, "plantId");
+        Objects.requireNonNull(batch, "batch");
+        Objects.requireNonNull(workerUuid, "workerUuid");
+        Objects.requireNonNull(farmId, "farmId");
+        Objects.requireNonNull(storageId, "storageId");
+        Objects.requireNonNull(batches, "batches");
+        Objects.requireNonNull(deliveries, "deliveries");
+        return writeQueue.submit(
+                plantId,
+                () -> harvestWithBatchNow(
+                        plantId, batch, workerUuid, farmId, storageId,
+                        batches, deliveries));
+    }
+
+    private CompletableFuture<HarvestedBatch> harvestWithBatchNow(
+            UUID plantId,
+            ProductBatch batch,
+            UUID workerUuid,
+            UUID farmId,
+            UUID storageId,
+            BatchService batches,
+            WorkerHarvestDeliveryRepository deliveries
+    ) {
+        long expected = versions.getOrDefault(plantId, 0L);
+        Instant now = Instant.now();
+        UUID itemInstanceId = UUID.nameUUIDFromBytes(
+                ("worker-harvest-item:" + plantId)
+                        .getBytes(StandardCharsets.UTF_8));
+        return database.transaction(session -> {
+            int changed = session.update(
+                    "DELETE FROM plants WHERE plant_uuid=? AND row_version=?",
+                    plantId,
+                    expected);
+            if (changed != 1) {
+                throw new ConcurrentPlantModificationException(
+                        "Concurrent worker harvest for " + plantId
+                                + " (expected row_version=" + expected + ')');
+            }
+            batches.create(session, batch, now);
+            WorkerHarvestDeliveryRepository.HarvestDelivery delivery =
+                    deliveries.create(
+                            session,
+                            plantId,
+                            batch.batchId(),
+                            workerUuid,
+                            farmId,
+                            storageId,
+                            itemInstanceId,
+                            now,
+                            now);
+            return new HarvestedBatch(batch, delivery);
+        }).thenApply(created -> {
+            versions.remove(plantId);
+            persistedUpdates.remove(plantId);
+            batches.remember(created.batch());
+            return created;
+        });
+    }
+
     public CompletableFuture<Boolean> delete(UUID plantId, String reason, UUID actor) {
         Objects.requireNonNull(plantId, "plantId");
         return writeQueue.submit(
@@ -361,6 +436,16 @@ public final class PlantRepository {
             return java.util.HexFormat.of().formatHex(digest);
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
+    public record HarvestedBatch(
+            ProductBatch batch,
+            WorkerHarvestDeliveryRepository.HarvestDelivery delivery
+    ) {
+        public HarvestedBatch {
+            Objects.requireNonNull(batch, "batch");
+            Objects.requireNonNull(delivery, "delivery");
         }
     }
 

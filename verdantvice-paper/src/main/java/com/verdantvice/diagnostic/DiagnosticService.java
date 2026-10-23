@@ -60,7 +60,7 @@ public final class DiagnosticService {
         String serverName = Bukkit.getName();
         String serverVersion = Bukkit.getVersion();
         boolean debug = configs.main().getBoolean("debug", false);
-        String defaultLanguage = configs.main().getString("default-language", "pl_PL");
+        String defaultLanguage = configs.main().getString("default-language", "en_US");
         java.util.Map<String, Object> modules =
                 configs.main().getConfigurationSection("modules") == null
                         ? java.util.Map.of()

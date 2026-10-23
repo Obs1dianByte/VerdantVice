@@ -35,8 +35,8 @@ public final class PlayerProfileManager {
     }
 
     public CompletableFuture<PlayerProfile> load(Player player) {
-        String detected = normalize(player.locale().toString());
-        return load(player.getUniqueId(), detected);
+        String locale = translations.locale(player);
+        return load(player.getUniqueId(), locale);
     }
 
     /**
@@ -158,16 +158,17 @@ public final class PlayerProfileManager {
 
     private String normalize(String locale) {
         if (locale == null || locale.isBlank()) {
-            return "pl_PL";
+            return translations.serverLocale();
         }
         String value = locale.replace('-', '_');
         String[] parts = value.split("_", 3);
         if (parts.length < 2) {
-            return "pl_PL";
+            return translations.serverLocale();
         }
         String candidate = parts[0].toLowerCase(java.util.Locale.ROOT)
                 + "_" + parts[1].toUpperCase(java.util.Locale.ROOT);
-        return translations.supportedLocales().contains(candidate) ? candidate : "pl_PL";
+        return translations.supportedLocales().contains(candidate)
+                ? candidate : translations.serverLocale();
     }
 
     private CompletableFuture<Void> onMain(Runnable action) {

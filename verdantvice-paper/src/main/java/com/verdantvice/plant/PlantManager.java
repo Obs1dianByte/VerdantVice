@@ -6,6 +6,7 @@ import com.verdantvice.api.event.VerdantPlantStageChangeEvent;
 import com.verdantvice.common.BlockPosition;
 import com.verdantvice.config.ConfigManager;
 import com.verdantvice.farm.FarmManager;
+import com.verdantvice.farm.PlantFarmMigration;
 import com.verdantvice.farm.FarmPermission;
 import com.verdantvice.genetics.GeneticProfile;
 import com.verdantvice.genetics.SeedGeneticsResolver;
@@ -25,6 +26,7 @@ import com.verdantvice.security.SecureItemService;
 import com.verdantvice.security.SignedItemData;
 import com.verdantvice.storage.BatchService;
 import com.verdantvice.storage.PlantRepository;
+import com.verdantvice.worker.WorkerHarvestDeliveryRepository;
 import com.verdantvice.strain.Strain;
 import com.verdantvice.strain.StrainRegistry;
 import net.kyori.adventure.text.Component;
@@ -130,16 +132,50 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
     }
 
     public CompletableFuture<Void> load() {
-        return repository.loadAll().thenCompose(rows -> onMain(() -> {
-            plants.clear();
-            chunkIndex.clear();
-            updateQueue.clear();
-            for (PlantRepository.StoredPlant row : rows) {
-                plants.put(row.plant().uniqueId(), row);
-                index(row.plant());
-                updateQueue.addLast(row.plant().uniqueId());
-            }
-        }));
+        return repository.loadAll()
+                .thenCompose(this::repairMissingFarmAssignments)
+                .thenCompose(rows -> onMain(() -> {
+                    plants.clear();
+                    chunkIndex.clear();
+                    updateQueue.clear();
+                    for (PlantRepository.StoredPlant row : rows) {
+                        plants.put(row.plant().uniqueId(), row);
+                        index(row.plant());
+                        updateQueue.addLast(row.plant().uniqueId());
+                    }
+                }));
+    }
+
+    private CompletableFuture<List<PlantRepository.StoredPlant>> repairMissingFarmAssignments(
+            List<PlantRepository.StoredPlant> rows
+    ) {
+        List<CompletableFuture<PlantRepository.StoredPlant>> repairs = rows.stream()
+                .map(row -> {
+                    Plant plant = row.plant();
+                    if (plant.farmId().isPresent()) {
+                        return CompletableFuture.completedFuture(row);
+                    }
+                    Optional<Plant> repair = PlantFarmMigration.repair(
+                            plant,
+                            farms.all()
+                    );
+                    if (repair.isEmpty()) {
+                        return CompletableFuture.completedFuture(row);
+                    }
+                    Plant repaired = repair.orElseThrow();
+                    return repository.saveVersioned(repaired, "FARM_ID_MIGRATED")
+                            .thenApply(version -> new PlantRepository.StoredPlant(
+                                    repaired,
+                                    row.genetics(),
+                                    version
+                            ));
+                })
+                .toList();
+        CompletableFuture<?>[] all = repairs.toArray(CompletableFuture[]::new);
+        return CompletableFuture.allOf(all)
+                .thenApply(ignored -> repairs.stream()
+                        .map(CompletableFuture::join)
+                        .toList());
     }
 
     public void start() {
@@ -328,6 +364,10 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
         return Optional.ofNullable(plants.get(plantId)).map(PlantRepository.StoredPlant::plant);
     }
 
+    public CompletableFuture<Optional<ProductBatch>> batch(UUID batchId) {
+        return batchService.find(Objects.requireNonNull(batchId, "batchId"));
+    }
+
     public Collection<Plant> all() {
         return plants.values().stream().map(PlantRepository.StoredPlant::plant).toList();
     }
@@ -424,11 +464,17 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
      * Delivery of the signed inventory reference is handled by the worker
      * action service after this future completes.
      */
-    public CompletableFuture<ProductBatch> harvestByWorker(
+    public CompletableFuture<PlantRepository.HarvestedBatch> harvestByWorker(
             UUID plantId,
-            UUID workerUuid) {
+            UUID workerUuid,
+            UUID farmId,
+            UUID storageId,
+            WorkerHarvestDeliveryRepository deliveries) {
         requireMainThread();
         Objects.requireNonNull(workerUuid, "workerUuid");
+        Objects.requireNonNull(farmId, "farmId");
+        Objects.requireNonNull(storageId, "storageId");
+        Objects.requireNonNull(deliveries, "deliveries");
         PlantRepository.StoredPlant stored = plants.get(
                 Objects.requireNonNull(plantId, "plantId"));
         if (stored == null) {
@@ -436,10 +482,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                     new IllegalArgumentException("target_unavailable"));
         }
         Plant plant = stored.plant();
-        if (plant.growthStage() == GrowthStage.SEED
-                || plant.growthStage() == GrowthStage.SPROUT
-                || plant.growthStage() == GrowthStage.SEEDLING
-                || plant.growthStage() == GrowthStage.SPOILED) {
+        if (plant.growthStage() != GrowthStage.READY) {
             return CompletableFuture.failedFuture(
                     new IllegalStateException("plant_not_ready"));
         }
@@ -450,27 +493,22 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
                 stored.genetics(),
                 Instant.now());
         ProductBatch batch = authenticity.sign(raw, signingSecret);
-        return batchService.create(batch)
-                .thenCompose(ignored -> repository.delete(
+        return repository.harvestWithBatch(
                         plant.uniqueId(),
-                        "WORKER_HARVESTED",
-                        workerUuid))
-                .thenCompose(deleted -> {
-                    if (!deleted) {
-                        return CompletableFuture.failedFuture(
-                                new IllegalStateException(
-                                        "Concurrent worker harvest for " + plant.uniqueId()));
+                        batch,
+                        workerUuid,
+                        farmId,
+                        storageId,
+                        batchService,
+                        deliveries)
+                .thenCompose(created -> onMain(() -> {
+                    plants.remove(plant.uniqueId());
+                    deindex(plant);
+                    updateQueue.remove(plant.uniqueId());
+                    if (displays != null) {
+                        displays.remove(plant.uniqueId());
                     }
-                    return onMain(() -> {
-                        plants.remove(plant.uniqueId());
-                        deindex(plant);
-                        updateQueue.remove(plant.uniqueId());
-                        if (displays != null) {
-                            displays.remove(plant.uniqueId());
-                        }
-                    });
-                })
-                .thenApply(ignored -> batch);
+                }).thenApply(ignored -> created));
     }
 
     /**
@@ -940,10 +978,7 @@ public final class PlantManager implements PlantViewSource, PlantInteractionHand
             player.sendMessage(translations.component(player, "errors.farm-permission"));
             return;
         }
-        if (plant.growthStage() == GrowthStage.SEED
-                || plant.growthStage() == GrowthStage.SPROUT
-                || plant.growthStage() == GrowthStage.SEEDLING
-                || plant.growthStage() == GrowthStage.SPOILED) {
+        if (plant.growthStage() != GrowthStage.READY) {
             player.sendMessage(translations.component(player, "plant.interaction.not-ready",
                     Map.of("timing", windowService.assess(plant, Instant.now()).name())));
             return;

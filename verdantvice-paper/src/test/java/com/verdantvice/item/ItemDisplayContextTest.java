@@ -44,7 +44,16 @@ class ItemDisplayContextTest {
     void strainNameIsResolvedFromRegistry() {
         ItemDisplayContext context = ItemDisplayContext.batch(TestFixtures.freshBatch(), strains);
         assertEquals("berry_fog", context.strainId());
-        assertEquals("Berry Fog", context.strainName());
+        assertEquals("Blueberry", context.strainName());
+    }
+
+    @Test
+    void cosmeticCommandAliasNeverBecomesAPersistentStrainIdentifier() {
+        var definition = TestFixtures.strain();
+        String alias = StrainRegistry.commandAlias(definition.displayName());
+        ItemDisplayContext context = ItemDisplayContext.simple(alias, 0.0, strains);
+        assertEquals(definition.id(), context.strainId());
+        assertEquals(definition.displayName(), context.strainName());
     }
 
     @Test

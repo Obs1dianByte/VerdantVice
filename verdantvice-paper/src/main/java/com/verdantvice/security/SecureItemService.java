@@ -4,23 +4,27 @@ import com.verdantvice.database.item.CasStatus;
 import com.verdantvice.database.item.ItemRegistration;
 import com.verdantvice.database.item.ItemRegistryRecord;
 import com.verdantvice.database.item.ItemRegistryRepository;
-import com.verdantvice.database.item.ItemRegistryState;
 import com.verdantvice.database.item.RegistrationStatus;
 import com.verdantvice.item.CustomItemFactory;
 import com.verdantvice.processing.ProductBatch;
 import com.verdantvice.processing.ProcessingFailureException;
 import com.verdantvice.processing.ProcessingFailureReason;
 import com.verdantvice.database.SqlSession;
+import com.verdantvice.database.DatabaseManager;
 import com.verdantvice.database.item.ItemCasResult;
+import com.verdantvice.database.item.ItemRegistryState;
 import org.bukkit.command.CommandSender;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 /**
  * Couples PDC signatures with the database registry. Stateful inputs are
@@ -33,17 +37,72 @@ public final class SecureItemService implements ItemConsumptionGateway {
     private final ItemRegistryRepository registry;
     private final Duration reservationDuration;
     private final ProcessingItemValidator processingValidator = new ProcessingItemValidator();
+    private final JavaPlugin plugin;
+    private final DatabaseManager database;
+    private final Set<UUID> pendingDeliveries = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public SecureItemService(
+            JavaPlugin plugin,
+            DatabaseManager database,
             CustomItemFactory factory,
             ItemSigner signer,
             ItemRegistryRepository registry,
             Duration reservationDuration
     ) {
+        this.plugin = Objects.requireNonNull(plugin, "plugin");
+        this.database = Objects.requireNonNull(database, "database");
         this.factory = Objects.requireNonNull(factory, "factory");
         this.signer = Objects.requireNonNull(signer, "signer");
         this.registry = Objects.requireNonNull(registry, "registry");
         this.reservationDuration = Objects.requireNonNull(reservationDuration, "reservationDuration");
+        if (reservationDuration.isNegative() || reservationDuration.isZero()) {
+            throw new IllegalArgumentException("reservationDuration must be positive");
+        }
+    }
+
+    /** Prepares on the server thread; the caller owns the registry transaction. */
+    public CustomItemFactory.PreparedItem prepare(
+            CommandSender viewer,
+            CustomItemType type,
+            UUID owner,
+            String strain
+    ) {
+        return factory.create(viewer, type, owner, strain);
+    }
+
+    /** Prepares a batch output before the caller begins its database transaction. */
+    public CustomItemFactory.PreparedItem prepare(
+            CommandSender viewer, CustomItemType type, UUID owner, ProductBatch batch
+    ) {
+        return factory.create(viewer, type, owner, batch);
+    }
+
+    public CompletableFuture<Optional<ItemRegistryRecord>> registryRecord(UUID instanceId) {
+        return registry.find(instanceId);
+    }
+
+    public void beginDelivery(UUID instanceId) {
+        pendingDeliveries.add(Objects.requireNonNull(instanceId, "instanceId"));
+    }
+
+    public void endDelivery(UUID instanceId) {
+        pendingDeliveries.remove(Objects.requireNonNull(instanceId, "instanceId"));
+    }
+
+    /** A just-inserted storage item remains sealed until world save and database acknowledgement. */
+    public boolean deliveryPending(ItemStack item) {
+        return !pendingDeliveries.isEmpty() && item != null
+                && signer.read(item).map(data -> pendingDeliveries.contains(data.uniqueInstanceId())).orElse(false);
+    }
+
+    /** Recreates an already registered non-batch identity without a second insert. */
+    public ItemStack recreate(CommandSender viewer, SignedItemData data) {
+        return factory.create(viewer, data).stack();
+    }
+
+    /** Recreates an already registered batch identity for durable delivery. */
+    public ItemStack recreate(CommandSender viewer, SignedItemData data, ProductBatch batch) {
+        return factory.create(viewer, data, batch).stack();
     }
 
     public CompletableFuture<ItemStack> issue(
@@ -63,7 +122,8 @@ public final class SecureItemService implements ItemConsumptionGateway {
             String strain,
             double quality
     ) {
-        return registerPrepared(factory.create(viewer, type, owner, batchId, strain, quality));
+        return onMain(() -> factory.create(viewer, type, owner, batchId, strain, quality))
+                .thenCompose(this::registerPrepared);
     }
 
     public CompletableFuture<ItemStack> issue(
@@ -72,7 +132,55 @@ public final class SecureItemService implements ItemConsumptionGateway {
             UUID owner,
             ProductBatch batch
     ) {
-        return registerPrepared(factory.create(viewer, type, owner, batch));
+        return onMain(() -> factory.create(viewer, type, owner, batch))
+                .thenCompose(this::registerPrepared);
+    }
+
+    /** Idempotently recreates the same signed physical item after a restart. */
+    public CompletableFuture<ItemStack> issueDeterministic(
+            CommandSender viewer,
+            CustomItemType type,
+            UUID owner,
+            ProductBatch batch,
+            UUID instanceId,
+            Instant createdAt
+    ) {
+        Objects.requireNonNull(viewer, "viewer");
+        Objects.requireNonNull(type, "type");
+        Objects.requireNonNull(owner, "owner");
+        Objects.requireNonNull(batch, "batch");
+        Objects.requireNonNull(instanceId, "instanceId");
+        Objects.requireNonNull(createdAt, "createdAt");
+        if (!owner.equals(batch.ownerUuid())) {
+            throw new IllegalArgumentException(
+                    "Deterministic item owner does not match product batch");
+        }
+        String itemId = switch (type) {
+            case FRESH_BATCH -> "fresh-batch";
+            case DRY_BATCH -> "dry-batch";
+            case CURED_BATCH -> "cured-batch";
+            case GROUND_PRODUCT -> "ground-product";
+            case MIXTURE -> "mixture";
+            case PACKAGE -> "package";
+            default -> throw new IllegalArgumentException(
+                    "Deterministic issue is limited to durable batch items");
+        };
+        String strain = batch.strainComposition().keySet().stream()
+                .sorted()
+                .findFirst()
+                .orElse("");
+        SignedItemData data = new SignedItemData(
+                type,
+                itemId,
+                instanceId,
+                batch.batchId(),
+                owner,
+                batch.qualityScore(),
+                strain,
+                createdAt,
+                1);
+        return onMain(() -> factory.create(viewer, data, batch))
+                .thenCompose(this::registerPrepared);
     }
 
     private CompletableFuture<ItemStack> registerPrepared(
@@ -98,40 +206,25 @@ public final class SecureItemService implements ItemConsumptionGateway {
                         new IllegalStateException("Generated item identity conflicted with the registry")
                 );
             }
-            return CompletableFuture.completedFuture(prepared.stack());
+            if (result.record().state() != ItemRegistryState.ACTIVE) {
+                return CompletableFuture.failedFuture(new ProcessingFailureException(
+                        ProcessingFailureReason.ITEM_ALREADY_USED));
+            }
+            return onMain(prepared::stack);
         });
     }
 
     public CompletableFuture<ItemStack> register(ItemStack signedItem) {
         Objects.requireNonNull(signedItem, "signedItem");
-        ItemStack snapshot = signedItem.clone();
-        ItemSigner.Verification verification = signer.verify(snapshot);
-        if (!verification.valid()) {
-            return CompletableFuture.failedFuture(
-                    new IllegalArgumentException("Item is not authentically signed")
-            );
-        }
-        SignedItemData data = verification.data();
-        ItemRegistration registration = new ItemRegistration(
-                data.uniqueInstanceId(),
-                data.itemType().name(),
-                data.itemId(),
-                data.batchId(),
-                data.ownerUuid(),
-                data.quality(),
-                data.strain().isBlank() ? null : data.strain(),
-                data.createdAt(),
-                signer.payloadHash(data),
-                data.schemaVersion(),
-                null
-        );
-        return registry.register(registration).thenCompose(result ->
-                result.status() == RegistrationStatus.CONFLICT
-                        ? CompletableFuture.failedFuture(
-                                new IllegalStateException("Signed item identity conflicted with registry")
-                        )
-                        : CompletableFuture.completedFuture(snapshot)
-        );
+        return onMain(() -> {
+            ItemStack snapshot = signedItem.clone();
+            ItemSigner.Verification verification = signer.verify(snapshot);
+            if (!verification.valid()) {
+                throw new IllegalArgumentException("Item is not authentically signed");
+            }
+            return new CustomItemFactory.PreparedItem(snapshot, verification.data(),
+                    signer.payloadHash(verification.data()));
+        }).thenCompose(this::registerPrepared);
     }
 
     public CompletableFuture<ConsumedItem> consume(
@@ -144,58 +237,10 @@ public final class SecureItemService implements ItemConsumptionGateway {
         Objects.requireNonNull(accepted, "accepted");
         Objects.requireNonNull(actor, "actor");
         Objects.requireNonNull(operationId, "operationId");
-        ItemStack snapshot = item.clone();
-        ItemSigner.Verification verification = signer.verify(snapshot);
-        if (!verification.valid() || !accepted.contains(verification.data().itemType())) {
-            return CompletableFuture.failedFuture(
-                    new IllegalArgumentException("invalid_or_wrong_item")
-            );
-        }
-        SignedItemData data = verification.data();
-        String payloadHash = signer.payloadHash(data);
-        UUID reservation = UUID.randomUUID();
-        Instant now = Instant.now();
-        return registry.find(data.uniqueInstanceId()).thenCompose(optional -> {
-            ItemRegistryRecord record = optional.orElseThrow(() ->
-                    new IllegalStateException("unregistered_item"));
-            if (record.state() != ItemRegistryState.ACTIVE
-                    || !constantEquals(record.signature(), payloadHash)) {
-                return CompletableFuture.failedFuture(
-                        new IllegalStateException("item_already_used_or_modified")
-                );
-            }
-            return registry.reserve(
-                    data.uniqueInstanceId(),
-                    record.version(),
-                    payloadHash,
-                    reservation,
-                    actor.toString(),
-                    now.plus(reservationDuration),
-                    operationId
-            );
-        }).thenCompose(reserved -> {
-            if (reserved.status() == CasStatus.REJECTED || reserved.record().isEmpty()) {
-                return CompletableFuture.failedFuture(
-                        new IllegalStateException("item_reservation_failed")
-                );
-            }
-            ItemRegistryRecord record = reserved.record().orElseThrow();
-            return registry.consume(
-                    data.uniqueInstanceId(),
-                    record.version(),
-                    payloadHash,
-                    reservation,
-                    operationId,
-                    Instant.now()
-            );
-        }).thenCompose(consumed -> {
-            if (consumed.status() == CasStatus.REJECTED) {
-                return CompletableFuture.failedFuture(
-                        new IllegalStateException("item_consumption_failed")
-                );
-            }
-            return CompletableFuture.completedFuture(new ConsumedItem(data, operationId));
-        });
+        Set<CustomItemType> acceptedSnapshot = Set.copyOf(accepted);
+        return validateActive(item, acceptedSnapshot, actor).thenCompose(validated ->
+                database.transaction(session -> consume(session, validated.identity(),
+                        acceptedSnapshot, actor, operationId, Instant.now())));
     }
 
     @Override
@@ -207,32 +252,28 @@ public final class SecureItemService implements ItemConsumptionGateway {
         Objects.requireNonNull(item, "item");
         Objects.requireNonNull(accepted, "accepted");
         Objects.requireNonNull(actor, "actor");
-        ItemStack snapshot = item.clone();
-        ItemSigner.Verification verification = signer.verify(snapshot);
-        if (!verification.valid()) {
-            return CompletableFuture.failedFuture(new ProcessingFailureException(
-                    ProcessingFailureReason.INVALID_SIGNATURE));
-        }
-        SignedItemData data = verification.data();
-        try {
-            processingValidator.validateData(data, accepted, actor);
-        } catch (ProcessingFailureException failure) {
-            return CompletableFuture.failedFuture(failure);
-        }
-        String payloadHash = signer.payloadHash(data);
-        return registry.find(data.uniqueInstanceId()).thenApply(optional -> {
-            ItemRegistryRecord record = optional.orElseThrow(() ->
-                    new ProcessingFailureException(
-                            ProcessingFailureReason.UNREGISTERED_ITEM));
-            processingValidator.validateRecord(record, data, payloadHash, actor);
-            return new ValidatedItem(snapshot, data, payloadHash);
-        });
+        Set<CustomItemType> acceptedSnapshot = Set.copyOf(accepted);
+        return onMain(() -> {
+            ItemStack snapshot = item.clone();
+            ItemSigner.Verification verification = signer.verify(snapshot);
+            if (!verification.valid()) {
+                throw new ProcessingFailureException(ProcessingFailureReason.INVALID_SIGNATURE);
+            }
+            SignedItemData data = verification.data();
+            processingValidator.validateData(data, acceptedSnapshot, actor);
+            return new ValidatedItem(snapshot, data, signer.payloadHash(data));
+        }).thenCompose(validated -> registry.find(validated.data().uniqueInstanceId()).thenApply(optional -> {
+            ItemRegistryRecord record = optional.orElseThrow(() -> new ProcessingFailureException(
+                    ProcessingFailureReason.UNREGISTERED_ITEM));
+            processingValidator.validateRecord(record, validated.data(), validated.payloadHash(), actor);
+            return validated;
+        }));
     }
 
     @Override
     public ConsumedItem consume(
             SqlSession session,
-            ValidatedItem validated,
+            ValidatedIdentity validated,
             Set<CustomItemType> accepted,
             UUID actor,
             String operationId,
@@ -271,14 +312,25 @@ public final class SecureItemService implements ItemConsumptionGateway {
         return signer.verify(item);
     }
 
-    private static boolean constantEquals(String left, String right) {
-        if (left == null || right == null) {
-            return false;
+    private <T> CompletableFuture<T> onMain(Supplier<T> action) {
+        CompletableFuture<T> future = new CompletableFuture<>();
+        Runnable task = () -> {
+            try {
+                future.complete(action.get());
+            } catch (Throwable failure) {
+                future.completeExceptionally(failure);
+            }
+        };
+        if (plugin.getServer().isPrimaryThread()) {
+            task.run();
+        } else {
+            try {
+                plugin.getServer().getScheduler().runTask(plugin, task);
+            } catch (RuntimeException failure) {
+                future.completeExceptionally(failure);
+            }
         }
-        return java.security.MessageDigest.isEqual(
-                left.getBytes(java.nio.charset.StandardCharsets.US_ASCII),
-                right.getBytes(java.nio.charset.StandardCharsets.US_ASCII)
-        );
+        return future;
     }
 
     public record ValidatedItem(
@@ -292,9 +344,20 @@ public final class SecureItemService implements ItemConsumptionGateway {
             Objects.requireNonNull(payloadHash, "payloadHash");
         }
 
+        public ValidatedIdentity identity() {
+            return new ValidatedIdentity(data, payloadHash);
+        }
+
         @Override
         public ItemStack snapshot() {
             return snapshot.clone();
+        }
+    }
+
+    public record ValidatedIdentity(SignedItemData data, String payloadHash) {
+        public ValidatedIdentity {
+            Objects.requireNonNull(data, "data");
+            Objects.requireNonNull(payloadHash, "payloadHash");
         }
     }
 

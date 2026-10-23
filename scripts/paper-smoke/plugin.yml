@@ -1,0 +1,6 @@
+name: VerdantViceSmoke
+version: 1.0.0
+main: com.verdantvice.smoke.PaperSmokePlugin
+api-version: '1.21.4'
+depend: [VerdantVice]
+description: Isolated, headless integration checks; never install on a live server.

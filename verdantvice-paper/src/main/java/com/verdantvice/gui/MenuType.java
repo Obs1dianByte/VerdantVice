@@ -13,6 +13,7 @@ public enum MenuType {
     GUIDE,
     SETTINGS,
     STORAGES,
+    STORAGE_UNLINK_CONFIRM,
     DRYING,
     CURING,
     PRIORITIES,

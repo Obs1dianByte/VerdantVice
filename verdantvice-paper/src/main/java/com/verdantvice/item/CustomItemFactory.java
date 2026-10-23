@@ -3,6 +3,7 @@ package com.verdantvice.item;
 import com.verdantvice.config.ConfigManager;
 import com.verdantvice.i18n.TranslationService;
 import com.verdantvice.processing.ProductBatch;
+import com.verdantvice.resourcepack.ResourcePackModels;
 import com.verdantvice.security.CustomItemType;
 import com.verdantvice.security.ItemSigner;
 import com.verdantvice.security.SignedItemData;
@@ -83,6 +84,33 @@ public final class CustomItemFactory {
                 ItemDisplayContext.batch(batch, strains));
     }
 
+    /** Rebuilds a non-batch item with the exact persisted identity. */
+    public PreparedItem create(CommandSender viewer, SignedItemData data) {
+        Objects.requireNonNull(data, "data");
+        if (data.itemType().batchBound() || data.batchId() != null) {
+            throw new IllegalArgumentException("missing_batch_context");
+        }
+        return create(viewer, data,
+                ItemDisplayContext.simple(data.strain(), data.quality(), strains));
+    }
+
+    /** Rebuilds a durable batch item with the exact persisted identity. */
+    public PreparedItem create(
+            CommandSender viewer,
+            SignedItemData data,
+            ProductBatch batch
+    ) {
+        Objects.requireNonNull(data, "data");
+        Objects.requireNonNull(batch, "batch");
+        if (!data.itemType().batchBound()
+                || !Objects.equals(data.batchId(), batch.batchId())
+                || !Objects.equals(data.ownerUuid(), batch.ownerUuid())) {
+            throw new IllegalArgumentException(
+                    "Signed item identity does not match product batch");
+        }
+        return create(viewer, data, ItemDisplayContext.batch(batch, strains));
+    }
+
     private PreparedItem create(
             CommandSender viewer,
             CustomItemType type,
@@ -90,10 +118,37 @@ public final class CustomItemFactory {
             UUID batchId,
             ItemDisplayContext context
     ) {
-        Objects.requireNonNull(viewer, "viewer");
-        Objects.requireNonNull(type, "type");
-        Objects.requireNonNull(context, "context");
         String configKey = configKey(type);
+        SignedItemData data = new SignedItemData(
+                type,
+                configKey,
+                UUID.randomUUID(),
+                batchId,
+                owner,
+                context.quality(),
+                context.strainId(),
+                Instant.now(),
+                1
+        );
+        return create(viewer, data, context);
+    }
+
+    private PreparedItem create(
+            CommandSender viewer,
+            SignedItemData data,
+            ItemDisplayContext context
+    ) {
+        if (!org.bukkit.Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException("Signed item rendering requires the server thread");
+        }
+        Objects.requireNonNull(viewer, "viewer");
+        Objects.requireNonNull(data, "data");
+        Objects.requireNonNull(context, "context");
+        CustomItemType type = data.itemType();
+        String configKey = configKey(type);
+        if (!configKey.equals(data.itemId())) {
+            throw new IllegalArgumentException("Item id does not match item type");
+        }
         YamlConfiguration items = configs.get("items.yml");
         ConfigurationSection section = items.getConfigurationSection(configKey);
         Material material = material(section, type);
@@ -130,22 +185,16 @@ public final class CustomItemFactory {
             lore.add(translations.component(viewer, "item.lore.quality", placeholders));
         }
         meta.lore(lore);
-        if (section != null && section.contains("custom-model-data")) {
-            meta.setCustomModelData(section.getInt("custom-model-data"));
+        if (section == null || section.contains("custom-model-data")) {
+            int model = section == null ? ResourcePackModels.item(type)
+                    : section.getInt("custom-model-data");
+            if (type == CustomItemType.SEED && material == Material.WHEAT_SEEDS) {
+                model = ResourcePackModels.seed(data.strain(), model);
+            }
+            if (model > 0) meta.setCustomModelData(model);
         }
         stack.setItemMeta(meta);
 
-        SignedItemData data = new SignedItemData(
-                type,
-                configKey,
-                UUID.randomUUID(),
-                batchId,
-                owner,
-                context.quality(),
-                context.strainId(),
-                Instant.now(),
-                1
-        );
         signer.sign(stack, data);
         if (section != null && section.contains("durability")) {
             signer.setUsesRemaining(stack, Math.max(1, section.getInt("durability")));

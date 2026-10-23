@@ -1,7 +1,7 @@
-# Twelve fictional game varieties. Values are simulation parameters only.
+# Strain names are cosmetic labels. All values below are fictional game simulation parameters.
 strains:
   berry_fog:
-    display-name: Berry Fog
+    display-name: Blueberry
     rarity: BASIC
     growth-duration-seconds: 5400
     difficulty: 24
@@ -19,7 +19,7 @@ strains:
     visual-model: berry_fog
     particle-profile: berry
   concrete_kush:
-    display-name: Concrete Kush
+    display-name: Hindu Kush
     rarity: BASIC
     growth-duration-seconds: 6000
     difficulty: 28
@@ -37,7 +37,7 @@ strains:
     visual-model: concrete_kush
     particle-profile: ash
   lemon_static:
-    display-name: Lemon Static
+    display-name: Super Lemon Haze
     rarity: BASIC
     growth-duration-seconds: 5100
     difficulty: 32
@@ -55,7 +55,7 @@ strains:
     visual-model: lemon_static
     particle-profile: spark
   green_alley:
-    display-name: Green Alley
+    display-name: 'Skunk #1'
     rarity: BASIC
     growth-duration-seconds: 5700
     difficulty: 20
@@ -73,7 +73,7 @@ strains:
     visual-model: green_alley
     particle-profile: leaf
   neon_haze:
-    display-name: Neon Haze
+    display-name: Super Silver Haze
     rarity: UNCOMMON
     growth-duration-seconds: 6600
     difficulty: 45
@@ -91,7 +91,7 @@ strains:
     visual-model: neon_haze
     particle-profile: neon
   night_widow:
-    display-name: Night Widow
+    display-name: White Widow
     rarity: UNCOMMON
     growth-duration-seconds: 7200
     difficulty: 52
@@ -109,7 +109,7 @@ strains:
     visual-model: night_widow
     particle-profile: shadow
   purple_crash:
-    display-name: Purple Crash
+    display-name: 'Purple #1'
     rarity: UNCOMMON
     growth-duration-seconds: 6300
     difficulty: 48
@@ -127,7 +127,7 @@ strains:
     visual-model: purple_crash
     particle-profile: purple
   velvet_smoke:
-    display-name: Velvet Smoke
+    display-name: Northern Lights
     rarity: UNCOMMON
     growth-duration-seconds: 6900
     difficulty: 42
@@ -145,7 +145,7 @@ strains:
     visual-model: velvet_smoke
     particle-profile: velvet
   ghost_garden:
-    display-name: Ghost Garden
+    display-name: AK-47
     rarity: RARE
     growth-duration-seconds: 8100
     difficulty: 67
@@ -163,7 +163,7 @@ strains:
     visual-model: ghost_garden
     particle-profile: ghost
   royal_static:
-    display-name: Royal Static
+    display-name: Jack Herer
     rarity: RARE
     growth-duration-seconds: 8400
     difficulty: 72
@@ -181,7 +181,7 @@ strains:
     visual-model: royal_static
     particle-profile: royal
   black_orchard:
-    display-name: Black Orchard
+    display-name: Black Domina
     rarity: RARE
     growth-duration-seconds: 9000
     difficulty: 76
@@ -199,7 +199,7 @@ strains:
     visual-model: black_orchard
     particle-profile: black_orchard
   verdant_vice:
-    display-name: Verdant Vice
+    display-name: OG Kush
     rarity: LEGENDARY
     growth-duration-seconds: 10800
     difficulty: 92

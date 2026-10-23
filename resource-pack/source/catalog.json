@@ -1,0 +1,838 @@
+{
+  "texture_size": 32,
+  "art_revision": 2,
+  "items": [
+    {
+      "id": "seed",
+      "type": "SEED",
+      "material": "WHEAT_SEEDS",
+      "custom_model_data": 12001,
+      "model": "seed"
+    },
+    {
+      "id": "planting-pot",
+      "type": "PLANTING_POT",
+      "material": "DECORATED_POT",
+      "custom_model_data": 12002,
+      "model": "planting_pot"
+    },
+    {
+      "id": "watering-can",
+      "type": "WATERING_CAN",
+      "material": "GLASS_BOTTLE",
+      "custom_model_data": 12003,
+      "model": "watering_can"
+    },
+    {
+      "id": "plant-scanner",
+      "type": "PLANT_SCANNER",
+      "material": "CLOCK",
+      "custom_model_data": 12004,
+      "model": "plant_scanner"
+    },
+    {
+      "id": "cleaning-kit",
+      "type": "CLEANING_KIT",
+      "material": "BRUSH",
+      "custom_model_data": 12005,
+      "model": "cleaning_kit"
+    },
+    {
+      "id": "treatment-spray",
+      "type": "TREATMENT_SPRAY",
+      "material": "HONEY_BOTTLE",
+      "custom_model_data": 12006,
+      "model": "treatment_spray"
+    },
+    {
+      "id": "nutrient-pack",
+      "type": "NUTRIENT_PACK",
+      "material": "BONE_MEAL",
+      "custom_model_data": 12007,
+      "model": "nutrient_pack"
+    },
+    {
+      "id": "repair-kit",
+      "type": "REPAIR_KIT",
+      "material": "IRON_NUGGET",
+      "custom_model_data": 12008,
+      "model": "repair_kit"
+    },
+    {
+      "id": "drying-rack",
+      "type": "DRYING_RACK",
+      "material": "BARREL",
+      "custom_model_data": 12009,
+      "model": "drying_rack"
+    },
+    {
+      "id": "curing-container",
+      "type": "CURING_CONTAINER",
+      "material": "CHISELED_BOOKSHELF",
+      "custom_model_data": 12010,
+      "model": "curing_container"
+    },
+    {
+      "id": "grinder",
+      "type": "GRINDER",
+      "material": "STONECUTTER",
+      "custom_model_data": 12011,
+      "model": "grinder"
+    },
+    {
+      "id": "farm-manager-table",
+      "type": "FARM_MANAGER_TABLE",
+      "material": "LECTERN",
+      "custom_model_data": 12012,
+      "model": "farm_manager_table"
+    },
+    {
+      "id": "selection-wand",
+      "type": "SELECTION_WAND",
+      "material": "BLAZE_ROD",
+      "custom_model_data": 12013,
+      "model": "selection_wand"
+    },
+    {
+      "id": "rolling-paper",
+      "type": "ROLLING_PAPER",
+      "material": "PAPER",
+      "custom_model_data": 12014,
+      "model": "rolling_paper"
+    },
+    {
+      "id": "filter",
+      "type": "FILTER",
+      "material": "STICK",
+      "custom_model_data": 12015,
+      "model": "filter"
+    },
+    {
+      "id": "package",
+      "type": "PACKAGE",
+      "material": "BUNDLE",
+      "custom_model_data": 12016,
+      "model": "package"
+    },
+    {
+      "id": "joint",
+      "type": "JOINT",
+      "material": "STICK",
+      "custom_model_data": 12017,
+      "model": "joint"
+    },
+    {
+      "id": "fresh-batch",
+      "type": "FRESH_BATCH",
+      "material": "KELP",
+      "custom_model_data": 12018,
+      "model": "fresh_batch"
+    },
+    {
+      "id": "dry-batch",
+      "type": "DRY_BATCH",
+      "material": "DRIED_KELP",
+      "custom_model_data": 12019,
+      "model": "dry_batch"
+    },
+    {
+      "id": "cured-batch",
+      "type": "CURED_BATCH",
+      "material": "DRIED_KELP",
+      "custom_model_data": 12020,
+      "model": "cured_batch"
+    },
+    {
+      "id": "ground-product",
+      "type": "GROUND_PRODUCT",
+      "material": "DRIED_KELP",
+      "custom_model_data": 12021,
+      "model": "ground_product"
+    },
+    {
+      "id": "mixture",
+      "type": "MIXTURE",
+      "material": "DRIED_KELP",
+      "custom_model_data": 12022,
+      "model": "mixture"
+    },
+    {
+      "id": "plantation-contract",
+      "type": "PLANTATION_CONTRACT",
+      "material": "WRITTEN_BOOK",
+      "custom_model_data": 12023,
+      "model": "plantation_contract"
+    },
+    {
+      "id": "guide-book",
+      "type": "GUIDE_BOOK",
+      "material": "WRITTEN_BOOK",
+      "custom_model_data": 12024,
+      "model": "guide_book"
+    },
+    {
+      "id": "advanced-book",
+      "type": "ADVANCED_BOOK",
+      "material": "WRITTEN_BOOK",
+      "custom_model_data": 12025,
+      "model": "advanced_book"
+    }
+  ],
+  "plant_material": "AMETHYST_SHARD",
+  "generic_stages": [
+    {
+      "stage": "SEED",
+      "custom_model_data": 12101,
+      "model": "plant_seed"
+    },
+    {
+      "stage": "SPROUT",
+      "custom_model_data": 12102,
+      "model": "plant_sprout"
+    },
+    {
+      "stage": "SEEDLING",
+      "custom_model_data": 12103,
+      "model": "plant_seedling"
+    },
+    {
+      "stage": "VEGETATIVE",
+      "custom_model_data": 12104,
+      "model": "plant_vegetative"
+    },
+    {
+      "stage": "MATURING",
+      "custom_model_data": 12105,
+      "model": "plant_maturing"
+    },
+    {
+      "stage": "READY",
+      "custom_model_data": 12106,
+      "model": "plant_ready"
+    },
+    {
+      "stage": "OVERRIPE",
+      "custom_model_data": 12107,
+      "model": "plant_overripe"
+    },
+    {
+      "stage": "SPOILED",
+      "custom_model_data": 12108,
+      "model": "plant_spoiled"
+    }
+  ],
+  "strains": [
+    {
+      "id": "berry_fog",
+      "display_name": "Blueberry",
+      "index": 0,
+      "accent": "#7c8db1",
+      "highlight": "#b9c6d4",
+      "seed_model_data": 13001,
+      "seed_model": "seed_berry_fog",
+      "stages": [
+        {
+          "stage": "SEED",
+          "custom_model_data": 13101,
+          "model": "plant_seed_berry_fog"
+        },
+        {
+          "stage": "SPROUT",
+          "custom_model_data": 13102,
+          "model": "plant_sprout_berry_fog"
+        },
+        {
+          "stage": "SEEDLING",
+          "custom_model_data": 13103,
+          "model": "plant_seedling_berry_fog"
+        },
+        {
+          "stage": "VEGETATIVE",
+          "custom_model_data": 13104,
+          "model": "plant_vegetative_berry_fog"
+        },
+        {
+          "stage": "MATURING",
+          "custom_model_data": 13105,
+          "model": "plant_maturing_berry_fog"
+        },
+        {
+          "stage": "READY",
+          "custom_model_data": 13106,
+          "model": "plant_ready_berry_fog"
+        },
+        {
+          "stage": "OVERRIPE",
+          "custom_model_data": 13107,
+          "model": "plant_overripe_berry_fog"
+        },
+        {
+          "stage": "SPOILED",
+          "custom_model_data": 13108,
+          "model": "plant_spoiled_berry_fog"
+        }
+      ]
+    },
+    {
+      "id": "concrete_kush",
+      "display_name": "Hindu Kush",
+      "index": 1,
+      "accent": "#8ba272",
+      "highlight": "#c1cd99",
+      "seed_model_data": 13002,
+      "seed_model": "seed_concrete_kush",
+      "stages": [
+        {
+          "stage": "SEED",
+          "custom_model_data": 13111,
+          "model": "plant_seed_concrete_kush"
+        },
+        {
+          "stage": "SPROUT",
+          "custom_model_data": 13112,
+          "model": "plant_sprout_concrete_kush"
+        },
+        {
+          "stage": "SEEDLING",
+          "custom_model_data": 13113,
+          "model": "plant_seedling_concrete_kush"
+        },
+        {
+          "stage": "VEGETATIVE",
+          "custom_model_data": 13114,
+          "model": "plant_vegetative_concrete_kush"
+        },
+        {
+          "stage": "MATURING",
+          "custom_model_data": 13115,
+          "model": "plant_maturing_concrete_kush"
+        },
+        {
+          "stage": "READY",
+          "custom_model_data": 13116,
+          "model": "plant_ready_concrete_kush"
+        },
+        {
+          "stage": "OVERRIPE",
+          "custom_model_data": 13117,
+          "model": "plant_overripe_concrete_kush"
+        },
+        {
+          "stage": "SPOILED",
+          "custom_model_data": 13118,
+          "model": "plant_spoiled_concrete_kush"
+        }
+      ]
+    },
+    {
+      "id": "lemon_static",
+      "display_name": "Super Lemon Haze",
+      "index": 2,
+      "accent": "#c1b459",
+      "highlight": "#e3d58c",
+      "seed_model_data": 13003,
+      "seed_model": "seed_lemon_static",
+      "stages": [
+        {
+          "stage": "SEED",
+          "custom_model_data": 13121,
+          "model": "plant_seed_lemon_static"
+        },
+        {
+          "stage": "SPROUT",
+          "custom_model_data": 13122,
+          "model": "plant_sprout_lemon_static"
+        },
+        {
+          "stage": "SEEDLING",
+          "custom_model_data": 13123,
+          "model": "plant_seedling_lemon_static"
+        },
+        {
+          "stage": "VEGETATIVE",
+          "custom_model_data": 13124,
+          "model": "plant_vegetative_lemon_static"
+        },
+        {
+          "stage": "MATURING",
+          "custom_model_data": 13125,
+          "model": "plant_maturing_lemon_static"
+        },
+        {
+          "stage": "READY",
+          "custom_model_data": 13126,
+          "model": "plant_ready_lemon_static"
+        },
+        {
+          "stage": "OVERRIPE",
+          "custom_model_data": 13127,
+          "model": "plant_overripe_lemon_static"
+        },
+        {
+          "stage": "SPOILED",
+          "custom_model_data": 13128,
+          "model": "plant_spoiled_lemon_static"
+        }
+      ]
+    },
+    {
+      "id": "green_alley",
+      "display_name": "Skunk #1",
+      "index": 3,
+      "accent": "#81ad68",
+      "highlight": "#b7ce8f",
+      "seed_model_data": 13004,
+      "seed_model": "seed_green_alley",
+      "stages": [
+        {
+          "stage": "SEED",
+          "custom_model_data": 13131,
+          "model": "plant_seed_green_alley"
+        },
+        {
+          "stage": "SPROUT",
+          "custom_model_data": 13132,
+          "model": "plant_sprout_green_alley"
+        },
+        {
+          "stage": "SEEDLING",
+          "custom_model_data": 13133,
+          "model": "plant_seedling_green_alley"
+        },
+        {
+          "stage": "VEGETATIVE",
+          "custom_model_data": 13134,
+          "model": "plant_vegetative_green_alley"
+        },
+        {
+          "stage": "MATURING",
+          "custom_model_data": 13135,
+          "model": "plant_maturing_green_alley"
+        },
+        {
+          "stage": "READY",
+          "custom_model_data": 13136,
+          "model": "plant_ready_green_alley"
+        },
+        {
+          "stage": "OVERRIPE",
+          "custom_model_data": 13137,
+          "model": "plant_overripe_green_alley"
+        },
+        {
+          "stage": "SPOILED",
+          "custom_model_data": 13138,
+          "model": "plant_spoiled_green_alley"
+        }
+      ]
+    },
+    {
+      "id": "neon_haze",
+      "display_name": "Super Silver Haze",
+      "index": 4,
+      "accent": "#88b3a3",
+      "highlight": "#c5ddd0",
+      "seed_model_data": 13005,
+      "seed_model": "seed_neon_haze",
+      "stages": [
+        {
+          "stage": "SEED",
+          "custom_model_data": 13141,
+          "model": "plant_seed_neon_haze"
+        },
+        {
+          "stage": "SPROUT",
+          "custom_model_data": 13142,
+          "model": "plant_sprout_neon_haze"
+        },
+        {
+          "stage": "SEEDLING",
+          "custom_model_data": 13143,
+          "model": "plant_seedling_neon_haze"
+        },
+        {
+          "stage": "VEGETATIVE",
+          "custom_model_data": 13144,
+          "model": "plant_vegetative_neon_haze"
+        },
+        {
+          "stage": "MATURING",
+          "custom_model_data": 13145,
+          "model": "plant_maturing_neon_haze"
+        },
+        {
+          "stage": "READY",
+          "custom_model_data": 13146,
+          "model": "plant_ready_neon_haze"
+        },
+        {
+          "stage": "OVERRIPE",
+          "custom_model_data": 13147,
+          "model": "plant_overripe_neon_haze"
+        },
+        {
+          "stage": "SPOILED",
+          "custom_model_data": 13148,
+          "model": "plant_spoiled_neon_haze"
+        }
+      ]
+    },
+    {
+      "id": "night_widow",
+      "display_name": "White Widow",
+      "index": 5,
+      "accent": "#b9c8b4",
+      "highlight": "#e3e9d5",
+      "seed_model_data": 13006,
+      "seed_model": "seed_night_widow",
+      "stages": [
+        {
+          "stage": "SEED",
+          "custom_model_data": 13151,
+          "model": "plant_seed_night_widow"
+        },
+        {
+          "stage": "SPROUT",
+          "custom_model_data": 13152,
+          "model": "plant_sprout_night_widow"
+        },
+        {
+          "stage": "SEEDLING",
+          "custom_model_data": 13153,
+          "model": "plant_seedling_night_widow"
+        },
+        {
+          "stage": "VEGETATIVE",
+          "custom_model_data": 13154,
+          "model": "plant_vegetative_night_widow"
+        },
+        {
+          "stage": "MATURING",
+          "custom_model_data": 13155,
+          "model": "plant_maturing_night_widow"
+        },
+        {
+          "stage": "READY",
+          "custom_model_data": 13156,
+          "model": "plant_ready_night_widow"
+        },
+        {
+          "stage": "OVERRIPE",
+          "custom_model_data": 13157,
+          "model": "plant_overripe_night_widow"
+        },
+        {
+          "stage": "SPOILED",
+          "custom_model_data": 13158,
+          "model": "plant_spoiled_night_widow"
+        }
+      ]
+    },
+    {
+      "id": "purple_crash",
+      "display_name": "Purple #1",
+      "index": 6,
+      "accent": "#a581aa",
+      "highlight": "#cfb5cb",
+      "seed_model_data": 13007,
+      "seed_model": "seed_purple_crash",
+      "stages": [
+        {
+          "stage": "SEED",
+          "custom_model_data": 13161,
+          "model": "plant_seed_purple_crash"
+        },
+        {
+          "stage": "SPROUT",
+          "custom_model_data": 13162,
+          "model": "plant_sprout_purple_crash"
+        },
+        {
+          "stage": "SEEDLING",
+          "custom_model_data": 13163,
+          "model": "plant_seedling_purple_crash"
+        },
+        {
+          "stage": "VEGETATIVE",
+          "custom_model_data": 13164,
+          "model": "plant_vegetative_purple_crash"
+        },
+        {
+          "stage": "MATURING",
+          "custom_model_data": 13165,
+          "model": "plant_maturing_purple_crash"
+        },
+        {
+          "stage": "READY",
+          "custom_model_data": 13166,
+          "model": "plant_ready_purple_crash"
+        },
+        {
+          "stage": "OVERRIPE",
+          "custom_model_data": 13167,
+          "model": "plant_overripe_purple_crash"
+        },
+        {
+          "stage": "SPOILED",
+          "custom_model_data": 13168,
+          "model": "plant_spoiled_purple_crash"
+        }
+      ]
+    },
+    {
+      "id": "velvet_smoke",
+      "display_name": "Northern Lights",
+      "index": 7,
+      "accent": "#6c9b99",
+      "highlight": "#b1cebd",
+      "seed_model_data": 13008,
+      "seed_model": "seed_velvet_smoke",
+      "stages": [
+        {
+          "stage": "SEED",
+          "custom_model_data": 13171,
+          "model": "plant_seed_velvet_smoke"
+        },
+        {
+          "stage": "SPROUT",
+          "custom_model_data": 13172,
+          "model": "plant_sprout_velvet_smoke"
+        },
+        {
+          "stage": "SEEDLING",
+          "custom_model_data": 13173,
+          "model": "plant_seedling_velvet_smoke"
+        },
+        {
+          "stage": "VEGETATIVE",
+          "custom_model_data": 13174,
+          "model": "plant_vegetative_velvet_smoke"
+        },
+        {
+          "stage": "MATURING",
+          "custom_model_data": 13175,
+          "model": "plant_maturing_velvet_smoke"
+        },
+        {
+          "stage": "READY",
+          "custom_model_data": 13176,
+          "model": "plant_ready_velvet_smoke"
+        },
+        {
+          "stage": "OVERRIPE",
+          "custom_model_data": 13177,
+          "model": "plant_overripe_velvet_smoke"
+        },
+        {
+          "stage": "SPOILED",
+          "custom_model_data": 13178,
+          "model": "plant_spoiled_velvet_smoke"
+        }
+      ]
+    },
+    {
+      "id": "ghost_garden",
+      "display_name": "AK-47",
+      "index": 8,
+      "accent": "#b7a777",
+      "highlight": "#d6d4ae",
+      "seed_model_data": 13009,
+      "seed_model": "seed_ghost_garden",
+      "stages": [
+        {
+          "stage": "SEED",
+          "custom_model_data": 13181,
+          "model": "plant_seed_ghost_garden"
+        },
+        {
+          "stage": "SPROUT",
+          "custom_model_data": 13182,
+          "model": "plant_sprout_ghost_garden"
+        },
+        {
+          "stage": "SEEDLING",
+          "custom_model_data": 13183,
+          "model": "plant_seedling_ghost_garden"
+        },
+        {
+          "stage": "VEGETATIVE",
+          "custom_model_data": 13184,
+          "model": "plant_vegetative_ghost_garden"
+        },
+        {
+          "stage": "MATURING",
+          "custom_model_data": 13185,
+          "model": "plant_maturing_ghost_garden"
+        },
+        {
+          "stage": "READY",
+          "custom_model_data": 13186,
+          "model": "plant_ready_ghost_garden"
+        },
+        {
+          "stage": "OVERRIPE",
+          "custom_model_data": 13187,
+          "model": "plant_overripe_ghost_garden"
+        },
+        {
+          "stage": "SPOILED",
+          "custom_model_data": 13188,
+          "model": "plant_spoiled_ghost_garden"
+        }
+      ]
+    },
+    {
+      "id": "royal_static",
+      "display_name": "Jack Herer",
+      "index": 9,
+      "accent": "#bd9958",
+      "highlight": "#e2c881",
+      "seed_model_data": 13010,
+      "seed_model": "seed_royal_static",
+      "stages": [
+        {
+          "stage": "SEED",
+          "custom_model_data": 13191,
+          "model": "plant_seed_royal_static"
+        },
+        {
+          "stage": "SPROUT",
+          "custom_model_data": 13192,
+          "model": "plant_sprout_royal_static"
+        },
+        {
+          "stage": "SEEDLING",
+          "custom_model_data": 13193,
+          "model": "plant_seedling_royal_static"
+        },
+        {
+          "stage": "VEGETATIVE",
+          "custom_model_data": 13194,
+          "model": "plant_vegetative_royal_static"
+        },
+        {
+          "stage": "MATURING",
+          "custom_model_data": 13195,
+          "model": "plant_maturing_royal_static"
+        },
+        {
+          "stage": "READY",
+          "custom_model_data": 13196,
+          "model": "plant_ready_royal_static"
+        },
+        {
+          "stage": "OVERRIPE",
+          "custom_model_data": 13197,
+          "model": "plant_overripe_royal_static"
+        },
+        {
+          "stage": "SPOILED",
+          "custom_model_data": 13198,
+          "model": "plant_spoiled_royal_static"
+        }
+      ]
+    },
+    {
+      "id": "black_orchard",
+      "display_name": "Black Domina",
+      "index": 10,
+      "accent": "#8b859c",
+      "highlight": "#bab4c4",
+      "seed_model_data": 13011,
+      "seed_model": "seed_black_orchard",
+      "stages": [
+        {
+          "stage": "SEED",
+          "custom_model_data": 13201,
+          "model": "plant_seed_black_orchard"
+        },
+        {
+          "stage": "SPROUT",
+          "custom_model_data": 13202,
+          "model": "plant_sprout_black_orchard"
+        },
+        {
+          "stage": "SEEDLING",
+          "custom_model_data": 13203,
+          "model": "plant_seedling_black_orchard"
+        },
+        {
+          "stage": "VEGETATIVE",
+          "custom_model_data": 13204,
+          "model": "plant_vegetative_black_orchard"
+        },
+        {
+          "stage": "MATURING",
+          "custom_model_data": 13205,
+          "model": "plant_maturing_black_orchard"
+        },
+        {
+          "stage": "READY",
+          "custom_model_data": 13206,
+          "model": "plant_ready_black_orchard"
+        },
+        {
+          "stage": "OVERRIPE",
+          "custom_model_data": 13207,
+          "model": "plant_overripe_black_orchard"
+        },
+        {
+          "stage": "SPOILED",
+          "custom_model_data": 13208,
+          "model": "plant_spoiled_black_orchard"
+        }
+      ]
+    },
+    {
+      "id": "verdant_vice",
+      "display_name": "OG Kush",
+      "index": 11,
+      "accent": "#75995a",
+      "highlight": "#b6c77b",
+      "seed_model_data": 13012,
+      "seed_model": "seed_verdant_vice",
+      "stages": [
+        {
+          "stage": "SEED",
+          "custom_model_data": 13211,
+          "model": "plant_seed_verdant_vice"
+        },
+        {
+          "stage": "SPROUT",
+          "custom_model_data": 13212,
+          "model": "plant_sprout_verdant_vice"
+        },
+        {
+          "stage": "SEEDLING",
+          "custom_model_data": 13213,
+          "model": "plant_seedling_verdant_vice"
+        },
+        {
+          "stage": "VEGETATIVE",
+          "custom_model_data": 13214,
+          "model": "plant_vegetative_verdant_vice"
+        },
+        {
+          "stage": "MATURING",
+          "custom_model_data": 13215,
+          "model": "plant_maturing_verdant_vice"
+        },
+        {
+          "stage": "READY",
+          "custom_model_data": 13216,
+          "model": "plant_ready_verdant_vice"
+        },
+        {
+          "stage": "OVERRIPE",
+          "custom_model_data": 13217,
+          "model": "plant_overripe_verdant_vice"
+        },
+        {
+          "stage": "SPOILED",
+          "custom_model_data": 13218,
+          "model": "plant_spoiled_verdant_vice"
+        }
+      ]
+    }
+  ]
+}

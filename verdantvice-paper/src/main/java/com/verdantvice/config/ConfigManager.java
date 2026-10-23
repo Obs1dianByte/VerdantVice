@@ -63,6 +63,7 @@ public final class ConfigManager {
             Files.createDirectories(dataFolder.resolve("languages"));
             Files.createDirectories(dataFolder.resolve("data"));
             Files.createDirectories(dataFolder.resolve("backups"));
+            Files.createDirectories(dataFolder.resolve("backups/languages"));
             Files.createDirectories(dataFolder.resolve("logs"));
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to create VerdantVice data directories", exception);
@@ -70,6 +71,18 @@ public final class ConfigManager {
 
         CONFIG_FILES.forEach(this::copyIfMissing);
         LANGUAGE_FILES.forEach(name -> copyIfMissing("languages/" + name));
+        try {
+            StrainDisplayNameMigration.Result migrated = new StrainDisplayNameMigration().migrate(
+                    dataPath("strains.yml"), dataPath("backups/configuration"));
+            if (migrated.renamed() > 0) {
+                plugin.getLogger().info("Updated " + migrated.renamed()
+                        + " default strain display names; original saved to "
+                        + migrated.backup().orElseThrow());
+            }
+        } catch (IOException failure) {
+            plugin.getLogger().log(Level.WARNING,
+                    "Could not safely migrate strain display names; existing configuration retained", failure);
+        }
         loadAll();
     }
 
@@ -168,7 +181,7 @@ public final class ConfigManager {
             fail("performance.database-save-seconds must be between 5 and 86400");
         }
 
-        String locale = main.getString("default-language", "pl_PL");
+        String locale = main.getString("default-language", "en_US");
         String normalized = locale == null ? "" : locale.replace('-', '_');
         boolean supported = LANGUAGE_FILES.stream()
                 .map(name -> name.substring(0, name.length() - 4))

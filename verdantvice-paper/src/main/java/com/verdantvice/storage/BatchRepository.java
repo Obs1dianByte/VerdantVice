@@ -62,42 +62,54 @@ public final class BatchRepository implements BatchPersistence {
         Objects.requireNonNull(batch, "batch");
         if (batch.signature().isBlank()) {
             return CompletableFuture.failedFuture(
-                    new IllegalArgumentException("A persisted batch must be signed")
-            );
+                    new IllegalArgumentException("A persisted batch must be signed"));
         }
         Instant now = Instant.now();
         return database.transaction(session -> {
-            PlayerDataRepository.ensure(session, batch.ownerUuid(), null, now);
-            session.update(
-                    """
-                    INSERT INTO product_batches (
-                      batch_id, owner_uuid, strain_composition_json,
-                      genetic_origin_json, fresh_weight, dry_weight, quality_score,
-                      quality_grade, contamination, freshness, harvest_timing,
-                      drying_data_json, curing_data_json, batch_state, created_at,
-                      updated_at, signature, schema_version, row_version
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0)
-                    """,
-                    batch.batchId(),
-                    batch.ownerUuid(),
-                    DomainJson.composition(batch.strainComposition()),
-                    DomainJson.uuidSet(batch.geneticOrigin()),
-                    batch.freshWeight(),
-                    batch.dryWeight(),
-                    batch.qualityScore(),
-                    batch.qualityGrade(),
-                    batch.contamination(),
-                    batch.freshness(),
-                    batch.harvestTiming(),
-                    batch.dryingData().map(BatchRepository::dryingJson).orElse(null),
-                    batch.curingData().map(BatchRepository::curingJson).orElse(null),
-                    batch.state(),
-                    batch.createdAt(),
-                    now,
-                    batch.signature()
-            );
+            create(session, batch, now);
             return null;
         });
+    }
+
+    @Override
+    public void create(
+            com.verdantvice.database.SqlSession session,
+            ProductBatch batch,
+            Instant now
+    ) throws SQLException {
+        Objects.requireNonNull(session, "session");
+        Objects.requireNonNull(batch, "batch");
+        Objects.requireNonNull(now, "now");
+        if (batch.signature().isBlank()) {
+            throw new IllegalArgumentException("A persisted batch must be signed");
+        }
+        PlayerDataRepository.ensure(session, batch.ownerUuid(), null, now);
+        session.update("""
+                        INSERT INTO product_batches (
+                          batch_id, owner_uuid, strain_composition_json,
+                          genetic_origin_json, fresh_weight, dry_weight, quality_score,
+                          quality_grade, contamination, freshness, harvest_timing,
+                          drying_data_json, curing_data_json, batch_state, created_at,
+                          updated_at, signature, schema_version, row_version
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0)
+                        """,
+                batch.batchId(),
+                batch.ownerUuid(),
+                DomainJson.composition(batch.strainComposition()),
+                DomainJson.uuidSet(batch.geneticOrigin()),
+                batch.freshWeight(),
+                batch.dryWeight(),
+                batch.qualityScore(),
+                batch.qualityGrade(),
+                batch.contamination(),
+                batch.freshness(),
+                batch.harvestTiming(),
+                batch.dryingData().map(BatchRepository::dryingJson).orElse(null),
+                batch.curingData().map(BatchRepository::curingJson).orElse(null),
+                batch.state(),
+                batch.createdAt(),
+                now,
+                batch.signature());
     }
 
     @Override

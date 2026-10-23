@@ -36,29 +36,58 @@ public final class FarmService {
         return copy(farm, farm.linkedStorage(), farm.salaryStorage(), members);
     }
 
-    public Farm linkStorage(Farm farm, FarmStorage storage, Collection<FarmStorage> allAssignments) {
+    public StorageLinkResult linkStorage(
+            Farm farm,
+            FarmStorage storage,
+            Collection<FarmStorage> allAssignments,
+            Collection<com.verdantvice.common.BlockPosition> physicalPositions
+    ) {
         DomainChecks.required(farm, "farm");
         DomainChecks.required(storage, "storage");
         DomainChecks.required(allAssignments, "allAssignments");
+        DomainChecks.required(physicalPositions, "physicalPositions");
         if (!farm.farmId().equals(storage.farmId())) {
-            throw new IllegalArgumentException("Storage references a different farm");
+            return StorageLinkResult.failure(StorageLinkResult.Status.OTHER_FARM);
         }
-        if (!farm.region().contains(storage.position())) {
-            throw new IllegalArgumentException("Storage must be inside the farm");
+        if (physicalPositions.isEmpty()
+                || physicalPositions.stream().anyMatch(position -> !farm.region().contains(position))) {
+            return StorageLinkResult.failure(StorageLinkResult.Status.OUTSIDE_FARM);
         }
-        boolean duplicatePosition = allAssignments.stream().anyMatch(existing ->
-                !existing.storageId().equals(storage.storageId())
-                        && existing.position().equals(storage.position()));
-        if (duplicatePosition) throw new IllegalArgumentException("Storage position is already assigned");
+        Optional<FarmStorage> assigned = allAssignments.stream()
+                .filter(existing -> existing.position().equals(storage.position()))
+                .findFirst();
+        if (assigned.isPresent()) {
+            return StorageLinkResult.failure(assigned.get().farmId().equals(farm.farmId())
+                    ? StorageLinkResult.Status.ALREADY_LINKED
+                    : StorageLinkResult.Status.OTHER_FARM);
+        }
+        if (storage.type() == StorageType.SALARY_STORAGE && farm.salaryStorage().isPresent()) {
+            return StorageLinkResult.failure(
+                    StorageLinkResult.Status.SALARY_STORAGE_ALREADY_EXISTS);
+        }
         HashSet<UUID> linked = new HashSet<>(farm.linkedStorage());
         linked.add(storage.storageId());
         Optional<UUID> salary = storage.type() == StorageType.SALARY_STORAGE
                 ? Optional.of(storage.storageId()) : farm.salaryStorage();
-        if (storage.type() == StorageType.SALARY_STORAGE && farm.salaryStorage().isPresent()
-                && !farm.salaryStorage().get().equals(storage.storageId())) {
-            throw new IllegalArgumentException("Farm already has a salary storage");
+        Farm updated = copy(farm, linked, salary, farm.members());
+        return StorageLinkResult.success(StorageLinkResult.Status.LINKED, updated, storage);
+    }
+
+    public StorageLinkResult unlinkStorage(Farm farm, FarmStorage storage) {
+        DomainChecks.required(farm, "farm");
+        DomainChecks.required(storage, "storage");
+        if (!farm.farmId().equals(storage.farmId())) {
+            return StorageLinkResult.failure(StorageLinkResult.Status.OTHER_FARM);
         }
-        return copy(farm, linked, salary, farm.members());
+        if (!farm.linkedStorage().contains(storage.storageId())) {
+            return StorageLinkResult.failure(StorageLinkResult.Status.NOT_LINKED);
+        }
+        HashSet<UUID> linked = new HashSet<>(farm.linkedStorage());
+        linked.remove(storage.storageId());
+        Optional<UUID> salary = farm.salaryStorage()
+                .filter(storageId -> !storageId.equals(storage.storageId()));
+        Farm updated = copy(farm, linked, salary, farm.members());
+        return StorageLinkResult.success(StorageLinkResult.Status.UNLINKED, updated, storage);
     }
 
     private static Farm copy(Farm farm, java.util.Set<UUID> storages, Optional<UUID> salary,

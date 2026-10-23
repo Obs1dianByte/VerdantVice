@@ -1,0 +1,48 @@
+{
+  "model": {
+    "type": "minecraft:range_dispatch",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "entries": [
+      {
+        "threshold": 12019,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/dry_batch"
+        }
+      },
+      {
+        "threshold": 12020,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/cured_batch"
+        }
+      },
+      {
+        "threshold": 12021,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/ground_product"
+        }
+      },
+      {
+        "threshold": 12022,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/mixture"
+        }
+      },
+      {
+        "threshold": 12023,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/dried_kelp"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "minecraft:item/dried_kelp"
+    }
+  }
+}

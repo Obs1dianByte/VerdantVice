@@ -12,6 +12,7 @@ import com.verdantvice.farm.FarmRegion;
 import com.verdantvice.farm.FarmRole;
 import com.verdantvice.farm.FarmSettings;
 import com.verdantvice.farm.FarmStorage;
+import com.verdantvice.farm.StorageLinkResult;
 import com.verdantvice.farm.StorageType;
 import com.verdantvice.processing.QualityGrade;
 
@@ -139,8 +140,40 @@ public final class FarmRepository {
         ).thenApply(changed -> changed == 1);
     }
 
-    public CompletableFuture<Void> linkStorage(FarmStorage storage) {
+    public CompletableFuture<Void> linkStorage(FarmStorage storage, Farm updatedFarm) {
+        Objects.requireNonNull(storage, "storage");
+        Objects.requireNonNull(updatedFarm, "updatedFarm");
+        long expected = versions.getOrDefault(updatedFarm.farmId(), 0L);
+        Instant now = Instant.now();
         return database.transaction(session -> {
+            Optional<StorageOwner> existing = session.queryOne(
+                    "SELECT storage_id, farm_id FROM farm_storages "
+                            + "WHERE world_uuid=? AND block_x=? AND block_y=? AND block_z=?",
+                    result -> new StorageOwner(
+                            UUID.fromString(result.getString("storage_id")),
+                            UUID.fromString(result.getString("farm_id"))
+                    ),
+                    storage.position().worldUuid(),
+                    storage.position().x(),
+                    storage.position().y(),
+                    storage.position().z()
+            );
+            if (existing.isPresent()) {
+                throw new StoragePersistenceException(
+                        existing.get().farmId().equals(storage.farmId())
+                                ? StorageLinkResult.Status.ALREADY_LINKED
+                                : StorageLinkResult.Status.OTHER_FARM
+                );
+            }
+            if (storage.type() == StorageType.SALARY_STORAGE && session.exists(
+                    "SELECT storage_id FROM farm_storages "
+                            + "WHERE farm_id=? AND storage_type=?",
+                    storage.farmId(),
+                    StorageType.SALARY_STORAGE
+            )) {
+                throw new StoragePersistenceException(
+                        StorageLinkResult.Status.SALARY_STORAGE_ALREADY_EXISTS);
+            }
             session.update(
                     "INSERT INTO farm_storages "
                             + "(storage_id, farm_id, storage_type, world_uuid, block_x, block_y, "
@@ -156,15 +189,48 @@ public final class FarmRepository {
                     storage.createdAt(),
                     storage.createdAt()
             );
+            int changed = session.update(
+                    "UPDATE farms SET updated_at=?, row_version=row_version+1 "
+                            + "WHERE farm_id=? AND row_version=?",
+                    now,
+                    updatedFarm.farmId(),
+                    expected
+            );
+            if (changed != 1) {
+                throw new SQLException("Concurrent farm storage modification: "
+                        + updatedFarm.farmId());
+            }
             return null;
-        });
+        }).thenRun(() -> versions.replace(updatedFarm.farmId(), expected, expected + 1L));
     }
 
-    public CompletableFuture<Boolean> unlinkStorage(UUID storageId) {
-        return database.update(
-                "DELETE FROM farm_storages WHERE storage_id=?",
-                storageId
-        ).thenApply(changed -> changed == 1);
+    public CompletableFuture<Void> unlinkStorage(FarmStorage storage, Farm updatedFarm) {
+        Objects.requireNonNull(storage, "storage");
+        Objects.requireNonNull(updatedFarm, "updatedFarm");
+        long expected = versions.getOrDefault(updatedFarm.farmId(), 0L);
+        Instant now = Instant.now();
+        return database.transaction(session -> {
+            int removed = session.update(
+                    "DELETE FROM farm_storages WHERE storage_id=? AND farm_id=?",
+                    storage.storageId(),
+                    storage.farmId()
+            );
+            if (removed != 1) {
+                throw new StoragePersistenceException(StorageLinkResult.Status.NOT_LINKED);
+            }
+            int changed = session.update(
+                    "UPDATE farms SET updated_at=?, row_version=row_version+1 "
+                            + "WHERE farm_id=? AND row_version=?",
+                    now,
+                    updatedFarm.farmId(),
+                    expected
+            );
+            if (changed != 1) {
+                throw new SQLException("Concurrent farm storage modification: "
+                        + updatedFarm.farmId());
+            }
+            return null;
+        }).thenRun(() -> versions.replace(updatedFarm.farmId(), expected, expected + 1L));
     }
 
     public CompletableFuture<Boolean> delete(UUID farmId, UUID ownerUuid) {
@@ -410,4 +476,8 @@ public final class FarmRepository {
 
     private record FarmParts(List<FarmRow> farms, List<MemberRow> members) {
     }
+
+    private record StorageOwner(UUID storageId, UUID farmId) {
+    }
+
 }

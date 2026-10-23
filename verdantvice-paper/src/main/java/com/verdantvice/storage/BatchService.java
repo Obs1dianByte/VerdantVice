@@ -55,6 +55,12 @@ public final class BatchService {
         return persistence.create(batch).thenApply(ignored -> remember(batch));
     }
 
+    public void create(SqlSession session, ProductBatch batch, Instant now)
+            throws SQLException {
+        verifySignature(batch);
+        persistence.create(session, batch, now);
+    }
+
     public CompletableFuture<ProductBatch> save(ProductBatch batch) {
         verifySignature(batch);
         return persistence.save(batch).thenApply(ignored -> remember(batch));

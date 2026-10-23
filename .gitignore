@@ -9,3 +9,6 @@ server/
 *.db-wal
 *.log
 hs_err_pid*
+.agents/
+/VERIFICATION.md
+/paper26-runtime-fixes-diagnostic.txt

@@ -8,7 +8,14 @@
         "threshold": 12007,
         "model": {
           "type": "minecraft:model",
-          "model": "verdantvice:item/seed"
+          "model": "verdantvice:item/nutrient_pack"
+        }
+      },
+      {
+        "threshold": 12008,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/bone_meal"
         }
       }
     ],

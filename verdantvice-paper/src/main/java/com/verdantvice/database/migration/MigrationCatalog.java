@@ -13,7 +13,9 @@ public final class MigrationCatalog {
         return List.of(
                 identityFarmAndPlantSchema(type),
                 processingWorkerAndEconomySchema(type),
-                antiDupeAndOperationJournalSchema(type)
+                antiDupeAndOperationJournalSchema(type),
+                workerReliabilitySchema(type),
+                processingDeliverySchema(type)
         );
     }
 
@@ -520,6 +522,67 @@ public final class MigrationCatalog {
         sql.add("CREATE INDEX idx_operation_journal_scope ON operation_journal(scope_key, operation_type)");
 
         return new SchemaMigration(3, "atomic item registry and idempotent operation journal", sql);
+    }
+
+    private static SchemaMigration workerReliabilitySchema(DatabaseType type) {
+        List<String> sql = new ArrayList<>();
+        sql.add(table(type, "worker_harvest_deliveries", """
+                delivery_id VARCHAR(36) NOT NULL PRIMARY KEY,
+                plant_uuid VARCHAR(36) NOT NULL,
+                batch_id VARCHAR(36) NOT NULL,
+                worker_uuid VARCHAR(36) NOT NULL,
+                farm_id VARCHAR(36) NOT NULL,
+                storage_id VARCHAR(36) NOT NULL,
+                item_instance_id VARCHAR(36) NOT NULL,
+                item_created_at BIGINT NOT NULL,
+                delivery_status VARCHAR(16) NOT NULL,
+                created_at BIGINT NOT NULL,
+                updated_at BIGINT NOT NULL,
+                delivered_at BIGINT NULL,
+                row_version BIGINT NOT NULL DEFAULT 0,
+                CONSTRAINT fk_harvest_delivery_batch FOREIGN KEY (batch_id)
+                    REFERENCES product_batches(batch_id) ON DELETE CASCADE,
+                CONSTRAINT fk_harvest_delivery_worker FOREIGN KEY (worker_uuid)
+                    REFERENCES workers(worker_uuid) ON DELETE CASCADE,
+                CONSTRAINT fk_harvest_delivery_farm FOREIGN KEY (farm_id)
+                    REFERENCES farms(farm_id) ON DELETE CASCADE,
+                CONSTRAINT fk_harvest_delivery_storage FOREIGN KEY (storage_id)
+                    REFERENCES farm_storages(storage_id) ON DELETE RESTRICT,
+                CONSTRAINT uq_harvest_delivery_plant UNIQUE (plant_uuid),
+                CONSTRAINT uq_harvest_delivery_batch UNIQUE (batch_id),
+                CONSTRAINT uq_harvest_delivery_item UNIQUE (item_instance_id)
+                """));
+        sql.add("CREATE INDEX idx_harvest_delivery_pending "
+                + "ON worker_harvest_deliveries(delivery_status, created_at)");
+        return new SchemaMigration(
+                4,
+                "durable worker salary and harvest delivery reliability",
+                sql);
+    }
+
+    private static SchemaMigration processingDeliverySchema(DatabaseType type) {
+        List<String> sql = new ArrayList<>();
+        sql.add(table(type, "processing_deliveries", """
+                operation_id VARCHAR(128) NOT NULL PRIMARY KEY,
+                batch_id VARCHAR(36) NOT NULL,
+                owner_uuid VARCHAR(36) NOT NULL,
+                farm_id VARCHAR(36) NOT NULL,
+                storage_id VARCHAR(36) NOT NULL,
+                item_instance_id VARCHAR(36) NOT NULL,
+                delivery_status VARCHAR(16) NOT NULL,
+                created_at BIGINT NOT NULL,
+                delivered_at BIGINT NULL,
+                CONSTRAINT fk_processing_delivery_batch FOREIGN KEY (batch_id)
+                    REFERENCES product_batches(batch_id) ON DELETE RESTRICT,
+                CONSTRAINT fk_processing_delivery_owner FOREIGN KEY (owner_uuid)
+                    REFERENCES players(player_uuid) ON DELETE RESTRICT,
+                CONSTRAINT fk_processing_delivery_storage FOREIGN KEY (storage_id)
+                    REFERENCES farm_storages(storage_id) ON DELETE RESTRICT,
+                CONSTRAINT uq_processing_delivery_item UNIQUE (item_instance_id)
+                """));
+        sql.add("CREATE INDEX idx_processing_delivery_pending "
+                + "ON processing_deliveries(delivery_status, created_at)");
+        return new SchemaMigration(5, "atomic worker processing delivery outbox", sql);
     }
 
     private static String table(DatabaseType type, String name, String body) {

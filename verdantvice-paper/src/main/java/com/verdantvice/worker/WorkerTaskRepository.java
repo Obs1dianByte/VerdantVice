@@ -360,6 +360,34 @@ public final class WorkerTaskRepository {
         });
     }
 
+    public CompletableFuture<Integer> interruptedCount() {
+        return database.queryOne(
+                "SELECT COUNT(*) AS total FROM worker_tasks "
+                        + "WHERE task_status IN ('RESERVED', 'IN_PROGRESS')",
+                result -> result.getInt("total")
+        ).thenApply(optional -> optional.orElse(0));
+    }
+
+    /**
+     * Requeues leases that cannot survive a server restart. Target and
+     * idempotency key are preserved, so walking/action recovery cannot create
+     * another logical task.
+     */
+    public CompletableFuture<Integer> recoverInterrupted(Instant now) {
+        Objects.requireNonNull(now, "now");
+        return database.update("""
+                        UPDATE worker_tasks SET
+                          worker_uuid=NULL, reservation_token=NULL,
+                          reservation_expires_at=NULL, task_status='QUEUED',
+                          updated_at=?, row_version=row_version+1
+                        WHERE task_status IN ('RESERVED', 'IN_PROGRESS')
+                          AND timeout_at>?
+                        """,
+                now,
+                now
+        );
+    }
+
     private CompletableFuture<TaskLease> transition(
             TaskLease lease,
             Instant now,

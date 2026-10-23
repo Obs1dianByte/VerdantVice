@@ -10,6 +10,7 @@ import java.util.UUID;
 public final class ProcessingMenuHolder implements InventoryHolder {
     private final UUID stationId;
     private final ProcessingStationType type;
+    private Inventory inventory;
 
     public ProcessingMenuHolder(UUID stationId, ProcessingStationType type) {
         this.stationId = Objects.requireNonNull(stationId, "stationId");
@@ -26,6 +27,12 @@ public final class ProcessingMenuHolder implements InventoryHolder {
 
     @Override
     public @NotNull Inventory getInventory() {
-        throw new UnsupportedOperationException("Holder is an inventory identity only");
+        if (inventory == null) throw new IllegalStateException("Inventory has not been attached");
+        return inventory;
+    }
+
+    public void attach(Inventory inventory) {
+        if (this.inventory != null) throw new IllegalStateException("Inventory already attached");
+        this.inventory = Objects.requireNonNull(inventory, "inventory");
     }
 }

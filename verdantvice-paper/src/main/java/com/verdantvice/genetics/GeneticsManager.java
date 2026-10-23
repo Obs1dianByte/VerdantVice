@@ -4,6 +4,7 @@ import com.verdantvice.common.DomainChecks;
 import com.verdantvice.config.ConfigManager;
 import com.verdantvice.effects.EffectProfile;
 import com.verdantvice.effects.EffectType;
+import com.verdantvice.database.item.ItemRegistration;
 import com.verdantvice.security.CustomItemType;
 import com.verdantvice.security.SecureItemService;
 import com.verdantvice.security.SignedItemData;
@@ -45,6 +46,8 @@ public final class GeneticsManager implements SeedGeneticsResolver {
     private final SecureItemService secureItems;
     private final GeneticsService geneticsService = new GeneticsService();
     private final Map<String, CustomStrainRecord> customStrains = new ConcurrentHashMap<>();
+    private final GeneticsDeliveryQueue deliveries = new GeneticsDeliveryQueue();
+    private final Map<UUID, Long> pendingRevisions = new ConcurrentHashMap<>();
 
     public GeneticsManager(
             JavaPlugin plugin,
@@ -95,6 +98,19 @@ public final class GeneticsManager implements SeedGeneticsResolver {
             String requestedName,
             ItemStack firstSeed,
             ItemStack secondSeed
+    ) {
+        try {
+            if (!Bukkit.isPrimaryThread()) {
+                throw new IllegalStateException("Genetics inventory operations require the main thread");
+            }
+            return prepareCross(player, requestedName, firstSeed, secondSeed);
+        } catch (RuntimeException failure) {
+            return CompletableFuture.failedFuture(failure);
+        }
+    }
+
+    private CompletableFuture<CrossingResult> prepareCross(
+            Player player, String requestedName, ItemStack firstSeed, ItemStack secondSeed
     ) {
         Objects.requireNonNull(player, "player");
         String name;
@@ -147,30 +163,27 @@ public final class GeneticsManager implements SeedGeneticsResolver {
         Strain strain = toStrain(record).orElseThrow(() ->
                 new IllegalStateException("custom_strain_parent_missing"));
 
-        String operationId = "genetics:" + record.strainId();
-        return secureItems.consume(
-                        firstSeed,
-                        SEEDS,
-                        player.getUniqueId(),
-                        operationId + ":first"
-                )
-                .thenCompose(ignored -> secureItems.consume(
-                        secondSeed,
-                        SEEDS,
-                        player.getUniqueId(),
-                        operationId + ":second"
-                ))
-                .thenCompose(ignored -> repository.create(record))
+        // Prepare all Bukkit data before touching durable parent identities. If item
+        // rendering fails, neither parent has been consumed.
+        var prepared = secureItems.prepare(player, CustomItemType.SEED,
+                player.getUniqueId(), strain.id());
+        SignedItemData childData = prepared.data();
+        ItemRegistration childRegistration = new ItemRegistration(
+                childData.uniqueInstanceId(), childData.itemType().name(), childData.itemId(),
+                childData.batchId(), childData.ownerUuid(), childData.quality(), childData.strain(),
+                childData.createdAt(), prepared.payloadHash(), childData.schemaVersion(), null);
+        var firstValidation = secureItems.validateActive(firstSeed, SEEDS, player.getUniqueId());
+        var secondValidation = secureItems.validateActive(secondSeed, SEEDS, player.getUniqueId());
+        return firstValidation.thenCombine(secondValidation, (first, second) ->
+                        new ParentIdentities(first.identity(), second.identity()))
+                .thenCompose(parents -> repository.cross(record, parents.first(), parents.second(), childRegistration))
                 .thenCompose(ignored -> onMainFuture(() -> {
                     register(record, strain);
-                    return secureItems.issue(
-                            player,
-                            CustomItemType.SEED,
-                            player.getUniqueId(),
-                            strain.id()
-                    );
+                    pendingRevisions.merge(player.getUniqueId(), 1L, Long::sum);
+                    // The durable receipt remains pending until deliverPending saves
+                    // the player's inventory and acknowledges that exact output ID.
+                    return secureItems.recreate(player, childData);
                 }))
-                .thenCompose(future -> future)
                 .thenApply(seed -> new CrossingResult(
                         record,
                         strain,
@@ -180,6 +193,81 @@ public final class GeneticsManager implements SeedGeneticsResolver {
                         secondData.uniqueInstanceId(),
                         seed
                 ));
+    }
+
+    /**
+     * Replays pending deliveries after logout, full inventory or server restart.
+     * Recreated copies retain the same UUID, so the registry still permits only
+     * one use even if a crash happens between saving inventory and acknowledgement.
+     */
+    public CompletableFuture<Integer> deliverPending(Player player) {
+        Objects.requireNonNull(player, "player");
+        UUID owner = player.getUniqueId();
+        return deliveries.submit(owner, () -> deliverPendingNow(player, owner));
+    }
+
+    public boolean hasPendingDelivery(UUID owner) {
+        return pendingRevisions.containsKey(Objects.requireNonNull(owner, "owner"));
+    }
+
+    private CompletableFuture<Integer> deliverPendingNow(Player player, UUID owner) {
+        Long revision = pendingRevisions.get(owner);
+        return repository.pendingSeeds(owner)
+                .thenCompose(pending -> onMainFuture(() -> {
+                    if (!player.isOnline()) {
+                        return new DeliveryAttempt(List.of(), pending.size());
+                    }
+                    java.util.ArrayList<UUID> delivered = new java.util.ArrayList<>();
+                    for (PendingGeneticsSeed receipt : pending) {
+                        if (strains.find(receipt.data().strain()).isEmpty()) {
+                            // A committed line may not yet have reached the in-memory
+                            // registry (e.g. plugin shutdown); retry after next load.
+                            continue;
+                        }
+                        removeParentCopies(player, receipt.firstParentId(), receipt.secondParentId());
+                        boolean present = hasInstance(player, receipt.data().uniqueInstanceId());
+                        if (present || player.getInventory().addItem(
+                                secureItems.recreate(player, receipt.data())).isEmpty()) {
+                            delivered.add(receipt.data().uniqueInstanceId());
+                        }
+                    }
+                    if (!pending.isEmpty()) {
+                        player.saveData();
+                    }
+                    return new DeliveryAttempt(List.copyOf(delivered), pending.size());
+                }))
+                .thenCompose(attempt -> CompletableFuture.allOf(attempt.delivered().stream()
+                                .map(id -> repository.acknowledgeSeed(owner, id))
+                                .toArray(CompletableFuture[]::new))
+                        .thenApply(ignored -> {
+                            if (attempt.delivered().size() < attempt.pendingCount()) {
+                                pendingRevisions.putIfAbsent(owner, 0L);
+                            } else if (revision != null) {
+                                // Do not clear a newer child committed during this scan.
+                                pendingRevisions.remove(owner, revision);
+                            }
+                            return attempt.delivered().size();
+                        }));
+    }
+
+    private void removeParentCopies(Player player, UUID first, UUID second) {
+        for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
+            var verification = secureItems.verify(player.getInventory().getItem(slot));
+            if (verification.valid() && (first.equals(verification.data().uniqueInstanceId())
+                    || second.equals(verification.data().uniqueInstanceId()))) {
+                player.getInventory().setItem(slot, null);
+            }
+        }
+    }
+
+    private boolean hasInstance(Player player, UUID instanceId) {
+        for (ItemStack item : player.getInventory().getContents()) {
+            var verification = secureItems.verify(item);
+            if (verification.valid() && instanceId.equals(verification.data().uniqueInstanceId())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -246,10 +334,11 @@ public final class GeneticsManager implements SeedGeneticsResolver {
 
     private Optional<Strain> toStrain(CustomStrainRecord record) {
         List<Strain> parents = record.line().parentStrainIds().stream()
+                .sorted()
                 .map(strains::find)
                 .flatMap(Optional::stream)
                 .toList();
-        if (parents.isEmpty()) {
+        if (parents.size() != record.line().parentStrainIds().size()) {
             return Optional.empty();
         }
         Strain primary = parents.get(0);
@@ -290,7 +379,9 @@ public final class GeneticsManager implements SeedGeneticsResolver {
     }
 
     private void register(CustomStrainRecord record) {
-        toStrain(record).ifPresent(strain -> register(record, strain));
+        Strain strain = toStrain(record).orElseThrow(() ->
+                new IllegalStateException("Custom strain " + record.strainId() + " has missing parent strains"));
+        register(record, strain);
     }
 
     private void register(CustomStrainRecord record, Strain strain) {
@@ -456,13 +547,24 @@ public final class GeneticsManager implements SeedGeneticsResolver {
         if (Bukkit.isPrimaryThread()) {
             run.run();
         } else {
-            Bukkit.getScheduler().runTask(plugin, run);
+            try {
+                Bukkit.getScheduler().runTask(plugin, run);
+            } catch (RuntimeException failure) {
+                future.completeExceptionally(failure);
+            }
         }
         return future;
     }
 
     private static double clamp(double value, double minimum, double maximum) {
         return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    private record ParentIdentities(SecureItemService.ValidatedIdentity first,
+                                    SecureItemService.ValidatedIdentity second) {
+    }
+
+    private record DeliveryAttempt(List<UUID> delivered, int pendingCount) {
     }
 
     public record CrossingResult(

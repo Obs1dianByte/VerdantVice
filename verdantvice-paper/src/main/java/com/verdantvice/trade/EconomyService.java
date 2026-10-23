@@ -31,7 +31,8 @@ public final class EconomyService {
                 || "VAULT".equalsIgnoreCase(
                 configs.get("economy.yml").getString("provider", "EMERALD")
         );
-        if (!requested || !plugin.getServer().getPluginManager().isPluginEnabled("Vault")) {
+        if (!requested || !configs.get("integrations.yml").getBoolean("vault", true)
+                || !plugin.getServer().getPluginManager().isPluginEnabled("Vault")) {
             return;
         }
         try {

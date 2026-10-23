@@ -8,7 +8,14 @@
         "threshold": 12008,
         "model": {
           "type": "minecraft:model",
-          "model": "verdantvice:item/grinder"
+          "model": "verdantvice:item/repair_kit"
+        }
+      },
+      {
+        "threshold": 12009,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/iron_nugget"
         }
       }
     ],

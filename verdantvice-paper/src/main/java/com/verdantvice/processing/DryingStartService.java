@@ -51,6 +51,18 @@ public final class DryingStartService {
             Parameters parameters
     ) {
         Objects.requireNonNull(item, "item");
+        return startIdentity(item.identity(), playerUuid, stationId, now, parameters);
+    }
+
+    /** Domain identity entry point used by automated integration tests and worker jobs. */
+    public CompletableFuture<Result> startIdentity(
+            SecureItemService.ValidatedIdentity item,
+            UUID playerUuid,
+            UUID stationId,
+            Instant now,
+            Parameters parameters
+    ) {
+        Objects.requireNonNull(item, "item");
         Objects.requireNonNull(playerUuid, "playerUuid");
         Objects.requireNonNull(stationId, "stationId");
         Objects.requireNonNull(now, "now");

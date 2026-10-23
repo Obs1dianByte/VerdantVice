@@ -1,8 +1,8 @@
-# Rozwój VerdantVice
+# VerdantVice development
 
-## Architektura
+## Architecture
 
-Projekt jest wielomodułowym buildem Gradle:
+The project is a multi-module Gradle build:
 
 ```text
 VerdantVice
@@ -16,19 +16,19 @@ VerdantVice
 └── resource-pack
 ```
 
-`verdantvice-core` zawiera niemutowalny model domenowy i usługi obliczeniowe
-bez zależności od Bukkit: rośliny, genetykę, przetwarzanie, efekty,
-tolerancję, rynek, kontrakty, plantacje i workerów.
+`verdantvice-core` contains the immutable domain model and calculation
+services without Bukkit dependencies: plants, genetics, processing, effects,
+tolerance, the market, contracts, farms, and workers.
 
-`verdantvice-paper` jest adapterem wykonawczym: bootstrap pluginu, listenery,
-GUI, encje i display entities, PDC, komendy, repozytoria SQL, integracje,
-lokalizacja oraz publiczne API.
+`verdantvice-paper` is the runtime adapter: plugin bootstrap, listeners,
+GUI, entities and display entities, PDC, commands, SQL repositories,
+integrations, localization, and the public API.
 
-## Narzędzia i wersje
+## Tools and versions
 
 - Java source/target/release: 21;
 - Gradle wrapper: 9.6.1;
-- Paper API do kompilacji: 1.21.4;
+- Compilation Paper API: 1.21.4;
 - JUnit Jupiter: 5.13.4;
 - Shadow: 9.6.1;
 - run-paper: 3.0.2;
@@ -38,120 +38,118 @@ lokalizacja oraz publiczne API.
 - MariaDB Java Client: 3.5.6;
 - Gson: 2.13.2.
 
-Zależności wykonawcze są cieniowane do produkcyjnego JAR-a; Hikari i Gson
-mają relokowane pakiety. Paper i PlaceholderAPI pozostają `compileOnly`.
+Runtime dependencies are shaded into the production JAR; Hikari and Gson
+packages are relocated. Paper and PlaceholderAPI remain `compileOnly`.
 
-## Zasady warstwy domenowej
+## Domain layer rules
 
-- Modele są niemutowalne. Operacja zwraca nowy obiekt, który wywołujący musi
-  zapisać.
-- Czas przekazuj jawnie jako `Instant`; testy nie powinny zależeć od zegara
-  systemowego.
-- Losowość przyjmuj jako parametr lub izoluj w adapterze, aby test był
-  deterministyczny.
-- Waliduj zakresy i UUID na granicy modelu.
-- Kod Core nie importuje klas Bukkit/Paper ani SQL.
-- Zmiana stanu partii unieważnia poprzednią sygnaturę i wymaga ponownego
-  podpisania przez warstwę uprawnioną do zapisu.
+- Models are immutable. Operations return a new object that the caller must
+  persist.
+- Pass time explicitly as `Instant`; tests must not depend on the system
+  clock.
+- Accept randomness as a parameter or isolate it in an adapter so tests
+  remain deterministic.
+- Validate ranges and UUIDs at model boundaries.
+- Core code must not import Bukkit/Paper or SQL classes.
+- A batch state change invalidates its previous signature and requires
+  re-signing by the layer authorized to persist it.
 
-## Wątki i serwer
+## Threads and the server
 
-Świat, encje, inventory i GUI wolno modyfikować wyłącznie na głównym wątku.
-Repozytoria zwracają `CompletableFuture` i wykonują SQL na ograniczonym
-executorze. Po zakończeniu operacji DB adapter wraca przez scheduler do
-Bukkit.
+Worlds, entities, inventories, and GUI must be modified only on the main
+thread. Repositories return `CompletableFuture` and execute SQL on a bounded
+executor. After a database operation completes, the adapter returns to
+Bukkit through the scheduler.
 
-Nie używaj `join()` ani `get()` na głównym wątku. Nie uruchamiaj zapytania
-SQL na ticku serwera. Operacje ekonomii, również Vault, są celowo wykonywane
-na głównym wątku.
+Do not call `join()` or `get()` on the main thread. Do not execute SQL during
+a server tick. Economy operations, including Vault operations, deliberately
+run on the main thread.
 
-Aktualizacje roślin i workerów muszą pozostać porcjowane limitami z
-konfiguracji. Nie iteruj po wszystkich rekordach świata w jednym ticku.
+Plant and worker updates must stay batched according to configuration
+limits. Do not iterate over every world record in a single tick.
 
-## Trwałość i idempotencja
+## Durability and idempotency
 
-Repozytoria używają `row_version`, transakcji, rezerwacji i porównań CAS.
-`item_registry` jest źródłem prawdy o stanie instancji przedmiotu, a
-`operation_journal` zabezpiecza powtórzenie operacji. Nowa ścieżka handlu lub
-przetwarzania powinna:
+Repositories use `row_version`, transactions, reservations, and CAS checks.
+`item_registry` is the source of truth for item instance state, while
+`operation_journal` protects against repeated operations. A new trade or
+processing path should:
 
-1. zweryfikować podpis PDC;
-2. zarezerwować instancję w bazie;
-3. wykonać mutację atomowo/idempotentnie;
-4. oznaczyć wejście jako zużyte;
-5. zarejestrować i wydać wyjście;
-6. bezpiecznie odtworzyć wejście przy jednoznacznym rollbacku.
+1. Verify the PDC signature.
+2. Reserve the instance in the database.
+3. Perform the mutation atomically and idempotently.
+4. Mark the input as consumed.
+5. Register and deliver the output.
+6. Safely restore the input after an unambiguous rollback.
 
-Nigdy nie twórz stanowego produktu zwykłym `new ItemStack` bez
+Never create a stateful product with a plain `new ItemStack` without
 `SecureItemService`.
 
-## Migracje bazy
+## Database migrations
 
-Migracje znajdują się w `MigrationCatalog` i mają kolejne wersje bez luk.
-Każda ma SHA-256 zależny od numeru, opisu i SQL.
+Migrations are defined in `MigrationCatalog` with consecutive versions and
+no gaps. Each has a SHA-256 derived from its number, description, and SQL.
 
-- Nigdy nie edytuj już wydanej migracji.
-- Dodaj nową wersję na końcu katalogu.
-- Przygotuj warianty SQL dla SQLite, MySQL i MariaDB.
-- Używaj `utf8mb4` i InnoDB dla baz sieciowych.
-- Dodaj test czystej migracji oraz aktualizacji ze starej wersji.
-- Nie ukrywaj częściowo zastosowanej migracji; start powinien zakończyć się
-  bezpiecznym błędem.
+- Never edit a migration that has already been released.
+- Append a new version to the catalog.
+- Provide SQL variants for SQLite, MySQL, and MariaDB.
+- Use `utf8mb4` and InnoDB for network databases.
+- Add tests for a clean migration and an upgrade from the previous version.
+- Do not hide a partially applied migration; startup should fail safely.
 
-Aktualny schemat ma wersję 3. Więcej: [MIGRATION.md](MIGRATION.md).
+The current schema version is 5. See [MIGRATION.md](MIGRATION.md).
 
-## Konfiguracja
+## Configuration
 
-Nowy plik konfiguracyjny należy:
+For each new configuration file:
 
-1. dodać do zasobów;
-2. dodać do `ConfigManager.CONFIG_FILES`;
-3. skopiować tylko, jeśli nie istnieje;
-4. zwalidować przed podmianą aktywnego snapshotu;
-5. opisać w [CONFIGURATION.md](CONFIGURATION.md).
+1. Add it to the resources.
+2. Add it to `ConfigManager.CONFIG_FILES`.
+3. Copy it only if it does not already exist.
+4. Validate it before replacing the active snapshot.
+5. Document it in [CONFIGURATION.md](CONFIGURATION.md).
 
-Jeśli zmiana nie może być zastosowana bezpiecznie na żywo, dodaj plik do
-listy wymagającej restartu. Nie przechowuj haseł ani sekretów w diagnostyce.
+If a change cannot be applied safely at runtime, add the file to the list
+that requires a restart. Do not include passwords or secrets in diagnostics.
 
-## Lokalizacja
+## Localization
 
-`en_US.yml` jest kanonicznym zestawem kluczy. Każdy z pięciu pozostałych
-języków musi zawierać wszystkie jego wartości tekstowe. Po dodaniu klucza
-zaktualizuj wszystkie sześć plików.
+`en_US.yml` is the canonical key set. Each of the other five languages must
+contain all its text values. Update all six files when adding a key.
 
-Wiadomości używają MiniMessage. Dane użytkownika przekazuj jako
-`Placeholder.unparsed`, nie sklejaj ich z szablonem. Zachowaj nazwy
-placeholderów pomiędzy tłumaczeniami.
+Messages use MiniMessage. Pass user data as `Placeholder.unparsed` rather
+than concatenating it into the template. Keep placeholder names consistent
+across translations.
 
-## Publiczne API
+## Public API
 
-Nie wystawiaj repozytoriów ani mutowalnych cache. Nowe API powinno:
+Do not expose repositories or mutable caches. New API should:
 
-- zwracać snapshot lub `CompletableFuture`;
-- jawnie dokumentować wątek;
-- zachować zgodność `API_VERSION`;
-- emitować zdarzenie dla istotnej mutacji;
-- nie ujawniać podpisu, sekretu ani danych połączenia.
+- Return a snapshot or `CompletableFuture`.
+- Explicitly document thread behavior.
+- Maintain `API_VERSION` compatibility.
+- Emit an event for a significant mutation.
+- Never expose signatures, secrets, or connection details.
 
-Opis kontraktu v1: [API.md](API.md).
+The v1 contract is documented in [API.md](API.md).
 
 ## Resource pack
 
-Numery `CustomModelData` w `items.yml`, definicje
-`assets/minecraft/items/*.json` i modele w obu wariantach muszą pozostać
-zgodne. Zmiana atlasu powinna regenerować jednocześnie 1.21.4 i 26.2.
-Szczegóły: [RESOURCE_PACK.md](RESOURCE_PACK.md).
+`CustomModelData` numbers in `items.yml`, definitions in
+`assets/minecraft/items/*.json`, and models in both variants must remain
+consistent. Atlas changes should regenerate 1.21.4 and 26.2 together.
+See [RESOURCE_PACK.md](RESOURCE_PACK.md).
 
-## Lista kontrolna zmiany
+## Change checklist
 
-1. Dodaj lub popraw test domenowy.
-2. Dla SQL przetestuj wszystkie trzy dialekty albo wyraźnie ogranicz zmianę.
-3. Uruchom `clean build`.
-4. Sprawdź brak blokowania głównego wątku.
-5. Sprawdź restart podczas aktywnego suszenia, kontraktu i zadania workera.
-6. Sprawdź scenariusz powtórzonego kliknięcia/pakietu.
-7. Uzupełnij sześć języków i dokumentację.
-8. Uruchom ręcznie Paper 1.21.4/Java 21 oraz Paper 26.2/Java 25.
-9. Zweryfikuj zawartość produkcyjnego JAR-a, nie tylko `-thin.jar`.
+1. Add or update a domain test.
+2. For SQL changes, test all three dialects or explicitly limit the scope.
+3. Run `clean build`.
+4. Check that the main thread is not blocked.
+5. Check a restart during active drying, a contract, and a worker task.
+6. Check repeated-click and repeated-packet scenarios.
+7. Update all six languages and the documentation.
+8. Run Paper 1.21.4/Java 21 and Paper 26.2/Java 25 manually.
+9. Verify the production JAR's contents, not just `-thin.jar`.
 
-Polecenia i raporty testów opisuje [TESTING.md](TESTING.md).
+Test commands and reports are documented in [TESTING.md](TESTING.md).
