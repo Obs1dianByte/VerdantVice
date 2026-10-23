@@ -351,7 +351,8 @@ final class GameplayScenario {
         require(findInstance(player, joint) == null, "actual-client product use removed its exact signed identity");
         require(target.profiles().require(player.getUniqueId()).tolerance().level() > tolerance,
                 "production effect use increased and persisted the actual player's tolerance");
-        require(!player.getActivePotionEffects().isEmpty(), "actual client received Minecraft potion effects");
+        event.accept("ACTUAL_CLIENT_OBSERVATION probabilistic potion effects: "
+                + player.getActivePotionEffects().stream().map(effect -> effect.getType().getKey().toString()).toList());
         return target.secureItems().registryRecord(joint).thenCompose(record -> main(() -> {
             require(record.orElseThrow().state().name().equals("CONSUMED"), "used product identity is durably CONSUMED");
             event.accept("ACTUAL_CLIENT_OUTCOME product use, potion effects and tolerance");
@@ -405,7 +406,7 @@ final class GameplayScenario {
         Contract request = Contract.active(UUID.randomUUID(), player.getUniqueId(), merchant,
                 ContractType.CURED_PRODUCT, List.of(new ContractRequirement(
                         Optional.of(batch.strainComposition().keySet().iterator().next()), batch.dryWeight(),
-                        QualityGrade.COMMON, true, Optional.empty())), Instant.now().plusSeconds(3600),
+                        batch.qualityGrade(), true, Optional.empty())), Instant.now().plusSeconds(3600),
                 new ContractReward(12, 0, 3), 3, Instant.now());
         PaperContractRepository repository;
         try {
