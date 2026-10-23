@@ -200,9 +200,10 @@ final class GameplayScenario {
             player.getInventory().setItem(0, can);
             player.getInventory().setHeldItemSlot(0);
             hydration = target.plants().plant(plants.getFirst()).orElseThrow().hydration();
-            Location eye = origin.clone().add(-5.5, 0, -1);
-            eye.setDirection(origin.clone().add(-5.5, 1.0, -3.5).subtract(eye).toVector());
-            player.teleport(eye);
+            Location feet = origin.clone().add(-5.5, 0, -1);
+            Location eye = feet.clone().add(0, player.getEyeHeight(), 0);
+            feet.setDirection(origin.clone().add(-5.5, 1.0, -3.5).subtract(eye).toVector());
+            player.teleport(feet);
             phase = 1;
             message(player, "Setup PASS. Physically right-click the first plant with the watering can, then /vvclient scenario process.");
             return null;
