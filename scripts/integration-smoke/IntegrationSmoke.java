@@ -99,7 +99,7 @@ public final class IntegrationSmoke extends JavaPlugin implements Listener {
         Object previousEnabled = economyConfig.get("vault.enabled");
         Object previousIntegration = integrations.get("vault");
         Economy provider = Bukkit.getServicesManager().getRegistration(Economy.class).getProvider();
-        check(provider.getName().equals("Essentials Economy"), "Vault uses actual EssentialsX economy");
+        equal("EssentialsX Economy", provider.getName(), "Vault uses actual EssentialsX economy");
         double original = provider.getBalance(player);
         try {
             economyConfig.set("provider", "VAULT");
