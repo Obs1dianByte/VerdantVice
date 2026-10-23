@@ -108,7 +108,7 @@ public final class PlantDisplayService {
         Location center = new Location(
                 world,
                 plant.position().x() + 0.5,
-                plant.position().y() + 0.25,
+                PlantDisplayGeometry.anchorY(plant.position().y()),
                 plant.position().z() + 0.5
         );
 
@@ -123,7 +123,7 @@ public final class PlantDisplayService {
             entity.setShadowStrength(0.0f);
             entity.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
             entity.setTransformation(new Transformation(
-                    new Vector3f(0.0f, 0.25f, 0.0f),
+                    new Vector3f(0.0f, PlantDisplayGeometry.modelLift(plant.growthStage()), 0.0f),
                     new AxisAngle4f(),
                     scale(plant.growthStage()),
                     new AxisAngle4f()
@@ -272,15 +272,7 @@ public final class PlantDisplayService {
     }
 
     private Vector3f scale(GrowthStage stage) {
-        float value = switch (stage) {
-            case SEED -> 0.30f;
-            case SPROUT -> 0.45f;
-            case SEEDLING -> 0.60f;
-            case VEGETATIVE -> 0.80f;
-            case MATURING -> 0.95f;
-            case READY -> 1.05f;
-            case OVERRIPE, SPOILED -> 0.90f;
-        };
+        float value = PlantDisplayGeometry.modelScale(stage);
         return new Vector3f(value, value, value);
     }
 

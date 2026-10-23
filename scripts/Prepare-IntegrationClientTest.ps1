@@ -82,7 +82,10 @@ $compilerArguments = @('--release','21','-encoding','UTF-8','-proc:none','-class
     '"' + $_.Replace('\','/').Replace('"','\"') + '"'
 }))
 $temporary = Join-Path $repository '.gradle/runtime-temp'
-$temporaryArguments = if (Test-Path -LiteralPath $temporary) { @("-J-Djava.io.tmpdir=$temporary") } else { @() }
+$temporaryArguments = @()
+if (Test-Path -LiteralPath $temporary) {
+    $temporaryArguments = @("-J-Djava.io.tmpdir=$temporary")
+}
 & $javac @temporaryArguments "@$argumentsFile"
 if ($LASTEXITCODE -ne 0) { throw 'Integration probe compilation failed.' }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'integration-smoke/plugin.yml') -Destination (Join-Path $classes 'plugin.yml')

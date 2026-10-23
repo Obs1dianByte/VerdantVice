@@ -1,6 +1,7 @@
 package com.verdantvice.clientprobe;
 
 import com.verdantvice.VerdantVicePlugin;
+import com.verdantvice.api.event.VerdantWorkerTaskEvent;
 import com.verdantvice.common.BlockPosition;
 import com.verdantvice.farm.Farm;
 import com.verdantvice.farm.StorageLinkResult;
@@ -12,6 +13,7 @@ import com.verdantvice.worker.TaskTarget;
 import com.verdantvice.worker.WorkerManager;
 import com.verdantvice.worker.WorkerPaymentRepository;
 import com.verdantvice.worker.WorkerRecord;
+import com.verdantvice.worker.WorkerState;
 import com.verdantvice.worker.WorkerTaskRepository;
 import com.verdantvice.worker.WorkerTaskStatus;
 import com.verdantvice.worker.WorkerTaskType;
@@ -24,6 +26,9 @@ import org.bukkit.block.Container;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -31,6 +36,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,6 +49,9 @@ final class WorkerGameplayAcceptance {
     private static final int STARTING_EMERALDS = 32;
     private static final int STARTING_WATER = 8;
     private static final String STATE_FILE = "worker-gameplay-state.yml";
+    private static final EnumSet<WorkerState> REQUIRED_EVENTS = EnumSet.of(
+            WorkerState.WALKING_TO_STORAGE, WorkerState.COLLECTING_RESOURCE,
+            WorkerState.WALKING_TO_TARGET, WorkerState.WATERING, WorkerState.SEARCHING_TASK);
 
     private WorkerGameplayAcceptance() {}
 
@@ -150,6 +159,8 @@ final class WorkerGameplayAcceptance {
         private UUID taskId;
         private double maximumMovement;
         private long deadline;
+        private final Listener taskListener = new Listener() {};
+        private final EnumSet<WorkerState> taskEvents = EnumSet.noneOf(WorkerState.class);
 
         private Fixture(JavaPlugin probe, VerdantVicePlugin target, Player player, Consumer<String> check,
                 Farm farm, World world, Block salary, Block water, Block pot, long day) {
@@ -166,7 +177,18 @@ final class WorkerGameplayAcceptance {
         }
 
         private CompletableFuture<Void> run() {
-            return main(probe, () -> target.farms().linkStorage(player, farm.farmId(), salary, StorageType.SALARY_STORAGE))
+            CompletableFuture<Void> operation = main(probe, () -> {
+                        Bukkit.getPluginManager().registerEvent(VerdantWorkerTaskEvent.class,
+                                taskListener, EventPriority.MONITOR, (listener, event) -> {
+                                    VerdantWorkerTaskEvent taskEvent = (VerdantWorkerTaskEvent) event;
+                                    if (taskId != null && taskId.equals(taskEvent.taskId())
+                                            && hired.worker().workerUuid().equals(taskEvent.workerId())) {
+                                        require(Bukkit.isPrimaryThread(), "Actual worker task events run on the main thread");
+                                        taskEvents.add(taskEvent.state());
+                                    }
+                                }, probe);
+                        return target.farms().linkStorage(player, farm.farmId(), salary, StorageType.SALARY_STORAGE);
+                    })
                     .thenCompose(future -> future).thenCompose(linked -> main(probe, () -> {
                         require(linked.status() == StorageLinkResult.Status.LINKED, "Actual salary barrel links through FarmManager: " + linked.status());
                         return target.farms().linkStorage(player, farm.farmId(), water, StorageType.WATER_STORAGE);
@@ -229,10 +251,15 @@ final class WorkerGameplayAcceptance {
                                 "Salary balance remains stable after further scheduler ticks");
                         require(count(water, Material.WATER_BUCKET) == STARTING_WATER - 1, "Exactly one water resource was consumed");
                         check.accept("actual worker AI navigated, watered once and completed the persisted task");
+                        check.accept("production task events include storage navigation, resource collection, target navigation, watering and completion");
                         check.accept("one PAID salary ledger debited the linked emerald barrel exactly once");
                         save();
                         return null;
                     }));
+            return operation.whenComplete((ignored, failure) -> main(probe, () -> {
+                HandlerList.unregisterAll(taskListener);
+                return null;
+            }));
         }
 
         private void poll(CompletableFuture<Void> finished) {
@@ -248,7 +275,8 @@ final class WorkerGameplayAcceptance {
                                 Optional<WorkerTaskRepository.StoredTask> task = evidence.task();
                                 if (task.isPresent() && task.get().task().status() == WorkerTaskStatus.COMPLETED
                                         && evidence.payments().size() == 1
-                                        && evidence.payments().getFirst().status() == WorkerPaymentRepository.PaymentStatus.PAID) {
+                                        && evidence.payments().getFirst().status() == WorkerPaymentRepository.PaymentStatus.PAID
+                                        && taskEvents.containsAll(REQUIRED_EVENTS)) {
                                     validatePaid(evidence, hired.worker().workerUuid(), day, hired.worker().salaryPerMinecraftDay());
                                     Plant current = target.plants().plant(planted.uniqueId()).orElseThrow();
                                     require(current.hydration() > planted.hydration(), "Actual worker watering increases hydration");
@@ -261,7 +289,8 @@ final class WorkerGameplayAcceptance {
                                             + task.map(value -> value.task().status().name()).orElse("MISSING")
                                             + ", worker=" + target.workers().worker(hired.worker().workerUuid())
                                                     .map(value -> value.worker().state().name()).orElse("MISSING")
-                                            + ", payments=" + evidence.payments() + ", emeralds=" + count(salary, Material.EMERALD));
+                                            + ", events=" + taskEvents + ", payments=" + evidence.payments()
+                                            + ", emeralds=" + count(salary, Material.EMERALD));
                                 } else {
                                     Bukkit.getScheduler().runTaskLater(probe, () -> poll(finished), 20L);
                                 }
@@ -292,6 +321,7 @@ final class WorkerGameplayAcceptance {
                 state.set("hydration-before", planted.hydration());
                 state.set("hydration-after", target.plants().plant(planted.uniqueId()).orElseThrow().hydration());
                 state.set("maximum-movement-squared", maximumMovement);
+                state.set("task-events", taskEvents.stream().map(Enum::name).toList());
                 state.set("completed-utc", Instant.now().toString());
                 player.saveData();
                 world.save();

@@ -13,6 +13,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -64,7 +65,8 @@ public final class PlantWorldListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND || event.getClickedBlock() == null) {
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK
+                || event.getHand() != EquipmentSlot.HAND || event.getClickedBlock() == null) {
             return;
         }
         Block clicked = event.getClickedBlock();
@@ -73,7 +75,15 @@ public final class PlantWorldListener implements Listener {
         }
         ItemStack held = event.getPlayer().getInventory().getItemInMainHand();
         ItemSigner.Verification verification = signer.verify(held);
-        if (!verification.valid() || verification.data().itemType() != CustomItemType.SEED) {
+        var planted = plants.at(clicked.getLocation());
+        var decision = PlantStationInteractionPolicy.decide(event.getAction(), event.getHand(),
+                planted.isPresent(), verification.valid() && verification.data().itemType() == CustomItemType.SEED);
+        if (decision == PlantStationInteractionPolicy.Decision.INTERACT) {
+            event.setCancelled(true);
+            plants.interact(event.getPlayer(), planted.orElseThrow().uniqueId(), event.getHand());
+            return;
+        }
+        if (decision != PlantStationInteractionPolicy.Decision.PLANT) {
             return;
         }
         event.setCancelled(true);

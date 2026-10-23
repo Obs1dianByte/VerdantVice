@@ -133,6 +133,11 @@ final class GameplayScenario {
         require(folder.toString().replace('\\', '/').contains("/build/minecraft-client/"),
                 "gameplay writes are restricted to an isolated Minecraft client test directory");
         event.accept("FIXTURE balance: one-minute drying/curing, rack speed 4, one-second process updates; production defaults unchanged");
+        // The isolated client already loads the locally built pack. Enable its
+        // model projection without sending a remote pack request on player join.
+        target.configs().get("resourcepack.yml").set("enabled", true);
+        target.configs().get("resourcepack.yml").set("send-on-join", false);
+        event.accept("FIXTURE rendering uses the locally installed matching resource pack");
         for (String key : List.of("processing.drying.duration-minutes", "processing.drying.speed",
                 "processing.curing.duration-minutes", "processing.update-seconds")) {
             originalProcessing.put(key, target.configs().get("quality.yml").get(key));
