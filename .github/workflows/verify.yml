@@ -9,6 +9,13 @@ permissions:
   contents: read
 
 jobs:
+  release-tooling:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify release candidate guards
+        run: node --test scripts/publish-release-candidate.test.mjs
+
   build-and-test:
     strategy:
       fail-fast: false

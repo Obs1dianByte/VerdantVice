@@ -1,0 +1,14 @@
+{
+  "tag": "v1.0.0-rc.1",
+  "title": "VerdantVice 1.0.0 RC1",
+  "prerelease": true,
+  "sourceCommit": "b2291e788c0fc2a0548895c3f8c8b5420a5ab9ae",
+  "verificationRun": 40136115331,
+  "artifact": "VerdantVice",
+  "notes": ".github/release-notes/v1.0.0-rc.1.md",
+  "assets": [
+    { "name": "VerdantVice-1.0.0.jar", "sha256": "970676beb62ff03bbdbd1f32d03fbe64e357fc6c6e099635887212eefdd24a55" },
+    { "name": "VerdantVice-resourcepack-1.21.4.zip", "sha256": "7ae238e21a5759628956501f262bd6dd6cafd5a1eaa26a6a9b699a4b8cbddadf" },
+    { "name": "VerdantVice-resourcepack-26.2.zip", "sha256": "9f85b5dbfd02260f94d164de249fdb844ea31277a72175dbcd1250e9ea7185ff" }
+  ]
+}

@@ -20,8 +20,8 @@ Folia, Spigot and CraftBukkit are not supported.
 
 ## Install
 
-1. Build the project or download the artifacts from a successful
-   [GitHub Actions run](https://github.com/Obs1dianByte/VerdantVice/actions).
+1. Download the plugin from [Releases](https://github.com/Obs1dianByte/VerdantVice/releases)
+   or build the project. Releases marked **Pre-release** are candidates, not stable builds.
 2. Stop the server and put `VerdantVice-1.0.0.jar` in `plugins/`.
    Do not install the `-thin.jar` file.
 3. Start the server and wait for `Plugin enabled successfully.`.
