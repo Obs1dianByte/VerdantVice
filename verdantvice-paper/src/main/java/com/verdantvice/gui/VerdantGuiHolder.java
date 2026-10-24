@@ -13,6 +13,7 @@ public final class VerdantGuiHolder implements InventoryHolder {
     private final UUID sessionId;
     private final MenuType type;
     private final int page;
+    private final GuiContext context;
     private final Map<Integer, String> actions;
     private Inventory inventory;
 
@@ -20,14 +21,14 @@ public final class VerdantGuiHolder implements InventoryHolder {
             UUID ownerUuid,
             MenuType type,
             int page,
+            GuiContext context,
             Map<Integer, String> actions
     ) {
         this.ownerUuid = Objects.requireNonNull(ownerUuid, "ownerUuid");
         this.sessionId = UUID.randomUUID();
         this.type = Objects.requireNonNull(type, "type");
         this.page = Math.max(0, page);
-        // GuiManager populates slot actions while constructing the inventory.
-        // The map never leaves this holder and is accessed only on the main thread.
+        this.context = Objects.requireNonNull(context, "context");
         this.actions = Objects.requireNonNull(actions, "actions");
     }
 
@@ -45,6 +46,10 @@ public final class VerdantGuiHolder implements InventoryHolder {
 
     public int page() {
         return page;
+    }
+
+    public GuiContext context() {
+        return context;
     }
 
     public String action(int slot) {

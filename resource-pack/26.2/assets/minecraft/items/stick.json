@@ -8,7 +8,14 @@
         "threshold": 12015,
         "model": {
           "type": "minecraft:model",
-          "model": "verdantvice:item/seed"
+          "model": "verdantvice:item/filter"
+        }
+      },
+      {
+        "threshold": 12016,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/stick"
         }
       },
       {
@@ -16,6 +23,13 @@
         "model": {
           "type": "minecraft:model",
           "model": "verdantvice:item/joint"
+        }
+      },
+      {
+        "threshold": 12018,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/stick"
         }
       }
     ],

@@ -10,11 +10,18 @@
           "type": "minecraft:model",
           "model": "verdantvice:item/grinder"
         }
+      },
+      {
+        "threshold": 12012,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:block/stonecutter"
+        }
       }
     ],
     "fallback": {
       "type": "minecraft:model",
-      "model": "minecraft:item/stonecutter"
+      "model": "minecraft:block/stonecutter"
     }
   }
 }

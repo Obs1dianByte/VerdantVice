@@ -1,5 +1,7 @@
 package com.verdantvice.worker;
 
+import com.verdantvice.text.ExternalNameSanitizer;
+
 import com.verdantvice.common.BlockPosition;
 
 import java.time.Instant;
@@ -24,10 +26,7 @@ public record WorkerRecord(
     public WorkerRecord {
         Objects.requireNonNull(worker, "worker");
         Objects.requireNonNull(entityUuid, "entityUuid");
-        name = Objects.requireNonNull(name, "name").strip();
-        if (name.isEmpty() || name.length() > 64) {
-            throw new IllegalArgumentException("Worker name must contain 1 to 64 characters");
-        }
+        name = ExternalNameSanitizer.name(name, "Worker", 64);
         Objects.requireNonNull(schedule, "schedule");
         home = Objects.requireNonNull(home, "home");
         lastKnownPosition = Objects.requireNonNull(lastKnownPosition, "lastKnownPosition");

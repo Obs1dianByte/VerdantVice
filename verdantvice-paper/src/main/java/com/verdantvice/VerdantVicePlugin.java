@@ -13,6 +13,7 @@ import com.verdantvice.effects.PlayerEffectManager;
 import com.verdantvice.farm.FarmManager;
 import com.verdantvice.farm.FarmProtectionListener;
 import com.verdantvice.genetics.GeneticsManager;
+import com.verdantvice.genetics.GeneticsDeliveryListener;
 import com.verdantvice.gui.DefaultGuiDataProvider;
 import com.verdantvice.gui.GuiListener;
 import com.verdantvice.gui.GuiManager;
@@ -39,6 +40,8 @@ import com.verdantvice.security.ItemSigner;
 import com.verdantvice.security.SecureItemService;
 import com.verdantvice.security.SigningSecretManager;
 import com.verdantvice.storage.BatchRepository;
+import com.verdantvice.storage.BatchService;
+import com.verdantvice.processing.BatchAuthenticityService;
 import com.verdantvice.storage.CustomStrainRepository;
 import com.verdantvice.storage.FarmRepository;
 import com.verdantvice.storage.PlantRepository;
@@ -48,6 +51,8 @@ import com.verdantvice.strain.StrainConfigLoader;
 import com.verdantvice.strain.StrainRegistry;
 import com.verdantvice.trade.EconomyService;
 import com.verdantvice.worker.WorkerManager;
+import com.verdantvice.worker.WorkerNameMigrationService;
+import com.verdantvice.worker.WorkerRepository;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.event.HandlerList;
@@ -135,6 +140,8 @@ public final class VerdantVicePlugin extends JavaPlugin {
             FarmRepository farmRepository = new FarmRepository(database);
             PlantRepository plantRepository = new PlantRepository(database);
             BatchRepository batchRepository = new BatchRepository(database);
+            BatchService batchService = new BatchService(
+                    batchRepository, new BatchAuthenticityService(), signingSecret);
             PlayerProfileRepository profileRepository =
                     new PlayerProfileRepository(database);
             ItemRegistryRepository itemRegistry = new ItemRegistryRepository(database);
@@ -142,8 +149,10 @@ public final class VerdantVicePlugin extends JavaPlugin {
 
             translations.setPreferenceWriter(playerData::setLocale);
             CustomItemFactory itemFactory =
-                    new CustomItemFactory(configs, translations, itemSigner);
+                    new CustomItemFactory(configs, translations, itemSigner, strains);
             secureItems = new SecureItemService(
+                    this,
+                    database,
                     itemFactory,
                     itemSigner,
                     itemRegistry,
@@ -177,7 +186,7 @@ public final class VerdantVicePlugin extends JavaPlugin {
                     translations,
                     farms,
                     plantRepository,
-                    batchRepository,
+                    batchService,
                     secureItems,
                     itemSigner,
                     strains,
@@ -198,7 +207,7 @@ public final class VerdantVicePlugin extends JavaPlugin {
                     translations,
                     notifications,
                     database,
-                    batchRepository,
+                    batchService,
                     secureItems,
                     itemSigner,
                     signingSecret
@@ -218,7 +227,7 @@ public final class VerdantVicePlugin extends JavaPlugin {
                     itemSigner,
                     strains
             );
-            books = new TutorialBookService(translations, itemSigner);
+            books = new TutorialBookService(translations, itemSigner, configs);
             herbalists = new HerbalistMarketManager(
                     this,
                     configs,
@@ -229,8 +238,10 @@ public final class VerdantVicePlugin extends JavaPlugin {
                     secureItems,
                     itemSigner,
                     itemRegistry,
+                    batchService,
                     books
             );
+            WorkerRepository workerRepository = new WorkerRepository(database);
             workers = WorkerManager.create(
                     this,
                     configs,
@@ -240,8 +251,10 @@ public final class VerdantVicePlugin extends JavaPlugin {
                     herbalists.conversionService(),
                     secureItems,
                     notifications,
-                    database
+                    database,
+                    workerRepository
             );
+            workers.attachProcessing(processing);
             gui = new GuiManager(
                     this,
                     configs,
@@ -254,8 +267,12 @@ public final class VerdantVicePlugin extends JavaPlugin {
                             strains,
                             genetics,
                             workers,
-                            herbalists.marketService()
-                    )
+                            herbalists.marketService(),
+                            processing,
+                            notifications
+                    ),
+                    farms,
+                    notifications
             );
             diagnostics = new DiagnosticService(
                     this,
@@ -268,13 +285,18 @@ public final class VerdantVicePlugin extends JavaPlugin {
 
             CompletableFuture<Void> farmsLoaded = farms.load();
             CompletableFuture<Void> geneticsLoaded = genetics.load();
-            CompletableFuture<Void> plantsLoaded = plants.load();
+            CompletableFuture<Void> plantsLoaded = farmsLoaded.thenCompose(ignored -> plants.load());
             CompletableFuture<Void> processingLoaded = processing.load();
             CompletableFuture<Void> herbalistsLoaded = geneticsLoaded.thenComposeAsync(
             ignored -> herbalists.start(),
             task -> Bukkit.getScheduler().runTask(this, task)
             );
-            CompletableFuture<Void> workersLoaded = workers.load();
+            String workerFallback = translations.plain(
+                    translations.serverLocale(), "herbalist.title");
+            CompletableFuture<Void> workersLoaded = new WorkerNameMigrationService(
+                    database, workerRepository, getLogger())
+                    .migrate(workerFallback)
+                    .thenCompose(ignored -> workers.load());
             CompletableFuture.allOf(
                             farmsLoaded,
                             geneticsLoaded,
@@ -308,6 +330,16 @@ public final class VerdantVicePlugin extends JavaPlugin {
         processing.start();
         workers.start();
         Bukkit.getOnlinePlayers().forEach(profiles::load);
+        Bukkit.getOnlinePlayers().forEach(player -> genetics.deliverPending(player)
+                .exceptionally(failure -> {
+                    getLogger().log(Level.WARNING, "Could not restore genetic seed delivery", failure);
+                    return 0;
+                }));
+        Bukkit.getOnlinePlayers().forEach(player -> processing.deliverPending(player)
+                .exceptionally(failure -> {
+                    getLogger().log(Level.WARNING, "Could not restore processing item delivery", failure);
+                    return 0;
+                }));
         registerOptionalIntegrations();
         long savePeriod = Math.max(
                 100L,
@@ -346,6 +378,7 @@ public final class VerdantVicePlugin extends JavaPlugin {
     private void registerListeners() {
         var manager = getServer().getPluginManager();
         manager.registerEvents(new GuiListener(gui), this);
+        manager.registerEvents(new GeneticsDeliveryListener(this, genetics), this);
         manager.registerEvents(new FarmProtectionListener(
                 this,
                 farms,
@@ -377,12 +410,15 @@ public final class VerdantVicePlugin extends JavaPlugin {
         ), this);
         manager.registerEvents(new PlayerEffectListener(effects, itemSigner), this);
         manager.registerEvents(new ItemSecurityListener(itemSigner, translations), this);
+        manager.registerEvents(new com.verdantvice.security.PendingDeliveryListener(secureItems), this);
         manager.registerEvents(new ResourcePackListener(resourcePack), this);
         manager.registerEvents(workers.listener(), this);
     }
 
     private void registerOptionalIntegrations() {
-        if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+        if (com.verdantvice.integration.IntegrationPolicy.enabled(
+                configs.get("integrations.yml"), "placeholderapi",
+                getServer().getPluginManager().isPluginEnabled("PlaceholderAPI"))) {
             try {
                 new VerdantPlaceholderExpansion(
                         this,
@@ -574,6 +610,9 @@ public final class VerdantVicePlugin extends JavaPlugin {
         }
         ConfigManager.ReloadReport report = configs.reloadSafe();
         translations.load();
+        if (herbalists != null && Bukkit.isPrimaryThread()) {
+            herbalists.refreshNames();
+        }
         StrainRegistry reloaded = new StrainConfigLoader(configs).load();
         reloaded.all().forEach(strain -> {
             if (strains.find(strain.id()).isPresent()) {

@@ -12,7 +12,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.logging.Level;
 
@@ -137,6 +136,16 @@ public final class RegionProtectionService {
             Object localPlayer = wgPluginClass.getMethod("wrapPlayer", Player.class)
                     .invoke(wgPlugin, player);
 
+            Object adaptedWorld = bukkitAdapter.getMethod("adapt", org.bukkit.World.class)
+                    .invoke(null, location.getWorld());
+            Object sessions = platform.getClass().getMethod("getSessionManager").invoke(platform);
+            Class<?> localPlayerType = Class.forName("com.sk89q.worldguard.LocalPlayer", true, loader);
+            Class<?> worldType = Class.forName("com.sk89q.worldedit.world.World", true, loader);
+            if ((boolean) sessions.getClass().getMethod("hasBypass", localPlayerType, worldType)
+                    .invoke(sessions, localPlayer, adaptedWorld)) {
+                return Decision.ALLOW;
+            }
+
             Class<?> flags = Class.forName(
                     "com.sk89q.worldguard.protection.flags.Flags",
                     true,
@@ -208,23 +217,12 @@ public final class RegionProtectionService {
                 integration = integrationClass.getMethod("of", Plugin.class)
                         .invoke(null, dependency);
             }
-            Method getLand = findMethod(integration.getClass(), "getLandByChunk", 3);
-            Object land = getLand.invoke(
-                    integration,
-                    location.getWorld(),
-                    location.getBlockX() >> 4,
-                    location.getBlockZ() >> 4
-            );
-            if (land == null) {
-                return Decision.ALLOW;
-            }
-            Method trusted = findCompatibleMethod(land.getClass(), "isTrusted", player);
-            if (trusted == null) {
-                return Decision.UNKNOWN;
-            }
-            return (boolean) trusted.invoke(land, player)
-                    ? Decision.ALLOW
-                    : Decision.DENY;
+            Class<?> flags = Class.forName("me.angeschossen.lands.api.flags.type.Flags", true,
+                    dependency.getClass().getClassLoader());
+            Field buildFlag = flags.getField("BLOCK_PLACE");
+            boolean allowed = LandsBuildPermission.test(integration, buildFlag.get(null),
+                    buildFlag.getType(), player, location, location.getBlock().getType());
+            return allowed ? Decision.ALLOW : Decision.DENY;
         }
     }
 
@@ -238,14 +236,4 @@ public final class RegionProtectionService {
         throw new NoSuchMethodException(type.getName() + "#" + name + "/" + parameters);
     }
 
-    private static Method findCompatibleMethod(Class<?> type, String name, Object argument) {
-        for (Method method : type.getMethods()) {
-            if (method.getName().equals(name)
-                    && method.getParameterCount() == 1
-                    && method.getParameterTypes()[0].isAssignableFrom(argument.getClass())) {
-                return method;
-            }
-        }
-        return null;
-    }
 }

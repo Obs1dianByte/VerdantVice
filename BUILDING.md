@@ -1,34 +1,34 @@
-# Budowanie VerdantVice
+# Building VerdantVice
 
-## Wymagania deweloperskie
+## Development requirements
 
-- JDK 21 lub nowsze do kompilacji;
-- JDK 25 do uruchomienia zadania `runServer`, ponieważ używa Paper 26.2;
-- dostęp do Internetu przy pierwszym uruchomieniu wrappera, aby pobrać
-  dystrybucję Gradle, zależności i testowy serwer Paper;
-- Git nie jest wymagany przez sam proces budowania.
+- JDK 21 or newer for compilation;
+- JDK 25 to run the `runServer` task, which uses Paper 26.2;
+- Internet access when first running the wrapper to download the Gradle
+  distribution, dependencies and test Paper server;
+- Git is not required by the build process itself.
 
-Repozytorium zawiera wrapper Gradle 9.6.1. Nie instaluj globalnego Gradle i
-nie zastępuj wrappera przypadkową wersją.
+The repository includes the Gradle 9.6.1 wrapper. Do not install a global
+Gradle distribution or replace the wrapper with an arbitrary version.
 
-Sprawdzenie aktywnej Javy:
+Check the active Java installation:
 
 ```powershell
 java -version
 .\gradlew.bat --version
 ```
 
-Na Linux/macOS:
+On Linux/macOS:
 
 ```bash
 java -version
 ./gradlew --version
 ```
 
-Jeśli na hoście jest kilka JDK, ustaw `JAVA_HOME` na właściwą instalację
-przed wywołaniem wrappera.
+If the host has several JDKs, set `JAVA_HOME` to the appropriate installation
+before invoking the wrapper.
 
-## Czysty build
+## Clean build
 
 Windows:
 
@@ -42,10 +42,10 @@ Linux/macOS:
 ./gradlew clean build
 ```
 
-Zadanie główne buduje oba moduły, uruchamia testy JUnit 5, generuje zwykłe
-JAR-y modułów i składa produkcyjny, zacieniony JAR Paper.
+The main task builds both modules, runs JUnit 5 tests, generates ordinary
+module JARs and assembles the production shaded Paper JAR.
 
-Najważniejsze wyniki:
+Main outputs:
 
 ```text
 verdantvice-paper/build/libs/VerdantVice-1.0.0.jar
@@ -53,83 +53,83 @@ verdantvice-paper/build/libs/VerdantVice-1.0.0-thin.jar
 verdantvice-core/build/libs/verdantvice-core-1.0.0.jar
 ```
 
-Do serwera instaluj wyłącznie `VerdantVice-1.0.0.jar`. Zawiera on
-VerdantVice Core oraz relokowane HikariCP i Gson, a także sterowniki SQLite,
-MySQL i MariaDB. Plik `-thin.jar` nie zawiera kompletnego środowiska
-wykonawczego.
+Install only `VerdantVice-1.0.0.jar` on the server. It includes VerdantVice
+Core, relocated HikariCP and Gson, and the SQLite, MySQL and MariaDB drivers.
+The `-thin.jar` file does not contain the complete runtime.
 
-Kompilacja ustawia `--release 21`, kodowanie UTF-8, `-parameters` oraz
-ostrzeżenia `-Xlint:all`. API Paper i PlaceholderAPI są zależnościami
-`compileOnly`; nie są pakowane do JAR-a.
+Compilation uses `--release 21`, UTF-8 encoding, `-parameters` and
+`-Xlint:all` warnings. The Paper API and PlaceholderAPI are `compileOnly`
+dependencies; they are not packaged in the JAR.
 
-## Przydatne zadania
+## Useful tasks
 
 ```powershell
-# wszystkie testy
+# All tests
 .\gradlew.bat test
 
-# tylko domena bez Bukkit
+# Domain module only, without Bukkit
 .\gradlew.bat :verdantvice-core:test
 
-# tylko adapter Paper
+# Paper adapter only
 .\gradlew.bat :verdantvice-paper:test
 
-# sam produkcyjny JAR
+# Production JAR only
 .\gradlew.bat :verdantvice-paper:shadowJar
 
-# lista zadań
+# Task list
 .\gradlew.bat tasks
 ```
 
-## Testowy serwer Paper 26.2
+## Paper 26.2 test server
 
-Zadanie `runServer` z pluginu `xyz.jpenilla.run-paper` używa katalogu `run/`
-i wersji Minecraft/Paper `26.2`:
+The `runServer` task from `xyz.jpenilla.run-paper` uses the `run/` directory
+and Minecraft/Paper version `26.2`:
 
 ```powershell
 .\gradlew.bat :verdantvice-paper:runServer
 ```
 
-Uruchamiaj je pod JDK 25. Pierwsze wykonanie pobiera serwer i może potrwać
-dłużej. Katalog `run/` jest ignorowany przez repozytorium.
+Run it with JDK 25. The first execution downloads the server and may take
+longer. The `run/` directory is ignored by the repository.
 
-Przed uruchomieniem serwera zapoznaj się z EULA Minecraft. Jeśli serwer
-zatrzyma się z prośbą o akceptację, otwórz wygenerowany `run/eula.txt`, ustaw
-po świadomej akceptacji:
+Read the Minecraft EULA before starting the server. If the server stops to
+request acceptance, open the generated `run/eula.txt` and, only after
+consciously accepting the terms, set:
 
 ```text
 eula=true
 ```
 
-i uruchom zadanie ponownie. Nie umieszczaj pliku EULA ani świata testowego w
-artefakcie pluginu.
+Then run the task again. Do not include the EULA file or test world in the
+plugin artifact.
 
-Po starcie sprawdź w konsoli:
+After startup, check the console for:
 
-- zastosowanie migracji bazy bez błędu;
-- komunikat VerdantVice `Plugin enabled successfully.`;
-- brak wyjątków podczas rejestracji listenerów i API;
-- `/vv admin database` oraz `/vv admin performance`.
+- successful database migrations;
+- the VerdantVice message `Plugin enabled successfully.`;
+- no exceptions while registering listeners and the API;
+- the output of `/vv admin database` and `/vv admin performance`.
 
-Pełny scenariusz testu gry i macierz 1.21.4/26.2:
+For the full gameplay test scenario and the 1.21.4/26.2 matrix, see
 [TESTING.md](TESTING.md).
 
-## Test Paper 1.21.4
+## Paper 1.21.4 test
 
-Konfiguracja Gradle nie ma drugiego zadania serwerowego. Zbuduj JAR i umieść
-go ręcznie w czystym serwerze Paper/Purpur 1.21.4 działającym pod Javą 21:
+The Gradle configuration does not provide a second server task. Build the
+JAR and place it manually in a clean Paper/Purpur 1.21.4 server running
+Java 21:
 
 ```powershell
 .\gradlew.bat clean build
 Copy-Item .\verdantvice-paper\build\libs\VerdantVice-1.0.0.jar `
-  C:\serwery\paper-1.21.4\plugins\
+  C:\servers\paper-1.21.4\plugins\
 ```
 
-Użyj osobnej bazy i osobnego świata niż dla testu 26.2.
+Use a separate database and world from the 26.2 test.
 
-## Powtarzalność i cache
+## Reproducibility and caches
 
-Projekt ma włączone równoległe zadania, build cache i configuration cache.
-Przed wydaniem zawsze wykonaj `clean build`, a nie tylko `shadowJar`.
-Nie kopiuj do dystrybucji katalogów `.gradle/`, `build/`, `run/`,
-testowych baz ani logów.
+Parallel tasks, the build cache and the configuration cache are enabled.
+Always run `clean build` before a release, rather than only `shadowJar`.
+Do not include `.gradle/`, `build/`, `run/`, test databases or logs in the
+distribution.

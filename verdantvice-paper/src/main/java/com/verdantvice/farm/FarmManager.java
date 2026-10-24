@@ -4,6 +4,7 @@ import com.verdantvice.common.BlockPosition;
 import com.verdantvice.config.ConfigManager;
 import com.verdantvice.integration.RegionProtectionService;
 import com.verdantvice.storage.FarmRepository;
+import com.verdantvice.storage.StoragePersistenceException;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -23,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class FarmManager {
@@ -39,6 +41,7 @@ public final class FarmManager {
     private final Map<BlockPosition, FarmStorage> storages = new ConcurrentHashMap<>();
     private final Map<ChunkKey, Set<UUID>> chunkIndex = new ConcurrentHashMap<>();
     private final Map<UUID, Selection> selections = new ConcurrentHashMap<>();
+    private final Set<BlockPosition> pendingStorageChanges = ConcurrentHashMap.newKeySet();
 
     public FarmManager(
             JavaPlugin plugin,
@@ -149,10 +152,11 @@ public final class FarmManager {
     public CompletableFuture<Boolean> delete(Player player, UUID farmId) {
         requireMainThread();
         Farm farm = farms.get(farmId);
-        if (farm == null || !farm.ownerUuid().equals(player.getUniqueId())) {
+        if (farm == null || (!farm.ownerUuid().equals(player.getUniqueId())
+                && !player.hasPermission("verdantvice.admin"))) {
             return CompletableFuture.completedFuture(false);
         }
-        return repository.delete(farmId, player.getUniqueId())
+        return repository.delete(farmId, farm.ownerUuid())
                 .thenCompose(deleted -> runOnMain(() -> {
                     if (!deleted) {
                         return;
@@ -216,41 +220,199 @@ public final class FarmManager {
                 }).thenApply(ignored -> removed));
     }
 
-    public CompletableFuture<FarmStorage> linkStorage(
+    public CompletableFuture<StorageLinkResult> linkStorage(
             Player player,
             UUID farmId,
             Block block,
             StorageType type
     ) {
         requireMainThread();
-        Farm farm = requirePermission(player, farmId, FarmPermission.MANAGE_STORAGE);
-        if (!(block.getState() instanceof org.bukkit.block.Container)) {
-            return CompletableFuture.failedFuture(
-                    new IllegalArgumentException("not_a_container")
-            );
+        Optional<StorageTarget> resolved = StorageTargetResolver.resolve(block);
+        if (resolved.isEmpty()) {
+            return CompletableFuture.completedFuture(
+                    StorageLinkResult.failure(StorageLinkResult.Status.NOT_A_CONTAINER));
         }
-        BlockPosition position = position(block.getLocation());
-        if (storages.containsKey(position)) {
-            return CompletableFuture.failedFuture(
-                    new IllegalArgumentException("storage_already_linked")
-            );
+        StorageTarget target = resolved.get();
+        Farm farm = farms.get(farmId);
+        StorageLinkResult access = storageAccess(player, farm);
+        if (access != null) {
+            return CompletableFuture.completedFuture(access);
+        }
+        FarmStorage assigned = storages.get(target.anchor());
+        if (assigned != null) {
+            return CompletableFuture.completedFuture(StorageLinkResult.failure(
+                    assigned.farmId().equals(farmId)
+                            ? StorageLinkResult.Status.ALREADY_LINKED
+                            : StorageLinkResult.Status.OTHER_FARM));
+        }
+        StorageLinkResult targetAccess = storageTargetAccess(player, farm, target);
+        if (targetAccess != null) {
+            return CompletableFuture.completedFuture(targetAccess);
+        }
+        if (!pendingStorageChanges.add(target.anchor())) {
+            return CompletableFuture.completedFuture(
+                    StorageLinkResult.failure(StorageLinkResult.Status.ALREADY_LINKED));
         }
         FarmStorage storage = new FarmStorage(
                 UUID.randomUUID(),
                 farmId,
-                position,
+                target.anchor(),
                 type,
                 true,
                 Instant.now()
         );
-        Farm updated = farmService.linkStorage(farm, storage, storages.values());
-        return repository.linkStorage(storage)
-                .thenCompose(ignored -> repository.save(updated))
-                .thenCompose(ignored -> runOnMain(() -> {
-                    storages.put(position, storage);
-                    farms.put(farmId, updated);
-                }))
-                .thenApply(ignored -> storage);
+        StorageLinkResult decision = farmService.linkStorage(
+                farm, storage, storages.values(), target.positions());
+        if (decision.status() != StorageLinkResult.Status.LINKED) {
+            pendingStorageChanges.remove(target.anchor());
+            return CompletableFuture.completedFuture(decision);
+        }
+        Farm updated = decision.farm().orElseThrow();
+        return repository.linkStorage(storage, updated)
+                .handle((ignored, failure) -> {
+                    if (failure == null) {
+                        return runOnMain(() -> {
+                            storages.put(target.anchor(), storage);
+                            farms.put(farmId, updated);
+                        }).thenApply(value -> decision);
+                    }
+                    Throwable cause = unwrap(failure);
+                    if (cause instanceof StoragePersistenceException conflict) {
+                        return CompletableFuture.completedFuture(
+                                StorageLinkResult.failure(conflict.status()));
+                    }
+                    return CompletableFuture.<StorageLinkResult>failedFuture(cause);
+                })
+                .thenCompose(result -> result)
+                .whenComplete((ignored, failure) ->
+                        pendingStorageChanges.remove(target.anchor()));
+    }
+
+    public CompletableFuture<StorageLinkResult> unlinkStorage(
+            Player player,
+            UUID farmId,
+            Block block
+    ) {
+        requireMainThread();
+        Optional<StorageTarget> resolved = StorageTargetResolver.resolve(block);
+        if (resolved.isEmpty()) {
+            return CompletableFuture.completedFuture(
+                    StorageLinkResult.failure(StorageLinkResult.Status.NOT_A_CONTAINER));
+        }
+        StorageTarget target = resolved.get();
+        Farm farm = farms.get(farmId);
+        StorageLinkResult access = storageAccess(player, farm);
+        if (access != null) {
+            return CompletableFuture.completedFuture(access);
+        }
+        FarmStorage storage = storages.get(target.anchor());
+        if (storage == null) {
+            StorageLinkResult targetAccess = storageTargetAccess(player, farm, target);
+            return CompletableFuture.completedFuture(targetAccess == null
+                    ? StorageLinkResult.failure(StorageLinkResult.Status.NOT_LINKED)
+                    : targetAccess);
+        }
+        if (!storage.farmId().equals(farmId)) {
+            return CompletableFuture.completedFuture(
+                    StorageLinkResult.failure(StorageLinkResult.Status.OTHER_FARM));
+        }
+        StorageLinkResult targetAccess = storageTargetAccess(player, farm, target);
+        if (targetAccess != null) {
+            return CompletableFuture.completedFuture(targetAccess);
+        }
+        return unlinkStorage(player, farmId, storage.storageId());
+    }
+
+    public CompletableFuture<StorageLinkResult> unlinkStorage(
+            Player player,
+            UUID farmId,
+            UUID storageId
+    ) {
+        requireMainThread();
+        Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(farmId, "farmId");
+        Objects.requireNonNull(storageId, "storageId");
+        Farm farm = farms.get(farmId);
+        StorageLinkResult access = storageAccess(player, farm);
+        if (access != null) {
+            return CompletableFuture.completedFuture(access);
+        }
+        FarmStorage storage = storages.values().stream()
+                .filter(candidate -> candidate.storageId().equals(storageId))
+                .findFirst()
+                .orElse(null);
+        if (storage == null) {
+            return CompletableFuture.completedFuture(
+                    StorageLinkResult.failure(StorageLinkResult.Status.NOT_LINKED));
+        }
+        if (!storage.farmId().equals(farmId)) {
+            return CompletableFuture.completedFuture(
+                    StorageLinkResult.failure(StorageLinkResult.Status.OTHER_FARM));
+        }
+        BlockPosition anchor = storage.position();
+        if (!pendingStorageChanges.add(anchor)) {
+            return CompletableFuture.completedFuture(
+                    StorageLinkResult.failure(StorageLinkResult.Status.ALREADY_LINKED));
+        }
+        StorageLinkResult decision = farmService.unlinkStorage(farm, storage);
+        if (decision.status() != StorageLinkResult.Status.UNLINKED) {
+            pendingStorageChanges.remove(anchor);
+            return CompletableFuture.completedFuture(decision);
+        }
+        Farm updated = decision.farm().orElseThrow();
+        return repository.unlinkStorage(storage, updated)
+                .handle((ignored, failure) -> {
+                    if (failure == null) {
+                        return runOnMain(() -> {
+                            storages.remove(anchor, storage);
+                            farms.put(farmId, updated);
+                        }).thenApply(value -> decision);
+                    }
+                    Throwable cause = unwrap(failure);
+                    if (cause instanceof StoragePersistenceException conflict) {
+                        return CompletableFuture.completedFuture(
+                                StorageLinkResult.failure(conflict.status()));
+                    }
+                    return CompletableFuture.<StorageLinkResult>failedFuture(cause);
+                })
+                .thenCompose(result -> result)
+                .whenComplete((ignored, failure) -> pendingStorageChanges.remove(anchor));
+    }
+
+    private StorageLinkResult storageAccess(Player player, Farm farm) {
+        if (farm == null) {
+            return StorageLinkResult.failure(StorageLinkResult.Status.NO_OWNED_FARM);
+        }
+        if (!player.hasPermission("verdantvice.admin")
+                && !farm.can(player.getUniqueId(), FarmPermission.MANAGE_STORAGE)) {
+            return StorageLinkResult.failure(StorageLinkResult.Status.NO_PERMISSION);
+        }
+        return null;
+    }
+
+    private StorageLinkResult storageTargetAccess(
+            Player player,
+            Farm farm,
+            StorageTarget target
+    ) {
+        if (target.positions().stream().anyMatch(position -> !farm.region().contains(position))) {
+            return StorageLinkResult.failure(StorageLinkResult.Status.OUTSIDE_FARM);
+        }
+        boolean denied = target.positions().stream()
+                .map(this::location)
+                .anyMatch(location -> location == null
+                        || !regionProtection.canBuild(player, location));
+        return denied
+                ? StorageLinkResult.failure(StorageLinkResult.Status.PROTECTED_REGION)
+                : null;
+    }
+
+    private Throwable unwrap(Throwable failure) {
+        Throwable current = failure;
+        while (current instanceof CompletionException && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
     }
 
     public void setSelection(Player player, int point, Location location) {
@@ -305,7 +467,14 @@ public final class FarmManager {
     }
 
     public Optional<FarmStorage> storageAt(Location location) {
-        return Optional.ofNullable(storages.get(position(location)));
+        Objects.requireNonNull(location, "location");
+        return storageAt(location.getBlock());
+    }
+
+    public Optional<FarmStorage> storageAt(Block block) {
+        return StorageTargetResolver.resolve(block)
+                .map(StorageTarget::anchor)
+                .map(storages::get);
     }
 
     public boolean isManagerTable(Location location) {

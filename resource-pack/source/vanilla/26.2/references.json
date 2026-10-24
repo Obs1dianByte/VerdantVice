@@ -1,0 +1,237 @@
+{
+  "minecraft_version": "26.2",
+  "source": "Official installed Minecraft client item definitions and asset index",
+  "official_client_sha1": "2dc72797acbc1b63fc16a11c4ac393605f453754",
+  "asset_index": "32",
+  "sound_manifest_sha1": "9ac006d5537ed0fa4a7bcd1eccfc505155847686",
+  "item_definitions_sha256": {
+    "amethyst_shard": "b725af7ee034376a5833977418199601c4260f6bdcf8aecc99742fff7f534f91",
+    "barrel": "e2ba0f18657c81e8bf3fecf29469596e850fb140741a908f178bd5533d9fac98",
+    "blaze_rod": "b5423caea6a17ea499ca6fcbdbae549389824e79710df8f1058b074767ebcafc",
+    "bone_meal": "177216e1ab79c4107437d8e1dddc303fd56a5c2ea3510857dcec6c141d16691c",
+    "brush": "61177c88c2d4def7dfde2abbe72eb6e1570f2826b4650eb0e24e0d0f0d3adc57",
+    "bundle": "008e09173fd95dbbc9b8eda04238dbc85331b03ac90af1d794cf07824f45b545",
+    "chiseled_bookshelf": "e3fca040c817bee762adb9e87eaed0c84b6214475a64ef16aaad4a59786898b6",
+    "clock": "65202973fa0db72eb44d581ef21feb13d9dbcca1685156c96c8c461c6bd07bfe",
+    "decorated_pot": "89103498374cba6a7c1cd83ae9ae8f13d781ce04fc3ed59d158aa1fc3a18da3d",
+    "dried_kelp": "0eeeb8b08add4b1b954c49b64baebf3e73b78aef4e17fd71e6ffb055cb1e7373",
+    "glass_bottle": "6813d4129e7115a7bd75d39a6ff4cf8ad7096f3d04e178e574da77851580b319",
+    "honey_bottle": "7a1efa1d72937f54e735019654d291fa8bf0b9d087eb4cec2b25327431428bb7",
+    "iron_nugget": "086f46d84411d053c0e87e761f36ddd1d065ce105f548fedd0c58748066e555f",
+    "kelp": "19eac72f8ac200ae8bbc9cb4da9cd73982f64b662d7e0ee487631acc5bc448c4",
+    "lectern": "66bf74fe21593107e79cf09bf483cd2cd2ef20946fcae08dd519cf6c78876c9d",
+    "paper": "608e0bf10bb94b67ac7c1056a47c1606953732a4009664b16e4b4b46f9b1952f",
+    "stick": "d928af6b44ca607f41a2c883a10abf95a09033e5e58adc83e96f526680b56eb5",
+    "stonecutter": "b9bbb6667cf5bb1e0600ee94146e19e343b2cc5deedf9e5e735cbd022f520471",
+    "wheat_seeds": "feda63d1bd8837998a7908b26d11f76b8ddca8d71ed2f84a2dbc3f7f272d700a",
+    "written_book": "82f60cb7956ad7c901c04d59c4aaca4ff74abe018060f60b7136cb537ec7d1af"
+  },
+  "model_files_sha256": {
+    "minecraft:block/barrel": "e4c191bd192361dcdb36c8f98af43a1ee1435f676409a6d0465641e4a5830cc5",
+    "minecraft:block/chiseled_bookshelf_inventory": "2ab343d6f4cd275bf6c921cbf86717af8d77e7763db1d5b423777f7dc34be453",
+    "minecraft:block/lectern": "f1a2c419f2191fdb3ce9727df32f33aa6e6c31c40d0ae7388efdaa0eed037248",
+    "minecraft:block/stonecutter": "79ceaec2618ed0c78d5b7e06e4e680355a47b37b5fa6874085465ae304b8aa78",
+    "minecraft:item/amethyst_shard": "8d3a1aeef2b1de1c9be2d69cff89c1c848ad87e4a57e2e91ab8625f1327960d7",
+    "minecraft:item/blaze_rod": "65f0fcb833e878d2003cd0438dcf9ad2f421be86cd55a4bbf6a9170a1439d9fa",
+    "minecraft:item/bone_meal": "882c55612637dc9e1ff1ea14b9032cfa071da7e1eab714ded97e13e0443b9c16",
+    "minecraft:item/brush": "2730f32fec113789f1b536c07c601bb8c0717ba39fbaf66763ad0e2bbaa8459f",
+    "minecraft:item/brush_brushing_0": "cf20f7f88ddca9e939fec2fe3cd6e62f19bd7266785cc783bbd02b586d73adcc",
+    "minecraft:item/brush_brushing_1": "2730f32fec113789f1b536c07c601bb8c0717ba39fbaf66763ad0e2bbaa8459f",
+    "minecraft:item/brush_brushing_2": "f6eeb6df2f71a23d91e3dd44ca414ebc037066b7315890c123adce88195c1e2f",
+    "minecraft:item/bundle": "2e416f9c1b826ea035f124f945c3211033b3ac57b6d6ce6602369cc86001c2c6",
+    "minecraft:item/bundle_open_back": "cfca0b78f88683a80f5d03daee1309f7b126483946417e31ae7622851e576f30",
+    "minecraft:item/bundle_open_front": "af9bb9d5fd3e2d1acc643023f513dd49dec1f6c7dfa74b047fdef35121990e6b",
+    "minecraft:item/clock_00": "2cb5ef073e180cea4c44b6a1bc579bf98d732e510ae3bc0823f544b1fbfd526c",
+    "minecraft:item/clock_01": "18a470861fc51877ef9b6b502946298c4bfaf9fb090c9798b7990bd39bb6c1f5",
+    "minecraft:item/clock_02": "1771ae82b1d167db93ee58936a8db1842d9a41b79e060192160408cedc9c87a8",
+    "minecraft:item/clock_03": "8de4e7413d40a39ae558796ddf02bc411b0ce7196bdd5ad258f07172a49371d7",
+    "minecraft:item/clock_04": "46729b6da87ce2e0cf169722e80a243b7050a9f6d2c053243aa19cb9854251fe",
+    "minecraft:item/clock_05": "be006e7be30bbfec5b96692adfd53595f1c55f68fc940fe4cccd238e1495af44",
+    "minecraft:item/clock_06": "883b2108050eca918e7220c53301886663017d0c3c1a68667922b4a27490d01a",
+    "minecraft:item/clock_07": "165776d50c07826275bb2768565b7b63e39b9255e40f8a4f36b85b6cc3e1f222",
+    "minecraft:item/clock_08": "f43a7dedb505c5462a8d6c804631357ad43e3e5ceb49b7330947093e79c3838c",
+    "minecraft:item/clock_09": "d08f7e424cdfe233042ffb33f8007abfac5954d0443801caf2e52f858e9d976d",
+    "minecraft:item/clock_10": "d3f43659fe99166517ffe4ffdae433c3f59b63145b54027dc668c70b7445da2c",
+    "minecraft:item/clock_11": "187402720549af26a0f82d12be50fe0e3e06cb3b805a9d902f252f0c0e50220d",
+    "minecraft:item/clock_12": "4c1dceb9d7cd234758e219135f72f5308a636b9c2d148275c6f192f2e1662dca",
+    "minecraft:item/clock_13": "6a209ad32e84b569a786efbdf71c24ff323189f342bab8b982ecd553dfb577a1",
+    "minecraft:item/clock_14": "e6aba7ad7ec3d489a1b68d2aa43a7630c359faee765b8fd4a53fa8e3e78aeb2b",
+    "minecraft:item/clock_15": "d5bb43e423f822b3630eae7f705d5108745f49c04930e443c8d8312a00d6831f",
+    "minecraft:item/clock_16": "2b450f1bc80d7469addfc5bd320dc94fc7ec9507683279d93c1b92bcf776e153",
+    "minecraft:item/clock_17": "2f4143ea009bd196c12611cf7639b89bc981b913265353a6fccf8d9889084ba8",
+    "minecraft:item/clock_18": "29c017f7078b0cc52e4bca63ed0e657e4a69cae00c86f00607a8b51c5e8d97ff",
+    "minecraft:item/clock_19": "c85f02b485c72a872183e6d9b1306cb4d833451cbc1aec1a055fae81037833e1",
+    "minecraft:item/clock_20": "8b9e66e6cd74bafea01f5fc82aa45bef3d79b39dd3cc9213dfa0733e55eec923",
+    "minecraft:item/clock_21": "a75772c015e14d2db44e26f74847fa523e9a2174be49a5d96153bb6e36d38aec",
+    "minecraft:item/clock_22": "981665e8b20015c2502bd1106ce6faff110f2a6e7b40d18dbbfced616e387b1c",
+    "minecraft:item/clock_23": "1260855c2b0ce9c9b6483b6b3adcdce27a3b5103c434a82b3e39be9e38900769",
+    "minecraft:item/clock_24": "ffad60163daaf8f8659f5697b6b2908890eaa4f10fd5a7d98862a4035fbbac2f",
+    "minecraft:item/clock_25": "ebbecdf37c86b1bc43ad9dcef8278d34b3d3c1238c4d1d59eb94c3b3fbe3eaa9",
+    "minecraft:item/clock_26": "5b2fca122c44f51a70c81adb7444a3e1fcf450d047d2f241abcb71a3e595e00f",
+    "minecraft:item/clock_27": "92d91581616a392111ebf59f8c71b709bc8141366eed5e9aa605589517f05659",
+    "minecraft:item/clock_28": "35615fa98a25f0107ef8e78503c8c7b5d06996ff7e224f85e2e4dd880930bb10",
+    "minecraft:item/clock_29": "9ccf3ad292907f1f14299c55ee86db70cc169e5c852535325147911ab020a2e5",
+    "minecraft:item/clock_30": "3191c44687cad398cba2c0408cdd8993c4edb75c17cf17095b6dafa7f8e306c5",
+    "minecraft:item/clock_31": "9b27d527c6b395fe02b8c9f01303e5e1b651bbbb649e13f0a95c9d74799e2489",
+    "minecraft:item/clock_32": "c8192ffec38b409d98f29775e67c0ec5d2687599a5309ba0d144f7c6e09988bb",
+    "minecraft:item/clock_33": "1c85351d1e992d4358b84a50b4f326d5bad3a4358dc714bd809781ea48746229",
+    "minecraft:item/clock_34": "829d4fe4975ee254220a53b9d73ea2bb425db6b73912bb66409ddbda76684238",
+    "minecraft:item/clock_35": "23bfbee586abd406c91d44e740cc6aa7203f45a4269010459b1192f46f2fdfbd",
+    "minecraft:item/clock_36": "56a24373a51e1eabb6662467d3f4d315fc57cf03dbcec325a54ff97682d483d0",
+    "minecraft:item/clock_37": "06114b5aab3c84dbe802277338e5ec55482a5602b64237c0f06d13755fd2a030",
+    "minecraft:item/clock_38": "942d96e303367135c2bb53891f43e346a53b6d0b14e1108b6206fc8f57ea898c",
+    "minecraft:item/clock_39": "14118eb7e18d2f092a2ccbf5ebfc01c341309733003a4dece107acc5539cb0c0",
+    "minecraft:item/clock_40": "388c4135fdb389e56cea8939cc3bb52228faf85de939d66e364ba2b032fb3d43",
+    "minecraft:item/clock_41": "e2387d61edebdfe024ac06ce3c4290ff62dce593492ad2b1f9fc52274fd0a84e",
+    "minecraft:item/clock_42": "3b6dcf4f55a8ae7a5967aaa714fb4ca5c095e6df90e71cf59a8fe171cf0dec95",
+    "minecraft:item/clock_43": "7bf2828ace45de70461e1f47daa0c0a0a362526eea2e501911fd75c8bd2aafb0",
+    "minecraft:item/clock_44": "eb20e3ee5c03c906bb86e3c96df49b68f201f7219fd101f7f4b9850197ee45d7",
+    "minecraft:item/clock_45": "30aefa7c44b7a11df1bfbfc0ea9e40ecef0a4658b1b1af31a67adfec24d07c76",
+    "minecraft:item/clock_46": "db183e276cfdd4f4bb618e74af99049653438dc4d07aab127d899d215896fd6b",
+    "minecraft:item/clock_47": "89e2c62c29f9eb0de7896fe78898a7fb40a2dcd48e87d3deb418287a4039e6f2",
+    "minecraft:item/clock_48": "4966ba16d441b148d7134fdaaed56acf788e95bad5ff0c0eef7bd78beeda7e0f",
+    "minecraft:item/clock_49": "4dd1299612934b8dc32dffd537c1181528d7fe1fe6c79f24c50be2e2b553cc86",
+    "minecraft:item/clock_50": "47d960e53732760ce2d180ad95031f7d91b5799f9a4cd215d78de55c23eba7c0",
+    "minecraft:item/clock_51": "b6cbd7e9e7bb318f5f82738f80dcc40f7b946dcdae84f339e472862ab9029459",
+    "minecraft:item/clock_52": "a2ff1cb277127a7737895919b11d013fbda3c108a03ae364bfaec6729655ba75",
+    "minecraft:item/clock_53": "22bdd6494c19b361700f7001d6d192c9e2405d839ec8faa876e84abcbe51d4bc",
+    "minecraft:item/clock_54": "d65e7407dc10f5ff0c443ad4cafb1842cea382e4e8c9388b2e8966c3eea3a68e",
+    "minecraft:item/clock_55": "3fedd26e60bcf051e4de04475a2788c1b059016b96e8f8832b31dc359a57ab9a",
+    "minecraft:item/clock_56": "3a47d1951245fcd13e2372a571053ad8442887597358d1a05cc8ea1faabcc2a4",
+    "minecraft:item/clock_57": "613906742d4169ba3291a62583ead8c049e7c02fef32dd7d0260b9b3fcaca2ad",
+    "minecraft:item/clock_58": "22017d3a384dc6d3af82447cb40ddb9438c52013517504aed130e6c6455f6a8e",
+    "minecraft:item/clock_59": "fe59e35668d22629531e97042218047f9beeebfd540306565fa6a1d9e8a443d9",
+    "minecraft:item/clock_60": "64a611fa77bef28facbb850600fda2aa943dab0ad9fbca3ebab2c5fffecd52d2",
+    "minecraft:item/clock_61": "9a499511a7a7366af2dc3c3555d534fae4fda9d13307613e1f322ea02c45ac00",
+    "minecraft:item/clock_62": "3825d3164287b3f613b6dc180d82d1df148020ab0a26b629c18d07eb29ebe2e0",
+    "minecraft:item/clock_63": "96032775d81997adfa6be5ffb8e54d1a1dc9d0843957f6dac59cd236f2507250",
+    "minecraft:item/decorated_pot": "beba8e6fd35a0c7ecda307e3d5d79594512c3e9bae87232984e7d165b701d011",
+    "minecraft:item/dried_kelp": "669cec4c0d214c46ca9eb07503b6a8678cc36724268082603832f125d96c44d4",
+    "minecraft:item/glass_bottle": "65901faa40f184edd9ff91d0fc660fb14be35712ea72a354fd9f678f00fac2ce",
+    "minecraft:item/honey_bottle": "1b00a5f63d274d539c9c9273aa8abc9e7cbbb588d3d471e5c54101c07d52f6ac",
+    "minecraft:item/iron_nugget": "164dc6705e28287361c6d6ebcf11ab4c604c8360b50e3c47d6c6804594b7ffa0",
+    "minecraft:item/kelp": "69f11bf8015bcb43395e906a07118c453a8b7f96f754dacd1aa10d4535fd5d58",
+    "minecraft:item/paper": "5591be69afa58ecd89f5626e7739ff161de04e8d6d6bf1f3e7d4a71344a56e66",
+    "minecraft:item/stick": "04048187b6c11f1152546cbb7b29db9877a73b6d2f152e1941d575c9460be8cc",
+    "minecraft:item/wheat_seeds": "61e8a9488e3c14791fee5fde7d3644d25863fb76b684ae6318812ca0f5edcb82",
+    "minecraft:item/written_book": "a8149d735d236092df505a60d2251aa7fd8c21023e3e66ac7c9586a331a0d723"
+  },
+  "sound_events": {
+    "block.azalea_leaves.place": {
+      "sounds": [
+        {
+          "name": "block/azalea_leaves/break1",
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break1",
+          "pitch": 0.92,
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break2",
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break2",
+          "pitch": 0.92,
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break3",
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break3",
+          "pitch": 0.92,
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break4",
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break4",
+          "pitch": 0.92,
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break5",
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break5",
+          "pitch": 0.92,
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break6",
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break6",
+          "pitch": 0.92,
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break7",
+          "volume": 0.85
+        },
+        {
+          "name": "block/azalea_leaves/break7",
+          "pitch": 0.92,
+          "volume": 0.85
+        }
+      ],
+      "subtitle": "subtitles.block.generic.place"
+    },
+    "item.brush.brushing.generic": {
+      "sounds": [
+        {
+          "name": "item/brush/brushing_generic1",
+          "pitch": 0.8,
+          "volume": 0.4
+        },
+        {
+          "name": "item/brush/brushing_generic2",
+          "pitch": 0.8,
+          "volume": 0.4
+        },
+        {
+          "name": "item/brush/brushing_generic3",
+          "pitch": 0.8,
+          "volume": 0.4
+        },
+        {
+          "name": "item/brush/brushing_generic4",
+          "pitch": 0.8,
+          "volume": 0.4
+        }
+      ],
+      "subtitle": "subtitles.item.brush.brushing.generic"
+    },
+    "block.amethyst_block.chime": {
+      "sounds": [
+        {
+          "name": "block/amethyst/shimmer",
+          "volume": 0.2
+        }
+      ],
+      "subtitle": "subtitles.block.amethyst_block.chime"
+    }
+  },
+  "sound_files_sha1": {
+    "minecraft/sounds/block/amethyst/shimmer.ogg": "a62c6054fe1ac8137b22f29959b562c0d821b6ed",
+    "minecraft/sounds/block/azalea_leaves/break1.ogg": "09fe6bf6b8c0c5912edec2d22874ef49820baab0",
+    "minecraft/sounds/block/azalea_leaves/break2.ogg": "5051ca4b109d465c1524b5625a364dc9c98c6046",
+    "minecraft/sounds/block/azalea_leaves/break3.ogg": "adcae20609d1f828a1225af5f604f72f5c4fb117",
+    "minecraft/sounds/block/azalea_leaves/break4.ogg": "9920cfbe289ddee5447e97304a01c3d11377983b",
+    "minecraft/sounds/block/azalea_leaves/break5.ogg": "1a7631a3590477fcb454846191891a0edddfe563",
+    "minecraft/sounds/block/azalea_leaves/break6.ogg": "f19e9d11b4703257187fe78150e08d0dbaf7ce13",
+    "minecraft/sounds/block/azalea_leaves/break7.ogg": "fc30546a46675b2a1d6893636f15dd7343f2ac11",
+    "minecraft/sounds/item/brush/brushing_generic1.ogg": "3035f8b719dfe54ce16d4bc2b9b93f9a968e7f2e",
+    "minecraft/sounds/item/brush/brushing_generic2.ogg": "b6c6761b701793ad12c4cad6034861c3e0b9f898",
+    "minecraft/sounds/item/brush/brushing_generic3.ogg": "28809bee5a55462486cf62b32f0c6f9871836d00",
+    "minecraft/sounds/item/brush/brushing_generic4.ogg": "376b4bf50eb6a2723c52196eeb8dc719584a06c8"
+  }
+}

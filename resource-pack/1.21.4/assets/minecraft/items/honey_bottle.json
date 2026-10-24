@@ -8,7 +8,14 @@
         "threshold": 12006,
         "model": {
           "type": "minecraft:model",
-          "model": "verdantvice:item/curing_container"
+          "model": "verdantvice:item/treatment_spray"
+        }
+      },
+      {
+        "threshold": 12007,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/honey_bottle"
         }
       }
     ],

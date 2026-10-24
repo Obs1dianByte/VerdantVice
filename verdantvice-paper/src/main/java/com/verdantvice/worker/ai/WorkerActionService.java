@@ -10,9 +10,20 @@ import com.verdantvice.plant.Plant;
 import com.verdantvice.plant.PlantManager;
 import com.verdantvice.plant.care.CareAction;
 import com.verdantvice.processing.ProductBatch;
+import com.verdantvice.processing.BatchState;
+import com.verdantvice.processing.ProcessingManager;
+import com.verdantvice.processing.ProcessingStationType;
+import com.verdantvice.processing.ProcessingTransferService;
+import com.verdantvice.farm.Farm;
+import com.verdantvice.worker.TaskTarget;
 import com.verdantvice.security.CustomItemType;
 import com.verdantvice.security.ItemSigner;
 import com.verdantvice.security.SecureItemService;
+import com.verdantvice.security.SignedItemData;
+import com.verdantvice.database.item.ItemRegistryRecord;
+import com.verdantvice.database.item.ItemRegistryState;
+import com.verdantvice.storage.PlantRepository;
+import com.verdantvice.worker.WorkerHarvestDeliveryRepository;
 import com.verdantvice.worker.WorkerRecord;
 import com.verdantvice.worker.WorkerTask;
 import com.verdantvice.worker.WorkerTaskRepository;
@@ -71,19 +82,34 @@ public final class WorkerActionService {
     private final FarmManager farms;
     private final PlantManager plants;
     private final SecureItemService secureItems;
+    private final WorkerHarvestDeliveryRepository deliveries;
+    private final StorageSaveBarrier storageSaves;
+    private final Map<UUID, Integer> harvestReservations = new java.util.HashMap<>();
+    private final Set<UUID> harvestDeliveriesInFlight = new java.util.HashSet<>();
+    private boolean recoveringDeliveries;
+    private ProcessingManager processing;
+    private final Set<String> processingDeliveriesInFlight = new java.util.HashSet<>();
 
     public WorkerActionService(
             JavaPlugin plugin,
             ConfigManager configs,
             FarmManager farms,
             PlantManager plants,
-            SecureItemService secureItems
+            SecureItemService secureItems,
+            WorkerHarvestDeliveryRepository deliveries
     ) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.configs = Objects.requireNonNull(configs, "configs");
         this.farms = Objects.requireNonNull(farms, "farms");
         this.plants = Objects.requireNonNull(plants, "plants");
         this.secureItems = Objects.requireNonNull(secureItems, "secureItems");
+        this.deliveries = Objects.requireNonNull(deliveries, "deliveries");
+        this.storageSaves = new StorageSaveBarrier(plugin);
+    }
+
+    public void attachProcessing(ProcessingManager processing) {
+        requireMainThread();
+        this.processing = Objects.requireNonNull(processing, "processing");
     }
 
     public Optional<Location> targetLocation(WorkerTask task) {
@@ -141,6 +167,11 @@ public final class WorkerActionService {
             WorkerTask task
     ) {
         requireMainThread();
+        if (task.type() == WorkerTaskType.UNLOAD_DRYING_RACK) {
+            return processing != null && processing.batch(task.target().targetId())
+                    .map(batch -> batch.state() == BatchState.DRIED
+                            || batch.state() == BatchState.SPOILED).orElse(false);
+        }
         Optional<FarmStorage> storage = requiredStorage(farmId, task.type());
         if (storage.isEmpty()) {
             return !new WorkerStateMachine().needsStorage(task.type());
@@ -190,8 +221,10 @@ public final class WorkerActionService {
                     care(worker, task, CareAction.REPAIR_AND_RELIEVE_STRESS);
             case CLEAN -> care(worker, task, CareAction.CLEAN);
             case HARVEST -> harvest(worker, task);
-            case MOVE_BATCH, LOAD_DRYING_RACK, UNLOAD_DRYING_RACK, PACKAGE ->
-                    CompletableFuture.completedFuture(moveBatch(worker, task));
+            case MOVE_BATCH -> CompletableFuture.completedFuture(moveBatch(worker, task));
+            case LOAD_DRYING_RACK -> loadDrying(worker, task);
+            case UNLOAD_DRYING_RACK -> unloadDrying(worker, task);
+            case PACKAGE -> packageBatch(worker, task);
             case PLANT -> plant(worker, task);
         };
     }
@@ -336,47 +369,245 @@ public final class WorkerActionService {
             WorkerTask task
     ) {
         Optional<Plant> target = plantTarget(worker, task);
-        if (target.isEmpty()) {
+        if (target.isEmpty() || !harvestable(target.get())) {
             return CompletableFuture.completedFuture(
-                    ActionResult.failure("target-unavailable")
-            );
+                    ActionResult.failure("target-unavailable"));
         }
-        if (!harvestable(target.get())) {
-            return CompletableFuture.completedFuture(
-                    ActionResult.failure("target-unavailable")
-            );
-        }
-        Optional<FarmStorage> destination = farms.storages(
-                        worker.worker().farmId()
-                ).stream()
-                .filter(FarmStorage::enabled)
-                .filter(storage -> storage.type() == StorageType.FRESH_HARVEST_STORAGE)
-                .filter(storage -> container(storage.position())
-                        .map(value -> value.getInventory().firstEmpty() >= 0)
-                        .orElse(false))
-                .sorted(Comparator.comparing(storage -> storage.storageId().toString()))
-                .findFirst();
+        Optional<FarmStorage> destination = reserveHarvestStorage(
+                worker.worker().farmId());
         if (destination.isEmpty()) {
             return CompletableFuture.completedFuture(
-                    ActionResult.failure("missing-resource")
-            );
+                    ActionResult.failure("harvest-storage-full"));
         }
-        return plants.harvestByWorker(
+        FarmStorage storage = destination.get();
+        CompletableFuture<ActionResult> delivery = plants.harvestByWorker(
                         target.get().uniqueId(),
-                        worker.worker().workerUuid()
-                )
-                .thenCompose(batch -> secureItems.issue(
-                                plugin.getServer().getConsoleSender(),
-                                CustomItemType.FRESH_BATCH,
-                                worker.worker().ownerUuid(),
-                                batch.batchId(),
-                                target.get().strainId(),
-                                batch.qualityScore()
-                        )
-                        .thenCompose(item -> onMain(() ->
-                                deliverBatch(destination.get(), item, batch))))
+                        worker.worker().workerUuid(),
+                        worker.worker().farmId(),
+                        storage.storageId(),
+                        deliveries)
+                .thenCompose(harvested -> onMainComposed(() -> deliverHarvest(storage, harvested)));
+        return delivery.whenComplete((ignored, failure) -> onMainNow(() ->
+                        releaseHarvestStorage(storage.storageId())))
                 .exceptionally(failure ->
                         ActionResult.failure("target-unavailable"));
+    }
+
+    private Optional<FarmStorage> reserveHarvestStorage(UUID farmId) {
+        requireMainThread();
+        for (FarmStorage storage : farms.storages(farmId).stream()
+                .filter(FarmStorage::enabled)
+                .filter(value -> value.type() == StorageType.FRESH_HARVEST_STORAGE)
+                .sorted(Comparator.comparing(value -> value.storageId().toString()))
+                .toList()) {
+            Optional<Container> holder = container(storage.position());
+            if (holder.isEmpty()) {
+                continue;
+            }
+            int free = freeSlots(holder.get().getInventory());
+            int reserved = harvestReservations.getOrDefault(storage.storageId(), 0);
+            if (free <= reserved) {
+                continue;
+            }
+            harvestReservations.put(storage.storageId(), reserved + 1);
+            return Optional.of(storage);
+        }
+        return Optional.empty();
+    }
+
+    private void releaseHarvestStorage(UUID storageId) {
+        int current = harvestReservations.getOrDefault(storageId, 0);
+        if (current <= 1) {
+            harvestReservations.remove(storageId);
+        } else {
+            harvestReservations.put(storageId, current - 1);
+        }
+    }
+
+    private int freeSlots(Inventory inventory) {
+        int free = 0;
+        for (ItemStack item : inventory.getStorageContents()) {
+            if (item == null || item.getType().isAir()) {
+                free++;
+            }
+        }
+        return free;
+    }
+
+    private CompletableFuture<Optional<ItemStack>> issueDeliveryItem(
+            PlantRepository.HarvestedBatch harvested
+    ) {
+        ProductBatch batch = harvested.batch();
+        WorkerHarvestDeliveryRepository.HarvestDelivery delivery =
+                harvested.delivery();
+        return secureItems.registryRecord(delivery.itemInstanceId()).thenCompose(existing -> onMainComposed(() -> {
+            if (existing.isPresent()) {
+                ItemRegistryRecord record = existing.orElseThrow();
+                if (record.state() == ItemRegistryState.CONSUMED || record.state() == ItemRegistryState.RESERVED) {
+                    // A downstream durable operation already owns/used this identity.
+                    // Reissuing it would create a ghost copy in the harvest storage.
+                    return deliveries.markDelivered(delivery.deliveryId(), java.time.Instant.now())
+                            .thenCompose(ignored -> onMainComposed(() -> {
+                                secureItems.endDelivery(delivery.itemInstanceId());
+                                return CompletableFuture.completedFuture(Optional.<ItemStack>empty());
+                            }));
+                }
+                if (record.state() != ItemRegistryState.ACTIVE
+                        || !Objects.equals(record.batchId(), batch.batchId())
+                        || !Objects.equals(record.ownerUuid(), batch.ownerUuid())
+                        || !record.itemType().equals(CustomItemType.FRESH_BATCH.name())) {
+                    return CompletableFuture.failedFuture(new IllegalStateException(
+                            "Harvest output registry identity is unavailable or inconsistent"));
+                }
+                // The batch may have evolved since the crash. The persisted item
+                // payload (especially quality and createdAt) must remain exact.
+                SignedItemData data = new SignedItemData(CustomItemType.valueOf(record.itemType()),
+                        record.itemId(), record.instanceId(), record.batchId(), record.ownerUuid(),
+                        Objects.requireNonNull(record.quality(), "Harvest registry quality"),
+                        record.strainId(), record.createdAt(), record.schemaVersion());
+                return CompletableFuture.completedFuture(Optional.of(secureItems.recreate(
+                        plugin.getServer().getConsoleSender(), data, batch)));
+            }
+            return secureItems.issueDeterministic(
+                    plugin.getServer().getConsoleSender(), CustomItemType.FRESH_BATCH,
+                    batch.ownerUuid(), batch, delivery.itemInstanceId(), delivery.itemCreatedAt())
+                    .thenApply(Optional::of);
+        }));
+    }
+
+    private CompletableFuture<ActionResult> deliverHarvest(
+            FarmStorage destination,
+            PlantRepository.HarvestedBatch harvested
+    ) {
+        requireMainThread();
+        UUID deliveryId = harvested.delivery().deliveryId();
+        if (!harvestDeliveriesInFlight.add(deliveryId)) return CompletableFuture.completedFuture(
+                ActionResult.success(16L, Map.of("delivery", "pending")));
+        CompletableFuture<ActionResult> result;
+        try {
+            result = issueDeliveryItem(harvested).thenCompose(item -> item.isPresent()
+                    ? onMainComposed(() -> deliverBatch(destination, item.orElseThrow(), harvested))
+                    : CompletableFuture.completedFuture(ActionResult.success(16L,
+                            Map.of("batch", harvested.batch().batchId().toString(), "delivery", "already-used"))));
+        } catch (Throwable failure) {
+            result = CompletableFuture.failedFuture(failure);
+        }
+        return result.whenComplete((ignored, failure) -> onMainNow(() -> harvestDeliveriesInFlight.remove(deliveryId)));
+    }
+
+    private CompletableFuture<ActionResult> deliverBatch(
+            FarmStorage destination,
+            ItemStack item,
+            PlantRepository.HarvestedBatch harvested
+    ) {
+        WorkerHarvestDeliveryRepository.HarvestDelivery delivery =
+                harvested.delivery();
+        ProductBatch batch = harvested.batch();
+        Optional<Container> holder = container(destination.position());
+        if (holder.isEmpty()) {
+            return CompletableFuture.completedFuture(
+                    ActionResult.success(16L, Map.of(
+                            "batch", batch.batchId().toString(),
+                            "delivery", "pending")));
+        }
+        Inventory inventory = holder.get().getInventory();
+        boolean present = containsInstance(inventory, delivery.itemInstanceId());
+        if (!present && inventory.firstEmpty() < 0) {
+            return CompletableFuture.completedFuture(
+                    ActionResult.success(16L, Map.of(
+                            "batch", batch.batchId().toString(),
+                            "delivery", "pending")));
+        }
+        secureItems.beginDelivery(delivery.itemInstanceId());
+        if (!present) {
+            Map<Integer, ItemStack> overflow = inventory.addItem(item);
+            if (!overflow.isEmpty()) {
+                return CompletableFuture.completedFuture(
+                        ActionResult.success(16L, Map.of(
+                                "batch", batch.batchId().toString(),
+                                "delivery", "pending")));
+            }
+        }
+        return storageSaves.save(destination.position(), () -> container(destination.position())
+                        .map(current -> containsInstance(current.getInventory(), delivery.itemInstanceId()))
+                        .orElse(false))
+                .thenCompose(saved -> deliveries.markDelivered(delivery.deliveryId(), java.time.Instant.now()))
+                .thenCompose(ignored -> onMain(() -> {
+                    secureItems.endDelivery(delivery.itemInstanceId());
+                    return ActionResult.success(16L, Map.of(
+                            "batch", batch.batchId().toString(),
+                            "quality", batch.qualityScore(),
+                            "weight", batch.freshWeight(),
+                            "delivery", "delivered"));
+                }));
+    }
+
+    private boolean containsInstance(Inventory inventory, UUID instanceId) {
+        for (ItemStack existing : inventory.getStorageContents()) {
+            if (existing == null || existing.getType().isAir()) {
+                continue;
+            }
+            ItemSigner.Verification verification = secureItems.verify(existing);
+            if (verification.valid()
+                    && instanceId.equals(
+                    verification.data().uniqueInstanceId())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Retries durable deliveries after a full container or server restart. */
+    public void recoverPendingDeliveries() {
+        requireMainThread();
+        if (recoveringDeliveries) {
+            return;
+        }
+        recoveringDeliveries = true;
+        CompletableFuture<Void> harvested = deliveries.pending().thenCompose(rows -> {
+            CompletableFuture<?>[] futures = rows.stream()
+                    .map(this::recoverDelivery)
+                    .toArray(CompletableFuture[]::new);
+            return CompletableFuture.allOf(futures);
+        });
+        CompletableFuture<Void> processed = processing == null
+                ? CompletableFuture.completedFuture(null)
+                : processing.transfers().pending().thenCompose(rows -> {
+                    CompletableFuture<?>[] futures = rows.stream()
+                            .map(delivery -> onMainComposed(() -> deliverProcessingOutput(delivery)))
+                            .toArray(CompletableFuture[]::new);
+                    return CompletableFuture.allOf(futures);
+                });
+        CompletableFuture.allOf(harvested, processed).whenComplete((ignored, failure) -> onMainNow(() -> {
+            recoveringDeliveries = false;
+            if (failure != null) {
+                plugin.getLogger().log(
+                        java.util.logging.Level.WARNING,
+                        "Worker harvest delivery recovery failed",
+                        failure);
+            }
+        }));
+    }
+
+    private CompletableFuture<Void> recoverDelivery(
+            WorkerHarvestDeliveryRepository.HarvestDelivery delivery
+    ) {
+        Optional<FarmStorage> storage = farms.storages(delivery.farmId()).stream()
+                .filter(value -> value.storageId().equals(delivery.storageId()))
+                .findFirst();
+        if (storage.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return plants.batch(delivery.batchId()).thenCompose(optional -> {
+            if (optional.isEmpty()) {
+                return CompletableFuture.completedFuture(null);
+            }
+            ProductBatch batch = optional.get();
+            PlantRepository.HarvestedBatch harvested =
+                    new PlantRepository.HarvestedBatch(batch, delivery);
+            return onMainComposed(() -> deliverHarvest(storage.get(), harvested))
+                    .thenApply(ignored -> null);
+        });
     }
 
     private CompletableFuture<ActionResult> plant(
@@ -429,32 +660,6 @@ public final class WorkerActionService {
                 });
     }
 
-    private ActionResult deliverBatch(
-            FarmStorage destination,
-            ItemStack item,
-            ProductBatch batch
-    ) {
-        Optional<Container> container = container(destination.position());
-        if (container.isEmpty()) {
-            location(destination.position()).ifPresent(location ->
-                    location.getWorld().dropItemNaturally(location, item));
-            return ActionResult.failure("target-unavailable");
-        }
-        Map<Integer, ItemStack> overflow =
-                container.get().getInventory().addItem(item);
-        overflow.values().forEach(leftover ->
-                location(destination.position()).ifPresent(location ->
-                        location.getWorld().dropItemNaturally(location, leftover)));
-        return ActionResult.success(
-                16L,
-                Map.of(
-                        "batch", batch.batchId().toString(),
-                        "quality", batch.qualityScore(),
-                        "weight", batch.freshWeight()
-                )
-        );
-    }
-
     private ActionResult moveBatch(WorkerRecord worker, WorkerTask task) {
         Optional<InventoryItem> source = findBatch(
                 task.target().targetId(),
@@ -498,6 +703,239 @@ public final class WorkerActionService {
         );
     }
 
+    private CompletableFuture<ActionResult> loadDrying(WorkerRecord worker, WorkerTask task) {
+        if (processing == null || task.target().position().isEmpty()) {
+            return CompletableFuture.completedFuture(ActionResult.failure("target-unavailable"));
+        }
+        Optional<InventoryItem> source = findBatch(task.target().targetId(), worker.worker().farmId());
+        Optional<ProcessingManager.Station> station = location(task.target().position().get())
+                .filter(value -> value.getWorld().isChunkLoaded(value.getBlockX() >> 4, value.getBlockZ() >> 4))
+                .flatMap(value -> processing.station(value.getBlock()));
+        // A restarted task may still see the consumed physical reference in storage.
+        boolean loaded = processing.stationSnapshots(
+                            farms.get(worker.worker().farmId()).orElseThrow(), ProcessingStationType.DRYING_RACK)
+                    .stream().anyMatch(snapshot -> snapshot.batchId().filter(task.target().targetId()::equals)
+                            .isPresent() && snapshot.ownerUuid().filter(worker.worker().ownerUuid()::equals).isPresent());
+        if (loaded) {
+            source.ifPresent(selected -> {
+                ItemSigner.Verification old = secureItems.verify(selected.inventory().getItem(selected.slot()));
+                if (old.valid() && old.data().itemType() == CustomItemType.FRESH_BATCH) {
+                    removeStorageInstance(worker.worker().farmId(), old.data().uniqueInstanceId());
+                }
+            });
+            return CompletableFuture.completedFuture(ActionResult.success(10L,
+                    Map.of("batch", task.target().targetId().toString())));
+        }
+        if (source.isEmpty() || station.isEmpty()) {
+            return CompletableFuture.completedFuture(ActionResult.failure("missing-resource"));
+        }
+        InventoryItem selected = source.get();
+        ItemStack input = selected.inventory().getItem(selected.slot());
+        ItemSigner.Verification verification = secureItems.verify(input);
+        if (!verification.valid() || input.getAmount() != 1) {
+            return CompletableFuture.completedFuture(ActionResult.failure("missing-resource"));
+        }
+        UUID instance = verification.data().uniqueInstanceId();
+        return processing.loadDryingByWorker(input.clone(), worker.worker().ownerUuid(),
+                        station.get().stationId())
+                .thenCompose(batch -> onMain(() -> {
+                    removeStorageInstance(worker.worker().farmId(), instance);
+                    return ActionResult.success(10L, Map.of("batch", batch.batchId().toString()));
+                }));
+    }
+
+    private CompletableFuture<ActionResult> unloadDrying(WorkerRecord worker, WorkerTask task) {
+        if (processing == null || task.target().position().isEmpty()) {
+            return CompletableFuture.completedFuture(ActionResult.failure("target-unavailable"));
+        }
+        String operation = "worker-unload:" + task.taskId();
+        return processing.transfers().find(operation).thenCompose(existing -> onMainComposed(() -> {
+            if (existing.isPresent()) return deliverProcessingOutput(existing.get());
+            Optional<FarmStorage> destination = outputStorage(worker.worker().farmId(), StorageType.DRY_PRODUCT_STORAGE);
+            Optional<ProcessingManager.Station> station = location(task.target().position().get())
+                    .filter(value -> value.getWorld().isChunkLoaded(value.getBlockX() >> 4, value.getBlockZ() >> 4))
+                    .flatMap(value -> processing.station(value.getBlock()));
+            if (destination.isEmpty() || station.isEmpty()) {
+                return CompletableFuture.completedFuture(ActionResult.failure("target-unavailable"));
+            }
+            return processing.unloadDryingByWorker(station.get().stationId(), task.target().targetId(),
+                            worker.worker().ownerUuid(), worker.worker().farmId(), destination.get().storageId(), operation)
+                    .thenCompose(delivery -> onMainComposed(() -> deliverProcessingOutput(delivery)));
+        }));
+    }
+
+    private CompletableFuture<ActionResult> packageBatch(WorkerRecord worker, WorkerTask task) {
+        if (processing == null) return CompletableFuture.completedFuture(ActionResult.failure("target-unavailable"));
+        String operation = "worker-package:" + task.taskId();
+        return processing.transfers().find(operation).thenCompose(existing -> onMainComposed(() -> {
+            if (existing.isPresent()) return deliverProcessingOutput(existing.get());
+            Optional<InventoryItem> source = findBatch(task.target().targetId(), worker.worker().farmId());
+            Optional<FarmStorage> destination = outputStorage(worker.worker().farmId(), StorageType.PACKAGED_PRODUCT_STORAGE);
+            if (source.isEmpty() || destination.isEmpty()) {
+                return CompletableFuture.completedFuture(ActionResult.failure("missing-resource"));
+            }
+            ItemStack item = source.get().inventory().getItem(source.get().slot());
+            ItemSigner.Verification verified = secureItems.verify(item);
+            if (!verified.valid() || item.getAmount() != 1) {
+                return CompletableFuture.completedFuture(ActionResult.failure("missing-resource"));
+            }
+            UUID instance = verified.data().uniqueInstanceId();
+            return secureItems.validateActive(item.clone(), Set.of(CustomItemType.DRY_BATCH, CustomItemType.CURED_BATCH),
+                            worker.worker().ownerUuid())
+                    .thenCompose(input -> processing.transfers().packageBatch(input.identity(),
+                            worker.worker().ownerUuid(), worker.worker().farmId(), destination.get().storageId(),
+                            operation, java.time.Instant.now()))
+                    .thenCompose(delivery -> onMainComposed(() -> {
+                        removeStorageInstance(worker.worker().farmId(), instance);
+                        return deliverProcessingOutput(delivery);
+                    }));
+        }));
+    }
+
+    private CompletableFuture<ActionResult> deliverProcessingOutput(ProcessingTransferService.Delivery delivery) {
+        requireMainThread();
+        if (delivery.delivered()) {
+            secureItems.endDelivery(delivery.data().uniqueInstanceId());
+            return CompletableFuture.completedFuture(
+                    ActionResult.success(10L, Map.of("batch", delivery.data().batchId().toString())));
+        }
+        if (!processingDeliveriesInFlight.add(delivery.operationId())) {
+            return CompletableFuture.completedFuture(ActionResult.failure("target-unavailable"));
+        }
+        CompletableFuture<ActionResult> result;
+        try {
+            Optional<FarmStorage> storage = farms.storages(delivery.farmId()).stream()
+                    .filter(FarmStorage::enabled)
+                    .filter(value -> value.storageId().equals(delivery.storageId())).findFirst();
+            Optional<Container> holder = storage.flatMap(value -> container(value.position()));
+            if (delivery.itemState() == ItemRegistryState.CONSUMED
+                    || delivery.itemState() == ItemRegistryState.RESERVED) {
+                result = processing.transfers().delivered(delivery.operationId(), java.time.Instant.now())
+                        .thenCompose(ignored -> onMain(() -> {
+                            secureItems.endDelivery(delivery.data().uniqueInstanceId());
+                            return ActionResult.success(10L, Map.of());
+                        }));
+            } else if (delivery.itemState() != ItemRegistryState.ACTIVE) {
+                result = CompletableFuture.failedFuture(new IllegalStateException(
+                        "Processing output registry identity is unavailable"));
+            } else if (holder.isEmpty()) {
+                result = CompletableFuture.completedFuture(ActionResult.failure("target-unavailable"));
+            } else {
+                Inventory inventory = holder.get().getInventory();
+                boolean present = containsInstance(inventory, delivery.data().uniqueInstanceId());
+                if (!present && inventory.firstEmpty() < 0) {
+                    result = CompletableFuture.completedFuture(ActionResult.failure("harvest-storage-full"));
+                } else {
+                    ProductBatch batch = processing.batch(delivery.data().batchId()).orElseThrow();
+                    secureItems.beginDelivery(delivery.data().uniqueInstanceId());
+                    if (!present) inventory.setItem(inventory.firstEmpty(), secureItems.recreate(
+                            plugin.getServer().getConsoleSender(), delivery.data(), batch));
+                    BlockPosition position = storage.orElseThrow().position();
+                    result = storageSaves.save(position, () -> container(position)
+                                    .map(current -> containsInstance(current.getInventory(),
+                                            delivery.data().uniqueInstanceId())).orElse(false))
+                            .thenCompose(saved -> processing.transfers().delivered(
+                                    delivery.operationId(), java.time.Instant.now()))
+                            .thenCompose(ignored -> onMain(() -> {
+                                secureItems.endDelivery(delivery.data().uniqueInstanceId());
+                                return ActionResult.success(10L, Map.of("batch", batch.batchId().toString()));
+                            }));
+                }
+            }
+        } catch (Throwable failure) {
+            result = CompletableFuture.failedFuture(failure);
+        }
+        return result.whenComplete((ignored, failure) -> onMainNow(() ->
+                processingDeliveriesInFlight.remove(delivery.operationId())));
+    }
+
+    private Optional<FarmStorage> outputStorage(UUID farmId, StorageType type) {
+        return farms.storages(farmId).stream().filter(FarmStorage::enabled)
+                .filter(storage -> storage.type() == type)
+                .sorted(Comparator.comparing(storage -> storage.storageId().toString()))
+                .filter(storage -> container(storage.position())
+                        .map(holder -> holder.getInventory().firstEmpty() >= 0).orElse(false)).findFirst();
+    }
+
+    private void removeStorageInstance(UUID farmId, UUID instanceId) {
+        for (FarmStorage storage : farms.storages(farmId)) {
+            container(storage.position()).ifPresent(holder -> {
+                Inventory inventory = holder.getInventory();
+                for (int slot = 0; slot < inventory.getSize(); slot++) {
+                    ItemSigner.Verification verified = secureItems.verify(inventory.getItem(slot));
+                    if (verified.valid() && verified.data().uniqueInstanceId().equals(instanceId)) {
+                        inventory.setItem(slot, null);
+                    }
+                }
+            });
+        }
+    }
+
+    /** Bounded scans of linked farm inventories, never the world or unloaded chunks. */
+    public List<ProcessingTask> processingTasks(Farm farm, int maximum) {
+        requireMainThread();
+        if (processing == null || maximum < 1) return List.of();
+        List<ProcessingTask> result = new ArrayList<>();
+        List<ProcessingManager.StationSnapshot> racks = processing.stationSnapshots(farm, ProcessingStationType.DRYING_RACK);
+        if (outputStorage(farm.farmId(), StorageType.DRY_PRODUCT_STORAGE).isPresent()) {
+            for (ProcessingManager.StationSnapshot rack : racks) {
+                if (result.size() >= maximum) break;
+                if (rack.exists() && rack.status() == ProcessingManager.StationStatus.READY
+                        && rack.ownerUuid().filter(farm.ownerUuid()::equals).isPresent()) {
+                    UUID batch = rack.batchId().orElseThrow();
+                    result.add(processingTask(WorkerTaskType.UNLOAD_DRYING_RACK, batch,
+                            position(rack.station()), rack.station().stationId().toString()));
+                }
+            }
+        }
+        List<ProcessingManager.StationSnapshot> free = new ArrayList<>(racks.stream()
+                .filter(ProcessingManager.StationSnapshot::exists)
+                .filter(rack -> rack.status() == ProcessingManager.StationStatus.FREE).toList());
+        Set<UUID> seen = new java.util.HashSet<>();
+        Optional<FarmStorage> packaged = outputStorage(farm.farmId(), StorageType.PACKAGED_PRODUCT_STORAGE);
+        for (FarmStorage storage : farms.storages(farm.farmId()).stream().filter(FarmStorage::enabled)
+                .sorted(Comparator.comparing(value -> value.storageId().toString())).toList()) {
+            Optional<Container> holder = container(storage.position());
+            if (holder.isEmpty()) continue;
+            for (ItemStack item : holder.get().getInventory().getContents()) {
+                if (result.size() >= maximum) return List.copyOf(result);
+                if (item == null || item.getAmount() != 1) continue;
+                ItemSigner.Verification verified = secureItems.verify(item);
+                if (!verified.valid() || verified.data().batchId() == null
+                        || !farm.ownerUuid().equals(verified.data().ownerUuid())
+                        || !seen.add(verified.data().batchId())) continue;
+                UUID batch = verified.data().batchId();
+                if (storage.type() == StorageType.FRESH_HARVEST_STORAGE
+                        && verified.data().itemType() == CustomItemType.FRESH_BATCH && !free.isEmpty()
+                        && processing.batch(batch).map(value -> value.state() == BatchState.FRESH).orElse(false)) {
+                    ProcessingManager.StationSnapshot rack = free.removeFirst();
+                    result.add(processingTask(WorkerTaskType.LOAD_DRYING_RACK, batch,
+                            position(rack.station()), rack.station().stationId().toString()));
+                } else if (storage.type() == StorageType.DRY_PRODUCT_STORAGE && packaged.isPresent()
+                        && (verified.data().itemType() == CustomItemType.DRY_BATCH
+                        || verified.data().itemType() == CustomItemType.CURED_BATCH)
+                        && processing.batch(batch).map(value -> value.state() == BatchState.DRIED
+                        || value.state() == BatchState.CURED).orElse(false)) {
+                    result.add(processingTask(WorkerTaskType.PACKAGE, batch,
+                            packaged.get().position(), "package"));
+                }
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    private ProcessingTask processingTask(WorkerTaskType type, UUID batch, BlockPosition position, String suffix) {
+        return new ProcessingTask(type, new TaskTarget("batch", batch, Optional.of(position)),
+                "auto:" + type.name().toLowerCase(java.util.Locale.ROOT) + ':' + batch + ':' + suffix);
+    }
+
+    private BlockPosition position(ProcessingManager.Station station) {
+        return new BlockPosition(station.position().worldUuid(), station.position().x(),
+                station.position().y(), station.position().z());
+    }
+
+    public record ProcessingTask(WorkerTaskType type, TaskTarget target, String idempotencyKey) { }
+
     private Optional<Container> destination(
             WorkerRecord worker,
             WorkerTask task
@@ -538,10 +976,7 @@ public final class WorkerActionService {
     }
 
     private boolean harvestable(Plant plant) {
-        return plant.growthStage() != GrowthStage.SEED
-                && plant.growthStage() != GrowthStage.SPROUT
-                && plant.growthStage() != GrowthStage.SEEDLING
-                && plant.growthStage() != GrowthStage.SPOILED;
+        return plant.growthStage() == GrowthStage.READY;
     }
 
     private Optional<ReservedResource> takeResource(
@@ -693,6 +1128,35 @@ public final class WorkerActionService {
                         position.y(),
                         position.z()
                 ));
+    }
+
+    private <T> CompletableFuture<T> onMainComposed(
+            java.util.function.Supplier<CompletableFuture<T>> action
+    ) {
+        if (plugin.getServer().isPrimaryThread()) {
+            try {
+                return action.get();
+            } catch (Throwable failure) {
+                return CompletableFuture.failedFuture(failure);
+            }
+        }
+        CompletableFuture<T> future = new CompletableFuture<>();
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            try {
+                action.get().whenComplete((result, failure) -> {
+                    if (failure == null) future.complete(result);
+                    else future.completeExceptionally(failure);
+                });
+            } catch (Throwable failure) {
+                future.completeExceptionally(failure);
+            }
+        });
+        return future;
+    }
+
+    private void onMainNow(Runnable action) {
+        if (plugin.getServer().isPrimaryThread()) action.run();
+        else plugin.getServer().getScheduler().runTask(plugin, action);
     }
 
     private CompletableFuture<ActionResult> onMain(

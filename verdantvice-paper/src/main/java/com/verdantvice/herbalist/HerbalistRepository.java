@@ -3,6 +3,7 @@ package com.verdantvice.herbalist;
 import com.verdantvice.database.DatabaseManager;
 import com.verdantvice.database.SqlNull;
 import com.verdantvice.database.SqlSession;
+import com.verdantvice.storage.PerKeyAsyncQueue;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.sql.JDBCType;
@@ -21,6 +22,7 @@ public final class HerbalistRepository {
             """.replace('\n', ' ').strip();
 
     private final DatabaseManager database;
+    private final PerKeyAsyncQueue<UUID> progressQueue = new PerKeyAsyncQueue<>();
 
     public HerbalistRepository(DatabaseManager database) {
         this.database = Objects.requireNonNull(database, "database");
@@ -58,7 +60,102 @@ public final class HerbalistRepository {
             int startingReputation,
             Instant now
     ) {
+        return createIfBelowLimit(
+                herbalistUuid, entityUuid, worldUuid, x, y, z, radius,
+                maximumNearby, startingReputation, HerbalistTier.NOVICE, null, now
+        );
+    }
+
+    public CompletableFuture<CreationResult> createIfBelowLimit(
+            UUID herbalistUuid,
+            UUID entityUuid,
+            UUID worldUuid,
+            int x,
+            int y,
+            int z,
+            int radius,
+            int maximumNearby,
+            int startingReputation,
+            HerbalistTier initialTier,
+            YamlConfiguration tierConfiguration,
+            Instant now
+    ) {
+        return create(
+                herbalistUuid, entityUuid, worldUuid, x, y, z, radius,
+                maximumNearby, startingReputation, false,
+                initialTier, tierConfiguration, now
+        );
+    }
+
+    public CompletableFuture<CreationResult> createIgnoringVillageLimit(
+            UUID herbalistUuid,
+            UUID entityUuid,
+            UUID worldUuid,
+            int x,
+            int y,
+            int z,
+            int radius,
+            int maximumNearby,
+            int startingReputation,
+            Instant now
+    ) {
+        return createIgnoringVillageLimit(
+                herbalistUuid, entityUuid, worldUuid, x, y, z, radius,
+                maximumNearby, startingReputation, HerbalistTier.NOVICE, null, now
+        );
+    }
+
+    public CompletableFuture<CreationResult> createIgnoringVillageLimit(
+            UUID herbalistUuid,
+            UUID entityUuid,
+            UUID worldUuid,
+            int x,
+            int y,
+            int z,
+            int radius,
+            int maximumNearby,
+            int startingReputation,
+            HerbalistTier initialTier,
+            YamlConfiguration tierConfiguration,
+            Instant now
+    ) {
+        return create(
+                herbalistUuid, entityUuid, worldUuid, x, y, z, radius,
+                maximumNearby, startingReputation, true,
+                initialTier, tierConfiguration, now
+        );
+    }
+
+    private CompletableFuture<CreationResult> create(
+            UUID herbalistUuid,
+            UUID entityUuid,
+            UUID worldUuid,
+            int x,
+            int y,
+            int z,
+            int radius,
+            int maximumNearby,
+            int startingReputation,
+            boolean ignoreVillageLimit,
+            HerbalistTier initialTier,
+            YamlConfiguration tierConfiguration,
+            Instant now
+    ) {
+        Objects.requireNonNull(herbalistUuid, "herbalistUuid");
+        Objects.requireNonNull(entityUuid, "entityUuid");
+        Objects.requireNonNull(worldUuid, "worldUuid");
+        Objects.requireNonNull(initialTier, "initialTier");
+        Objects.requireNonNull(now, "now");
+        long initialExperience = initialTier == HerbalistTier.NOVICE
+                ? 0L
+                : HerbalistTier.threshold(
+                        initialTier,
+                        Objects.requireNonNull(tierConfiguration, "tierConfiguration")
+                );
         return database.transaction(session -> {
+            if (session.exists("SELECT 1 FROM workers WHERE entity_uuid=?", entityUuid)) {
+                return new CreationResult(CreationStatus.WORKER, null);
+            }
             Optional<HerbalistRecord> existing = findByEntity(session, entityUuid);
             if (existing.isPresent()) {
                 return new CreationResult(CreationStatus.ALREADY_EXISTS, existing.get());
@@ -71,7 +168,8 @@ public final class HerbalistRepository {
                     result -> result.getInt("total"),
                     worldUuid, x - radius, x + radius, y - radius, y + radius, z - radius, z + radius
             ).orElse(0);
-            if (nearby >= maximumNearby) {
+            boolean overLimit = nearby >= maximumNearby;
+            if (overLimit && !ignoreVillageLimit) {
                 return new CreationResult(CreationStatus.VILLAGE_LIMIT, null);
             }
             session.update("""
@@ -79,38 +177,51 @@ public final class HerbalistRepository {
                               herbalist_uuid, entity_uuid, owner_uuid, world_uuid,
                               block_x, block_y, block_z, herbalist_level, experience,
                               reputation, offers_json, created_at, updated_at, row_version
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?, ?, 0)
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
                             """,
                     herbalistUuid, entityUuid, SqlNull.of(JDBCType.VARCHAR), worldUuid,
-                    x, y, z, startingReputation, SqlNull.of(JDBCType.LONGVARCHAR), now, now);
+                    x, y, z, initialTier.databaseLevel(), initialExperience,
+                    startingReputation, SqlNull.of(JDBCType.LONGVARCHAR), now, now);
             HerbalistRecord created = findByEntity(session, entityUuid)
                     .orElseThrow(() -> new SQLException("Created herbalist row disappeared"));
-            return new CreationResult(CreationStatus.CREATED, created);
+            return new CreationResult(
+                    overLimit ? CreationStatus.CREATED_FORCED : CreationStatus.CREATED,
+                    created
+            );
         });
     }
 
-    public CompletableFuture<HerbalistRecord> addProgress(
+    public CompletableFuture<HerbalistRecord> setTierAtLeast(
             UUID herbalistUuid,
-            long experienceDelta,
-            int reputationDelta,
-            HerbalistTier resultingTier,
+            HerbalistTier requestedTier,
+            YamlConfiguration tierConfiguration,
             Instant now
     ) {
-        if (experienceDelta < 0L || reputationDelta < 0) {
-            throw new IllegalArgumentException("Progress deltas cannot be negative");
-        }
-        Objects.requireNonNull(resultingTier, "resultingTier");
-        return database.transaction(session -> {
-            session.update("""
-                            UPDATE herbalists
-                            SET experience=experience+?, reputation=reputation+?,
-                                herbalist_level=?, updated_at=?, row_version=row_version+1
-                            WHERE herbalist_uuid=?
-                            """,
-                    experienceDelta, reputationDelta, resultingTier.databaseLevel(), now, herbalistUuid);
-            return find(session, herbalistUuid)
+        Objects.requireNonNull(herbalistUuid, "herbalistUuid");
+        Objects.requireNonNull(requestedTier, "requestedTier");
+        Objects.requireNonNull(tierConfiguration, "tierConfiguration");
+        Objects.requireNonNull(now, "now");
+        return progressQueue.submit(herbalistUuid, () -> database.transaction(session -> {
+            HerbalistRecord current = find(session, herbalistUuid, true)
                     .orElseThrow(() -> new SQLException("Unknown herbalist " + herbalistUuid));
-        });
+            HerbalistProgressPolicy.AdministrativeProgress progress =
+                    HerbalistProgressPolicy.administrativeProgress(
+                            current.tier(), current.experience(), requestedTier, tierConfiguration
+                    );
+            int changed = session.update("""
+                            UPDATE herbalists
+                            SET experience=?, herbalist_level=?, updated_at=?,
+                                row_version=row_version+1
+                            WHERE herbalist_uuid=? AND row_version=?
+                            """,
+                    progress.experience(), progress.tier().databaseLevel(), now,
+                    herbalistUuid, current.version());
+            if (changed != 1) {
+                throw new SQLException("Concurrent herbalist tier update");
+            }
+            return find(session, herbalistUuid)
+                    .orElseThrow(() -> new SQLException("Updated herbalist disappeared"));
+        }));
     }
 
     /**
@@ -130,12 +241,12 @@ public final class HerbalistRepository {
         if (experienceDelta < 0L || reputationDelta < 0) {
             throw new IllegalArgumentException("Progress deltas cannot be negative");
         }
-        return database.transaction(session -> {
+        return progressQueue.submit(herbalistUuid, () -> database.transaction(session -> {
             HerbalistRecord current = find(session, herbalistUuid, true)
                     .orElseThrow(() -> new SQLException("Unknown herbalist " + herbalistUuid));
             long resultingExperience = Math.addExact(current.experience(), experienceDelta);
-            HerbalistTier resultingTier = HerbalistTier.forExperience(
-                    resultingExperience, tierConfiguration);
+            HerbalistTier resultingTier = HerbalistProgressPolicy.tierAfterProgress(
+                    current.tier(), resultingExperience, tierConfiguration);
             int changed = session.update("""
                             UPDATE herbalists
                             SET experience=?, reputation=CASE
@@ -150,7 +261,7 @@ public final class HerbalistRepository {
             }
             return find(session, herbalistUuid)
                     .orElseThrow(() -> new SQLException("Updated herbalist disappeared"));
-        });
+        }));
     }
 
     Optional<HerbalistRecord> find(SqlSession session, UUID herbalistUuid) throws SQLException {
@@ -206,8 +317,10 @@ public final class HerbalistRepository {
 
     public enum CreationStatus {
         CREATED,
+        CREATED_FORCED,
         ALREADY_EXISTS,
-        VILLAGE_LIMIT
+        VILLAGE_LIMIT,
+        WORKER
     }
 
     public record CreationResult(CreationStatus status, HerbalistRecord record) {

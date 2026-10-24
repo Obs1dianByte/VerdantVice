@@ -18,6 +18,7 @@ import com.verdantvice.processing.ProductBatch;
 import com.verdantvice.processing.QualityGrade;
 import com.verdantvice.security.SignedItemData;
 import com.verdantvice.storage.DomainJson;
+import com.verdantvice.storage.BatchService;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -47,10 +48,16 @@ public final class PaperContractRepository {
     private final DatabaseManager database;
     private final ItemRegistryRepository itemRegistry;
     private final ContractService contractService = new ContractService();
+    private final BatchService batchService;
 
-    public PaperContractRepository(DatabaseManager database, ItemRegistryRepository itemRegistry) {
+    public PaperContractRepository(
+            DatabaseManager database,
+            ItemRegistryRepository itemRegistry,
+            BatchService batchService
+    ) {
         this.database = Objects.requireNonNull(database, "database");
         this.itemRegistry = Objects.requireNonNull(itemRegistry, "itemRegistry");
+        this.batchService = Objects.requireNonNull(batchService, "batchService");
     }
 
     public CompletableFuture<StoredContract> create(Contract contract, int maximumActive) {
@@ -154,8 +161,10 @@ public final class PaperContractRepository {
                     || !Objects.equals(registered.batchId(), data.batchId())) {
                 return rejected(stored.contract(), "invalid-signature");
             }
-            ProductBatch batch = loadBatch(session, data.batchId(), true)
-                    .orElseThrow(() -> new IllegalArgumentException("unknown-batch"));
+            ProductBatch batch = batchService.require(
+                    session, data.batchId(), playerUuid,
+                    java.util.EnumSet.allOf(BatchState.class), true).batch();
+            batchService.remember(batch);
             ContractUpdate update = contractService.deliver(stored.contract(), batch, true, now);
             if (!update.accepted()) {
                 saveIfExpired(session, stored, update.contract(), now);
@@ -272,21 +281,6 @@ public final class PaperContractRepository {
         }
     }
 
-    private Optional<ProductBatch> loadBatch(SqlSession session, UUID batchId, boolean forUpdate)
-            throws SQLException {
-        if (batchId == null) return Optional.empty();
-        String suffix = forUpdate && session.databaseType().isNetworkDatabase() ? " FOR UPDATE" : "";
-        return session.queryOne("""
-                        SELECT batch_id, owner_uuid, strain_composition_json, genetic_origin_json,
-                               fresh_weight, dry_weight, quality_score, quality_grade,
-                               contamination, freshness, harvest_timing, created_at,
-                               signature, batch_state
-                        FROM product_batches WHERE batch_id=?
-                        """ + suffix,
-                PaperContractRepository::mapBatch,
-                batchId);
-    }
-
     private static StoredContract map(ResultSet result) throws SQLException {
         try {
             UUID id = UUID.fromString(result.getString("contract_id"));
@@ -314,29 +308,6 @@ public final class PaperContractRepository {
                     result.getString("reward_operation_id"), result.getLong("row_version"));
         } catch (RuntimeException exception) {
             throw new SQLException("Malformed contract row", exception);
-        }
-    }
-
-    private static ProductBatch mapBatch(ResultSet result) throws SQLException {
-        try {
-            double dry = result.getDouble("dry_weight");
-            if (result.wasNull()) dry = 0.0;
-            double quality = result.getDouble("quality_score");
-            return new ProductBatch(
-                    UUID.fromString(result.getString("batch_id")),
-                    UUID.fromString(result.getString("owner_uuid")),
-                    DomainJson.composition(result.getString("strain_composition_json")),
-                    DomainJson.uuidSet(result.getString("genetic_origin_json")),
-                    result.getDouble("fresh_weight"), dry, quality,
-                    QualityGrade.valueOf(result.getString("quality_grade")),
-                    result.getDouble("contamination"), result.getDouble("freshness"),
-                    HarvestTiming.valueOf(result.getString("harvest_timing")),
-                    Optional.empty(), Optional.empty(),
-                    Instant.ofEpochMilli(result.getLong("created_at")),
-                    result.getString("signature"),
-                    BatchState.valueOf(result.getString("batch_state")));
-        } catch (RuntimeException exception) {
-            throw new SQLException("Malformed product batch row", exception);
         }
     }
 

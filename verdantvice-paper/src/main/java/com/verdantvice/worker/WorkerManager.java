@@ -4,6 +4,7 @@ import com.verdantvice.api.event.VerdantWorkerHiredEvent;
 import com.verdantvice.api.event.VerdantWorkerTaskEvent;
 import com.verdantvice.common.BlockPosition;
 import com.verdantvice.config.ConfigManager;
+import com.verdantvice.database.DatabaseIntegrityException;
 import com.verdantvice.database.DatabaseManager;
 import com.verdantvice.farm.Farm;
 import com.verdantvice.farm.FarmManager;
@@ -14,6 +15,7 @@ import com.verdantvice.herbalist.HerbalistConversionService;
 import com.verdantvice.herbalist.HerbalistRecord;
 import com.verdantvice.herbalist.HerbalistTier;
 import com.verdantvice.i18n.TranslationService;
+import com.verdantvice.text.ExternalNameSanitizer;
 import com.verdantvice.notification.NotificationService;
 import com.verdantvice.notification.NotificationType;
 import com.verdantvice.plant.GrowthStage;
@@ -29,6 +31,7 @@ import com.verdantvice.worker.WorkerTaskRepository.TaskLease;
 import com.verdantvice.worker.ai.PaperWorkerPathfinder;
 import com.verdantvice.worker.ai.WorkerActionService;
 import com.verdantvice.worker.ai.WorkerStateMachine;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -91,10 +94,12 @@ public final class WorkerManager {
     private final WorkerRepository workers;
     private final WorkerTaskRepository tasks;
     private final WorkerPaymentRepository payments;
+    private final WorkerRuntimeIntegrityService integrity;
     private final WorkerStateMachine stateMachine = new WorkerStateMachine();
     private final SalaryService salaryService = new SalaryService();
     private final MoraleService moraleService = new MoraleService();
     private final WorkerProgressionService progression = new WorkerProgressionService();
+    private final WorkerSalaryAttemptPolicy salaryAttempts;
     private final PaperWorkerPathfinder pathfinder;
     private final WorkerActionService actions;
     private final WorkerListener listener;
@@ -117,7 +122,9 @@ public final class WorkerManager {
             NotificationService notifications,
             WorkerRepository workers,
             WorkerTaskRepository tasks,
-            WorkerPaymentRepository payments
+            WorkerPaymentRepository payments,
+            WorkerRuntimeIntegrityService integrity,
+            WorkerHarvestDeliveryRepository harvestDeliveries
     ) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.configs = Objects.requireNonNull(configs, "configs");
@@ -130,13 +137,26 @@ public final class WorkerManager {
         this.workers = Objects.requireNonNull(workers, "workers");
         this.tasks = Objects.requireNonNull(tasks, "tasks");
         this.payments = Objects.requireNonNull(payments, "payments");
+        this.integrity = Objects.requireNonNull(integrity, "integrity");
+        long initialSalaryBackoff = Math.max(
+                1L,
+                configs.get("workers.yml").getLong(
+                        "salary.retry-initial-seconds", 5L));
+        long maximumSalaryBackoff = Math.max(
+                initialSalaryBackoff,
+                configs.get("workers.yml").getLong(
+                        "salary.retry-maximum-seconds", 60L));
+        this.salaryAttempts = new WorkerSalaryAttemptPolicy(
+                Duration.ofSeconds(initialSalaryBackoff),
+                Duration.ofSeconds(maximumSalaryBackoff));
         this.pathfinder = new PaperWorkerPathfinder(plugin);
         this.actions = new WorkerActionService(
                 plugin,
                 configs,
                 farms,
                 plants,
-                secureItems
+                secureItems,
+                Objects.requireNonNull(harvestDeliveries, "harvestDeliveries")
         );
         this.listener = new WorkerListener(this);
         this.workerIdKey = new NamespacedKey(plugin, "worker_id");
@@ -153,7 +173,25 @@ public final class WorkerManager {
             NotificationService notifications,
             DatabaseManager database
     ) {
+        return create(
+                plugin, configs, translations, farms, plants, herbalists,
+                secureItems, notifications, database, new WorkerRepository(database));
+    }
+
+    public static WorkerManager create(
+            JavaPlugin plugin,
+            ConfigManager configs,
+            TranslationService translations,
+            FarmManager farms,
+            PlantManager plants,
+            HerbalistConversionService herbalists,
+            SecureItemService secureItems,
+            NotificationService notifications,
+            DatabaseManager database,
+            WorkerRepository workerRepository
+    ) {
         Objects.requireNonNull(database, "database");
+        WorkerTaskRepository taskRepository = new WorkerTaskRepository(database);
         return new WorkerManager(
                 plugin,
                 configs,
@@ -163,20 +201,36 @@ public final class WorkerManager {
                 herbalists,
                 secureItems,
                 notifications,
-                new WorkerRepository(database),
-                new WorkerTaskRepository(database),
-                new WorkerPaymentRepository(database)
+                Objects.requireNonNull(workerRepository, "workerRepository"),
+                taskRepository,
+                new WorkerPaymentRepository(database),
+                new WorkerRuntimeIntegrityService(
+                        database,
+                        taskRepository,
+                        plugin.getLogger()),
+                new WorkerHarvestDeliveryRepository(database)
         );
     }
 
     public CompletableFuture<Void> load() {
         Instant now = Instant.now();
-        return workers.loadAll()
-                .thenCombine(tasks.cleanupExpired(now), (records, ignored) -> records)
-                .thenCompose(records -> onMain(() -> {
+        return integrity.migrate(translations.serverLocale())
+                .thenCompose(report -> workers.loadAll()
+                        .thenCombine(
+                                payments.pending(),
+                                (records, pending) -> new WorkerLoad(
+                                        records.stream()
+                                                .filter(record -> !report.disabledWorkerIds()
+                                                        .contains(record.worker().workerUuid()))
+                                                .toList(),
+                                        pending))
+                        .thenCombine(
+                                tasks.cleanupExpired(now),
+                                (loaded, ignored) -> loaded))
+                .thenCompose(loaded -> onMain(() -> {
                     runtimes.clear();
                     workerByEntity.clear();
-                    for (WorkerRecord record : records) {
+                    for (WorkerRecord record : loaded.records()) {
                         RuntimeWorker runtime = new RuntimeWorker(record);
                         runtimes.put(record.worker().workerUuid(), runtime);
                         workerByEntity.put(record.entityUuid(), record.worker().workerUuid());
@@ -185,6 +239,19 @@ public final class WorkerManager {
                             bind(runtime, villager);
                         }
                     }
+                    loaded.pendingPayments().stream()
+                            .sorted(Comparator
+                                    .comparing(PaymentRecord::createdAt)
+                                    .thenComparing(value -> value.paymentId().toString()))
+                            .forEach(payment -> {
+                                RuntimeWorker runtime = runtimes.get(payment.workerUuid());
+                                if (runtime == null) {
+                                    return;
+                                }
+                                long day = WorkerPaymentRepository.minecraftDay(
+                                        payment.periodKey());
+                                runtime.queueStartupPendingSalary(day);
+                            });
                 }));
     }
 
@@ -197,12 +264,18 @@ public final class WorkerManager {
                 1L,
                 configs.main().getLong("performance.worker-update-ticks", 20L)
         );
+        actions.recoverPendingDeliveries();
         tickTask = Bukkit.getScheduler().runTaskTimer(
                 plugin,
                 () -> tick(),
                 period,
                 period
         );
+    }
+
+    public void attachProcessing(com.verdantvice.processing.ProcessingManager processing) {
+        requireMainThread();
+        actions.attachProcessing(processing);
     }
 
     public void stop() {
@@ -256,6 +329,46 @@ public final class WorkerManager {
                 Objects.requireNonNull(workerUuid, "workerUuid")
         );
         return runtime == null ? Optional.empty() : Optional.of(runtime.record);
+    }
+
+    public List<WorkerSnapshot> snapshots(UUID farmId) {
+        Objects.requireNonNull(farmId, "farmId");
+        return runtimes.values().stream()
+                .filter(runtime -> runtime.record.worker().farmId().equals(farmId))
+                .map(this::snapshot)
+                .sorted(Comparator.comparing(value -> value.record().name()))
+                .toList();
+    }
+
+    private WorkerSnapshot snapshot(RuntimeWorker runtime) {
+        Optional<WorkerTaskType> currentTask = runtime.lease == null
+                ? Optional.empty()
+                : Optional.of(runtime.lease.task().task().type());
+        Optional<Integer> currentPriority = runtime.lease == null
+                ? Optional.empty()
+                : Optional.of(runtime.lease.task().task().priority());
+        Optional<BlockPosition> position = runtime.entity != null
+                && runtime.entity.isValid() && !runtime.entity.isDead()
+                ? Optional.of(new BlockPosition(
+                        runtime.entity.getWorld().getUID(),
+                        runtime.entity.getLocation().getBlockX(),
+                        runtime.entity.getLocation().getBlockY(),
+                        runtime.entity.getLocation().getBlockZ()
+                ))
+                : runtime.record.lastKnownPosition();
+        boolean entityAvailable = runtime.entity != null
+                && runtime.entity.isValid()
+                && !runtime.entity.isDead();
+        return new WorkerSnapshot(
+                runtime.record,
+                currentTask,
+                currentPriority,
+                Optional.ofNullable(runtime.lastTaskType),
+                position,
+                entityAvailable,
+                runtime.busy,
+                runtime.blockedCount
+        );
     }
 
     public boolean isWorker(Villager villager) {
@@ -342,17 +455,16 @@ public final class WorkerManager {
                     }
                     String operation = "hire-worker:"
                             + operationWorkerId + ':' + instanceId;
-                    return secureItems.consume(
+                    return onMainSupply(() -> secureItems.validateActive(
                                     contractSnapshot,
                                     CONTRACT_ONLY,
-                                    player.getUniqueId(),
-                                    operation
-                            )
-                            .thenCompose(consumed -> workers.hireHerbalist(
+                                    player.getUniqueId()
+                            )).thenCompose(future -> future)
+                            .thenCompose(validated -> onMainSupply(() -> workers.hireHerbalist(
                                     context.herbalist(),
                                     player.getUniqueId(),
                                     context.farm().farmId(),
-                                    villager.getName(),
+                                    workerName(player, villager),
                                     specialization(villager.getUniqueId()),
                                     Math.max(
                                             1,
@@ -365,8 +477,12 @@ public final class WorkerManager {
                                     WorkerSchedule.from(configs.get("workers.yml")),
                                     context.home(),
                                     effectiveWorkerLimit(context.farm()),
-                                    Instant.now()
-                            ))
+                                    translations.locale(player),
+                                    Instant.now(),
+                                    validated.identity(),
+                                    secureItems,
+                                    operation
+                            )).thenCompose(future -> future))
                             .thenCompose(record -> onMainSupply(() -> {
                                 if (!villager.isValid() || villager.isDead()) {
                                     throw new IllegalStateException("invalid_entity");
@@ -434,7 +550,7 @@ public final class WorkerManager {
                         actor.sendMessage(translations.component(
                                 actor,
                                 "herbalist.hire.dismissed",
-                                Map.of("worker", runtime.record.name())
+                                Map.of("worker", safeWorkerName(actor, runtime.record.name()))
                         ));
                     }
                     return removed;
@@ -513,7 +629,14 @@ public final class WorkerManager {
                 coworker.coworkerDied = true;
             }
         }
-        tasks.releaseForWorker(workerId, Instant.now());
+        runtime.lease = null;
+        runtime.navigation = null;
+        tasks.releaseForWorker(workerId, Instant.now())
+                .whenComplete((ignored, failure) -> {
+                    if (failure != null) {
+                        logAsync("Could not release dead worker task " + workerId, failure);
+                    }
+                });
         Worker blocked = copy(
                 runtime.record.worker(),
                 WorkerState.BLOCKED,
@@ -541,6 +664,9 @@ public final class WorkerManager {
         if (ticks % 20L == 0L) {
             generatePlantTasks();
         }
+        if (ticks % 100L == 0L) {
+            actions.recoverPendingDeliveries();
+        }
         List<RuntimeWorker> ordered = new ArrayList<>(runtimes.values());
         ordered.sort(Comparator.comparing(runtime ->
                 runtime.record.worker().workerUuid().toString()));
@@ -559,7 +685,7 @@ public final class WorkerManager {
     }
 
     private void tick(RuntimeWorker runtime) {
-        if (runtime.busy) {
+        if (runtime.disabled || runtime.busy) {
             return;
         }
         Villager entity = runtime.entity;
@@ -575,7 +701,20 @@ public final class WorkerManager {
             }
         }
         long day = minecraftDay(entity.getWorld());
-        if (runtime.lease == null && runtime.lastSalaryProcessedDay < day) {
+        Instant now = Instant.now();
+        Long pendingSalaryDay = runtime.pendingSalaryDays.peekFirst();
+        if (runtime.lease == null && pendingSalaryDay != null
+                && !runtime.salaryInFlight
+                && !now.isBefore(runtime.salaryRetryAt)) {
+            processSalary(runtime, pendingSalaryDay);
+            return;
+        }
+        if (runtime.lease == null && salaryAttempts.shouldAttempt(
+                runtime.lastSalaryProcessedDay,
+                day,
+                runtime.salaryInFlight,
+                runtime.salaryRetryAt,
+                now)) {
             processSalary(runtime, day);
             return;
         }
@@ -592,38 +731,23 @@ public final class WorkerManager {
                 runtime.lease != null,
                 atHome
         );
-        if (directive == WorkerStateMachine.ScheduleDirective.RETURN_HOME
-                && runtime.lease == null
-                && worker.state() != WorkerState.RETURNING_HOME
-                && worker.state() != WorkerState.BLOCKED) {
-            transition(runtime, WorkerState.RETURNING_HOME);
-            return;
-        }
-        if (directive == WorkerStateMachine.ScheduleDirective.REST
-                && runtime.lease == null
-                && worker.state() != WorkerState.RESTING) {
-            transition(runtime, WorkerState.RESTING);
-            runtime.receivedBreak = true;
-            return;
-        }
-        if (directive == WorkerStateMachine.ScheduleDirective.SLEEP
-                && runtime.lease == null
-                && atHome
-                && worker.state() != WorkerState.SLEEPING) {
-            transition(runtime, WorkerState.SLEEPING);
+        Optional<WorkerState> scheduled = stateMachine.scheduledTransition(
+                worker.state(),
+                directive,
+                runtime.lease != null,
+                atHome,
+                worker.unpaidDays() < refusalDays());
+        if (scheduled.isPresent()) {
+            if (scheduled.get() == WorkerState.RESTING) {
+                runtime.receivedBreak = true;
+            }
+            transition(runtime, scheduled.get());
             return;
         }
 
         switch (worker.state()) {
-            case IDLE -> {
-                if (directive == WorkerStateMachine.ScheduleDirective.WORK) {
-                    transition(runtime, WorkerState.SEARCHING_TASK);
-                }
-            }
-            case RESTING, SLEEPING -> {
-                if (directive == WorkerStateMachine.ScheduleDirective.WORK) {
-                    transition(runtime, WorkerState.SEARCHING_TASK);
-                }
+            case IDLE, RESTING, SLEEPING -> {
+                // Schedule transitions are handled above.
             }
             case SEARCHING_TASK -> searchTask(runtime);
             case RESERVING_TASK -> startTask(runtime);
@@ -635,10 +759,13 @@ public final class WorkerManager {
                     executeAction(runtime);
             case RETURNING_HOME -> returnHome(runtime);
             case WAITING_FOR_PAYMENT -> {
-                if (directive == WorkerStateMachine.ScheduleDirective.WORK) {
-                    transition(runtime, WorkerState.SEARCHING_TASK);
-                } else if (!atHome) {
-                    transition(runtime, WorkerState.RETURNING_HOME);
+                if (!atHome) {
+                    runtime.record.home()
+                            .flatMap(this::location)
+                            .ifPresent(home -> navigate(
+                                    runtime,
+                                    home,
+                                    WorkerState.WAITING_FOR_PAYMENT));
                 }
             }
             case BLOCKED -> handleBlocked(runtime);
@@ -797,6 +924,7 @@ public final class WorkerManager {
                         return;
                     }
                     WorkerTask task = completed.task().task();
+                    runtime.lastTaskType = task.type();
                     runtime.lease = null;
                     runtime.navigation = null;
                     runtime.pathAttempts = 0;
@@ -937,7 +1065,14 @@ public final class WorkerManager {
         if (entity == null) {
             return;
         }
+        BlockPosition requestedTarget = blockPosition(target);
+        if (runtime.navigation != null && !requestedTarget.equals(runtime.navigationTarget)) {
+            pathfinder.stop(entity);
+            runtime.navigation = null;
+            runtime.pathAttempts = 0;
+        }
         if (runtime.navigation == null) {
+            runtime.navigationTarget = requestedTarget;
             double speed = Math.max(
                     0.25,
                     Math.min(
@@ -1042,13 +1177,21 @@ public final class WorkerManager {
     }
 
     private void transition(RuntimeWorker runtime, WorkerState requested) {
-        if (runtime.busy) {
+        if (runtime.busy || runtime.disabled) {
             return;
         }
         Worker current = runtime.record.worker();
-        WorkerState next = stateMachine.transition(current.state(), requested);
+        final WorkerState next;
+        try {
+            next = stateMachine.transition(current.state(), requested);
+        } catch (IllegalStateException failure) {
+            logTransitionFailure(runtime, current.state(), requested, failure);
+            return;
+        }
         Worker updated = copy(current, next, current.activeTaskId());
         persist(runtime, updated, () -> {
+            runtime.transitionFailureKey = null;
+            runtime.transitionFailureLoggedAt = Instant.MIN;
             if (runtime.lease != null) {
                 Bukkit.getPluginManager().callEvent(
                         new VerdantWorkerTaskEvent(
@@ -1059,6 +1202,28 @@ public final class WorkerManager {
                 );
             }
         });
+    }
+
+    private void logTransitionFailure(
+            RuntimeWorker runtime,
+            WorkerState current,
+            WorkerState requested,
+            IllegalStateException failure
+    ) {
+        String key = current + "->" + requested;
+        Instant now = Instant.now();
+        if (key.equals(runtime.transitionFailureKey)
+                && now.isBefore(runtime.transitionFailureLoggedAt
+                .plus(transitionWarningInterval()))) {
+            return;
+        }
+        runtime.transitionFailureKey = key;
+        runtime.transitionFailureLoggedAt = now;
+        plugin.getLogger().log(
+                Level.WARNING,
+                "Illegal worker transition suppressed for "
+                        + runtime.record.worker().workerUuid() + ": " + key,
+                failure);
     }
 
     private void persist(
@@ -1107,74 +1272,57 @@ public final class WorkerManager {
     }
 
     private void processSalary(RuntimeWorker runtime, long day) {
+        if (runtime.salaryInFlight || runtime.disabled) {
+            return;
+        }
+        runtime.salaryInFlight = true;
         runtime.busy = true;
-        runtime.lastSalaryProcessedDay = day;
         UUID workerId = runtime.record.worker().workerUuid();
         java.util.concurrent.atomic.AtomicReference<Optional<InventoryDebit>> debit =
                 new java.util.concurrent.atomic.AtomicReference<>(Optional.empty());
         java.util.concurrent.atomic.AtomicBoolean workerSaved =
                 new java.util.concurrent.atomic.AtomicBoolean();
+        java.util.concurrent.atomic.AtomicReference<WorkerRecord> durableWorker =
+                new java.util.concurrent.atomic.AtomicReference<>();
         payments.findForDay(workerId, day)
                 .thenCompose(existing -> {
                     if (existing.isPresent()
                             && existing.get().status() != PaymentStatus.PENDING) {
-                        return CompletableFuture.completedFuture(
-                                new SalaryOutcome(
-                                        existing.get(),
-                                        runtime.record,
-                                        Optional.empty(),
-                                        existing.get().status() == PaymentStatus.PAID,
-                                        true
-                                )
-                        );
+                        return CompletableFuture.completedFuture(new SalaryOutcome(
+                                existing.get(), runtime.record, Optional.empty(),
+                                existing.get().status() == PaymentStatus.PAID, true));
                     }
                     if (existing.isPresent()) {
                         PaymentRecord pending = existing.get();
                         if (runtime.record.worker().lastPaidMinecraftDay() >= day) {
-                            return payments.markPaid(
-                                            pending.paymentId(),
-                                            Instant.now()
-                                    )
+                            return payments.markPaid(pending.paymentId(), Instant.now())
                                     .thenApply(finalized -> new SalaryOutcome(
-                                            finalized,
-                                            runtime.record,
-                                            Optional.empty(),
-                                            true,
-                                            true
-                                    ));
+                                            finalized, runtime.record, Optional.empty(),
+                                            true, true));
                         }
                         if (runtime.record.worker().unpaidDays() > 0
-                                && !runtime.record.updatedAt()
-                                .isBefore(pending.createdAt())) {
+                                && !runtime.record.updatedAt().isBefore(pending.createdAt())) {
                             return payments.markFailed(pending.paymentId())
                                     .thenApply(finalized -> new SalaryOutcome(
-                                            finalized,
-                                            runtime.record,
-                                            Optional.empty(),
-                                            false,
-                                            true
-                                    ));
+                                            finalized, runtime.record, Optional.empty(),
+                                            false, true));
                         }
-                        return payments.markFailed(pending.paymentId())
-                                .thenCompose(finalized -> onMainSupply(() ->
-                                        prepareUnpaidSalary(
-                                                runtime,
-                                                finalized,
-                                                day
-                                        )));
+                        if (runtime.startupPendingSalaryDays.contains(day)) {
+                            return payments.markFailed(pending.paymentId())
+                                    .thenCompose(finalized -> onMainSupply(() ->
+                                            prepareUnpaidSalary(runtime, finalized, day)));
+                        }
+                        return onMainSupply(() -> prepareSalary(runtime, pending, day));
                     }
-                    CompletableFuture<PaymentRecord> ledger = existing.isPresent()
-                            ? CompletableFuture.completedFuture(existing.get())
-                            : payments.createPending(
+                    return payments.createPending(
                                     workerId,
                                     runtime.record.worker().ownerUuid(),
-                                    runtime.record.worker()
-                                            .salaryPerMinecraftDay(),
+                                    runtime.record.worker().farmId(),
+                                    runtime.record.worker().salaryPerMinecraftDay(),
                                     day,
-                                    Instant.now()
-                            );
-                    return ledger.thenCompose(payment -> onMainSupply(() ->
-                            prepareSalary(runtime, payment, day)));
+                                    Instant.now())
+                            .thenCompose(payment -> onMainSupply(() ->
+                                    prepareSalary(runtime, payment, day)));
                 })
                 .thenApply(outcome -> {
                     debit.set(outcome.debit());
@@ -1184,46 +1332,129 @@ public final class WorkerManager {
                     if (outcome.alreadyFinal()) {
                         return CompletableFuture.completedFuture(outcome);
                     }
-                    return workers.save(outcome.updated())
-                            .thenCompose(saved -> {
-                                workerSaved.set(true);
-                                CompletableFuture<PaymentRecord> finalLedger =
-                                        outcome.paid()
-                                                ? payments.markPaid(
-                                                outcome.payment().paymentId(),
-                                                Instant.now()
-                                        )
-                                                : payments.markFailed(
-                                                outcome.payment().paymentId()
-                                        );
-                                return finalLedger.thenApply(payment ->
-                                        new SalaryOutcome(
-                                                payment,
-                                                saved,
-                                                outcome.debit(),
-                                                outcome.paid(),
-                                                false
-                                        ));
-                            });
+                    CompletableFuture<WorkerRecord> persisted =
+                            workers.save(outcome.updated())
+                                    .exceptionallyCompose(saveFailure -> workers.find(workerId)
+                                            .thenCompose(current -> {
+                                                if (current.isPresent()
+                                                        && salaryOutcomePersisted(
+                                                        current.get(), outcome, day)) {
+                                                    return CompletableFuture.completedFuture(
+                                                            current.get());
+                                                }
+                                                return CompletableFuture.failedFuture(
+                                                        unwrap(saveFailure));
+                                            }));
+                    return persisted.thenCompose(saved -> {
+                        durableWorker.set(saved);
+                        workerSaved.set(true);
+                        CompletableFuture<PaymentRecord> finalLedger = outcome.paid()
+                                ? payments.markPaid(outcome.payment().paymentId(), Instant.now())
+                                : payments.markFailed(outcome.payment().paymentId());
+                        return finalLedger.thenApply(payment -> new SalaryOutcome(
+                                payment, saved, outcome.debit(), outcome.paid(), false));
+                    });
                 })
                 .whenComplete((outcome, failure) -> onMainNow(() -> {
                     runtime.busy = false;
+                    runtime.salaryInFlight = false;
                     if (failure != null) {
                         if (!workerSaved.get()) {
                             debit.get().ifPresent(this::refund);
+                        } else if (durableWorker.get() != null) {
+                            runtime.record = durableWorker.get();
                         }
-                        logAsync("Worker salary processing failed", failure);
+                        handleSalaryFailure(runtime, day, failure);
                         return;
                     }
+                    runtime.salaryFailures = 0;
+                    runtime.salaryRetryAt = Instant.MIN;
+                    runtime.lastSalaryProcessedDay = Math.max(
+                            runtime.lastSalaryProcessedDay, day);
+                    runtime.pendingSalaryDays.remove(day);
+                    runtime.startupPendingSalaryDays.remove(day);
                     if (!outcome.alreadyFinal()) {
                         runtime.record = outcome.updated();
                     }
                     salaryNotification(runtime, outcome, day);
-                    if (!outcome.paid()
-                            && shouldLeave(runtime.record.worker(), day)) {
+                    if (!outcome.paid() && shouldLeave(runtime.record.worker(), day)) {
                         leaveFarm(runtime);
                     }
                 }));
+    }
+
+    private boolean salaryOutcomePersisted(
+            WorkerRecord current,
+            SalaryOutcome outcome,
+            long day
+    ) {
+        Worker persisted = current.worker();
+        Worker expected = outcome.updated().worker();
+        if (outcome.paid()) {
+            return persisted.lastPaidMinecraftDay() >= day
+                    && persisted.unpaidDays() == 0;
+        }
+        return persisted.unpaidDays() >= expected.unpaidDays()
+                && persisted.lastPaidMinecraftDay()
+                == expected.lastPaidMinecraftDay();
+    }
+
+    private void handleSalaryFailure(RuntimeWorker runtime, long day, Throwable failure) {
+        Throwable cause = unwrap(failure);
+        if (cause instanceof DatabaseIntegrityException integrity) {
+            disableStaleRuntime(runtime, new WorkerPaymentException(
+                    WorkerPaymentFailureReason.CONSTRAINT_VIOLATION,
+                    "Worker salary persistence violated a database constraint",
+                    integrity));
+            return;
+        }
+        if (cause instanceof WorkerPaymentException paymentFailure
+                && permanentSalaryFailure(paymentFailure.reason())) {
+            disableStaleRuntime(runtime, paymentFailure);
+            return;
+        }
+        runtime.salaryFailures++;
+        runtime.salaryRetryAt = salaryAttempts.nextRetry(Instant.now(), runtime.salaryFailures);
+        Instant now = Instant.now();
+        if (now.isBefore(runtime.salaryFailureLoggedAt.plus(salaryWarningInterval()))) {
+            return;
+        }
+        runtime.salaryFailureLoggedAt = now;
+        plugin.getLogger().log(Level.WARNING,
+                "Worker salary processing failed for "
+                        + runtime.record.worker().workerUuid()
+                        + " on day " + day + "; retry after " + runtime.salaryRetryAt,
+                cause);
+    }
+
+    private boolean permanentSalaryFailure(WorkerPaymentFailureReason reason) {
+        return switch (reason) {
+            case MISSING_WORKER_PARENT, MISSING_PAYER_PARENT,
+                    MISSING_FARM_PARENT, STALE_RUNTIME, CONSTRAINT_VIOLATION -> true;
+            case DATABASE_UNAVAILABLE -> false;
+        };
+    }
+
+    private void disableStaleRuntime(RuntimeWorker runtime, WorkerPaymentException failure) {
+        if (runtime.disabled) return;
+        runtime.disabled = true;
+        runtime.salaryRetryAt = Instant.MAX;
+        if (runtime.entity != null) {
+            pathfinder.stop(runtime.entity);
+        }
+        UUID workerId = runtime.record.worker().workerUuid();
+        runtime.lease = null;
+        tasks.releaseForWorker(workerId, Instant.now())
+                .whenComplete((ignored, releaseFailure) -> {
+                    if (releaseFailure != null) {
+                        logAsync("Could not release tasks for disabled worker " + workerId,
+                                releaseFailure);
+                    }
+                });
+        plugin.getLogger().log(Level.SEVERE,
+                "Disabled stale worker runtime " + workerId
+                        + " after salary integrity failure " + failure.reason(),
+                failure);
     }
 
     private SalaryOutcome prepareUnpaidSalary(
@@ -1348,6 +1579,23 @@ public final class WorkerManager {
         return factors;
     }
 
+    private String workerName(Player player, Villager villager) {
+        String fallback = translations.plain(player, "herbalist.title");
+        String plain = villager.customName() == null
+                ? fallback
+                : PlainTextComponentSerializer.plainText()
+                        .serialize(villager.customName());
+        return ExternalNameSanitizer.name(plain, fallback, 64);
+    }
+
+    private String safeWorkerName(Player viewer, String source) {
+        return ExternalNameSanitizer.name(
+                source,
+                translations.plain(viewer, "herbalist.title"),
+                64
+        );
+    }
+
     private void salaryNotification(
             RuntimeWorker runtime,
             SalaryOutcome outcome,
@@ -1364,7 +1612,7 @@ public final class WorkerManager {
                     owner,
                     "worker.salary.paid",
                     Map.of(
-                            "worker", runtime.record.name(),
+                            "worker", safeWorkerName(owner, runtime.record.name()),
                             "amount", runtime.record.worker()
                                     .salaryPerMinecraftDay(),
                             "day", day
@@ -1382,7 +1630,7 @@ public final class WorkerManager {
                 owner,
                 NotificationType.UNPAID_WORKER,
                 key,
-                Map.of("worker", runtime.record.name())
+                Map.of("worker", safeWorkerName(owner, runtime.record.name()))
         );
     }
 
@@ -1426,6 +1674,12 @@ public final class WorkerManager {
                                 Duration.ofMinutes(20L),
                                 spec.idempotencyKey()
                         )));
+            }
+            for (WorkerActionService.ProcessingTask task : actions.processingTasks(farm, limit)) {
+                if (priorityEnabled(task.type())) {
+                    created.add(submitTask(farm.farmId(), task.type(), task.target(),
+                            Duration.ofMinutes(20L), task.idempotencyKey()));
+                }
             }
         }
         CompletableFuture.allOf(created.toArray(CompletableFuture[]::new))
@@ -1662,6 +1916,22 @@ public final class WorkerManager {
                         45L
                 )
         ));
+    }
+
+    private int refusalDays() {
+        return Math.max(1, configs.get("workers.yml").getInt("salary.refusal-days", 3));
+    }
+
+    private Duration salaryWarningInterval() {
+        return Duration.ofSeconds(Math.max(5L,
+                configs.get("workers.yml").getLong(
+                        "salary.warning-interval-seconds", 60L)));
+    }
+
+    private Duration transitionWarningInterval() {
+        return Duration.ofSeconds(Math.max(5L,
+                configs.get("workers.yml").getLong(
+                        "state-transition-warning-interval-seconds", 60L)));
     }
 
     private Duration pathTimeout() {
@@ -1993,13 +2263,8 @@ public final class WorkerManager {
     }
 
     private boolean harvestable(Plant plant, Instant now) {
-        return plant.growthStage() != GrowthStage.SEED
-                && plant.growthStage() != GrowthStage.SPROUT
-                && plant.growthStage() != GrowthStage.SEEDLING
-                && plant.growthStage() != GrowthStage.SPOILED
-                && (!now.isBefore(plant.harvestWindowStart())
-                || plant.growthStage() == GrowthStage.READY
-                || plant.growthStage() == GrowthStage.OVERRIPE);
+        Objects.requireNonNull(now, "now");
+        return plant.growthStage() == GrowthStage.READY;
     }
 
     private long minecraftDay(World world) {
@@ -2157,16 +2422,58 @@ public final class WorkerManager {
         private Villager entity;
         private TaskLease lease;
         private PaperWorkerPathfinder.Navigation navigation;
+        private BlockPosition navigationTarget;
         private int pathAttempts;
         private int blockedCount;
         private Instant blockedSince;
         private boolean busy;
         private boolean receivedBreak;
         private boolean coworkerDied;
+        private WorkerTaskType lastTaskType;
         private long lastSalaryProcessedDay = Long.MIN_VALUE;
+        private boolean salaryInFlight;
+        private final java.util.ArrayDeque<Long> pendingSalaryDays =
+                new java.util.ArrayDeque<>();
+        private final java.util.Set<Long> startupPendingSalaryDays =
+                new java.util.HashSet<>();
+        private Instant salaryRetryAt = Instant.MIN;
+        private int salaryFailures;
+        private Instant salaryFailureLoggedAt = Instant.MIN;
+        private boolean disabled;
+        private String transitionFailureKey;
+        private Instant transitionFailureLoggedAt = Instant.MIN;
 
         private RuntimeWorker(WorkerRecord record) {
             this.record = Objects.requireNonNull(record, "record");
+        }
+
+        private void queueStartupPendingSalary(long day) {
+            if (startupPendingSalaryDays.add(day)) {
+                pendingSalaryDays.add(day);
+                java.util.List<Long> ordered = new java.util.ArrayList<>(pendingSalaryDays);
+                ordered.sort(Long::compareTo);
+                pendingSalaryDays.clear();
+                pendingSalaryDays.addAll(ordered);
+            }
+        }
+    }
+
+    public record WorkerSnapshot(
+            WorkerRecord record,
+            Optional<WorkerTaskType> currentTask,
+            Optional<Integer> currentPriority,
+            Optional<WorkerTaskType> lastTask,
+            Optional<BlockPosition> position,
+            boolean entityAvailable,
+            boolean busy,
+            int blockedCount
+    ) {
+        public WorkerSnapshot {
+            Objects.requireNonNull(record, "record");
+            currentTask = Objects.requireNonNull(currentTask, "currentTask");
+            currentPriority = Objects.requireNonNull(currentPriority, "currentPriority");
+            lastTask = Objects.requireNonNull(lastTask, "lastTask");
+            position = Objects.requireNonNull(position, "position");
         }
     }
 
@@ -2178,6 +2485,17 @@ public final class WorkerManager {
     ) {
         private static HireContext failed(HireStatus status) {
             return new HireContext(status, null, null, null);
+        }
+    }
+
+    private record WorkerLoad(
+            List<WorkerRecord> records,
+            List<PaymentRecord> pendingPayments
+    ) {
+        private WorkerLoad {
+            records = List.copyOf(Objects.requireNonNull(records, "records"));
+            pendingPayments = List.copyOf(Objects.requireNonNull(
+                    pendingPayments, "pendingPayments"));
         }
     }
 

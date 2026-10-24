@@ -1,0 +1,41 @@
+{
+  "model": {
+    "type": "minecraft:range_dispatch",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "entries": [
+      {
+        "threshold": 12023,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plantation_contract"
+        }
+      },
+      {
+        "threshold": 12024,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/guide_book"
+        }
+      },
+      {
+        "threshold": 12025,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/advanced_book"
+        }
+      },
+      {
+        "threshold": 12026,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/written_book"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "minecraft:item/written_book"
+    }
+  }
+}

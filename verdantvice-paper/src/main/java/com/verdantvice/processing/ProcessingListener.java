@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
@@ -22,6 +23,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -74,9 +76,16 @@ public final class ProcessingListener implements Listener {
         }
     }
 
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        processing.abortForPlayer(event.getPlayer());
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND || event.getClickedBlock() == null) {
+        if (event.getHand() != EquipmentSlot.HAND
+                || event.getClickedBlock() == null
+                || !ProcessingStationPolicy.opensMenu(event.getAction())) {
             return;
         }
         ProcessingManager.Station station =
@@ -86,6 +95,10 @@ public final class ProcessingListener implements Listener {
         }
         event.setCancelled(true);
         Player player = event.getPlayer();
+        if (processing.stationBreakPending(station)) {
+            player.sendMessage(translations.component(player, "errors.busy"));
+            return;
+        }
         if (!player.hasPermission("verdantvice.process")) {
             player.sendMessage(translations.component(player, "errors.no-permission"));
             return;
@@ -145,6 +158,13 @@ public final class ProcessingListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onClose(InventoryCloseEvent event) {
+        if (event.getPlayer() instanceof Player owner && processing.hasPendingDelivery(owner.getUniqueId())) {
+            Bukkit.getScheduler().runTask(plugin, () -> processing.deliverPending(owner)
+                    .exceptionally(failure -> {
+                        plugin.getLogger().log(Level.WARNING, "Processing delivery remains pending", failure);
+                        return 0;
+                    }));
+        }
         if (event.getPlayer() instanceof Player player
                 && event.getInventory().getHolder() instanceof RollingMenuHolder rolling) {
             Bukkit.getScheduler().runTask(
@@ -154,6 +174,15 @@ public final class ProcessingListener implements Listener {
         }
     }
 
+    @EventHandler
+    public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        Bukkit.getScheduler().runTask(plugin, () -> processing.deliverPending(event.getPlayer())
+                .exceptionally(failure -> {
+                    plugin.getLogger().log(Level.WARNING, "Processing delivery remains pending", failure);
+                    return 0;
+                }));
+    }
+
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDeath(PlayerDeathEvent event) {
         processing.abortForPlayer(event.getEntity());
@@ -161,17 +190,25 @@ public final class ProcessingListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBreak(BlockBreakEvent event) {
-        ProcessingManager.Station station = processing.station(event.getBlock()).orElse(null);
-        if (station == null) {
+        ProcessingManager.StationBreakResult result =
+                processing.claimStationForBreak(event.getBlock());
+        if (result.status() == ProcessingManager.StationBreakStatus.NOT_STATION) {
             return;
         }
-        if (!processing.canBreak(event.getBlock())) {
+        if (result.status() == ProcessingManager.StationBreakStatus.BUSY) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(translations.component(event.getPlayer(), "errors.busy"));
+            event.getPlayer().sendMessage(
+                    translations.component(event.getPlayer(), "errors.busy")
+            );
             return;
         }
+
+        ProcessingManager.Station station = result.optionalStation().orElseThrow();
+        Block block = event.getBlock();
+        var dropLocation = block.getLocation().add(0.5, 0.5, 0.5);
+        event.setCancelled(true);
         event.setDropItems(false);
-        processing.removeStation(event.getBlock());
+        event.setExpToDrop(0);
         Player player = event.getPlayer();
         secureItems.issue(
                 player,
@@ -180,13 +217,26 @@ public final class ProcessingListener implements Listener {
                 ""
         ).whenComplete((item, failure) -> Bukkit.getScheduler().runTask(plugin, () -> {
             if (failure != null) {
-                plugin.getLogger().log(Level.WARNING, "Could not return processing station", failure);
-                player.sendMessage(translations.component(player, "errors.database-unavailable"));
+                result.close();
+                plugin.getLogger().log(
+                        Level.WARNING,
+                        "Could not return processing station",
+                        failure
+                );
+                player.sendMessage(
+                        translations.component(player, "errors.database-unavailable")
+                );
                 return;
             }
+            if (!processing.completeStationBreak(block, result)) {
+                result.close();
+                player.sendMessage(translations.component(player, "errors.busy"));
+                return;
+            }
+            block.setType(org.bukkit.Material.AIR, false);
             Map<Integer, ItemStack> overflow = player.getInventory().addItem(item);
             overflow.values().forEach(stack ->
-                    player.getWorld().dropItemNaturally(player.getLocation(), stack));
+                    dropLocation.getWorld().dropItemNaturally(dropLocation, stack));
         }));
     }
 

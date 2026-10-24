@@ -8,7 +8,14 @@
         "threshold": 12013,
         "model": {
           "type": "minecraft:model",
-          "model": "verdantvice:item/plant_scanner"
+          "model": "verdantvice:item/selection_wand"
+        }
+      },
+      {
+        "threshold": 12014,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/blaze_rod"
         }
       }
     ],

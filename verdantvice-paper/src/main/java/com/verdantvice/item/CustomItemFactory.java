@@ -2,10 +2,14 @@ package com.verdantvice.item;
 
 import com.verdantvice.config.ConfigManager;
 import com.verdantvice.i18n.TranslationService;
+import com.verdantvice.processing.ProductBatch;
+import com.verdantvice.resourcepack.ResourcePackModels;
 import com.verdantvice.security.CustomItemType;
 import com.verdantvice.security.ItemSigner;
 import com.verdantvice.security.SignedItemData;
+import com.verdantvice.strain.StrainRegistry;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -16,24 +20,29 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 public final class CustomItemFactory {
+    private static final Pattern UNRESOLVED = Pattern.compile("<[a-zA-Z0-9_-]+>");
+
     private final ConfigManager configs;
     private final TranslationService translations;
     private final ItemSigner signer;
+    private final StrainRegistry strains;
 
     public CustomItemFactory(
             ConfigManager configs,
             TranslationService translations,
-            ItemSigner signer
+            ItemSigner signer,
+            StrainRegistry strains
     ) {
         this.configs = Objects.requireNonNull(configs, "configs");
         this.translations = Objects.requireNonNull(translations, "translations");
         this.signer = Objects.requireNonNull(signer, "signer");
+        this.strains = Objects.requireNonNull(strains, "strains");
     }
 
     public PreparedItem create(
@@ -42,7 +51,11 @@ public final class CustomItemFactory {
             UUID owner,
             String strain
     ) {
-        return create(viewer, type, owner, null, strain, 0.0);
+        if (type.batchBound()) {
+            throw new IllegalArgumentException("missing_batch_context");
+        }
+        return create(viewer, type, owner, null,
+                ItemDisplayContext.simple(strain, 0.0, strains));
     }
 
     public PreparedItem create(
@@ -53,47 +66,135 @@ public final class CustomItemFactory {
             String strain,
             double quality
     ) {
-        String configKey = configKey(type);
-        YamlConfiguration items = configs.get("items.yml");
-        ConfigurationSection section = items.getConfigurationSection(configKey);
-        Material material = material(section, type);
-        ItemStack stack = new ItemStack(material);
-        ItemMeta meta = stack.getItemMeta();
-        String translationBase = "item." + configKey.replace('-', '_');
-        meta.displayName(translations.component(viewer, translationBase + ".name"));
-        List<Component> lore = new ArrayList<>();
-        lore.add(translations.component(viewer, translationBase + ".description"));
-        if (strain != null && !strain.isBlank()) {
-            lore.add(translations.component(
-                    viewer,
-                    "item.lore.strain",
-                    Map.of("strain", strain)
-            ));
+        if (type.batchBound()) {
+            throw new IllegalArgumentException("missing_batch_context");
         }
-        if (quality > 0.0) {
-            lore.add(translations.component(
-                    viewer,
-                    "item.lore.quality",
-                    Map.of("quality", String.format(Locale.ROOT, "%.1f", quality))
-            ));
-        }
-        meta.lore(lore);
-        if (section != null && section.contains("custom-model-data")) {
-            meta.setCustomModelData(section.getInt("custom-model-data"));
-        }
-        stack.setItemMeta(meta);
+        return create(viewer, type, owner, batchId,
+                ItemDisplayContext.simple(strain, quality, strains));
+    }
 
+    public PreparedItem create(
+            CommandSender viewer,
+            CustomItemType type,
+            UUID owner,
+            ProductBatch batch
+    ) {
+        Objects.requireNonNull(batch, "batch");
+        return create(viewer, type, owner, batch.batchId(),
+                ItemDisplayContext.batch(batch, strains));
+    }
+
+    /** Rebuilds a non-batch item with the exact persisted identity. */
+    public PreparedItem create(CommandSender viewer, SignedItemData data) {
+        Objects.requireNonNull(data, "data");
+        if (data.itemType().batchBound() || data.batchId() != null) {
+            throw new IllegalArgumentException("missing_batch_context");
+        }
+        return create(viewer, data,
+                ItemDisplayContext.simple(data.strain(), data.quality(), strains));
+    }
+
+    /** Rebuilds a durable batch item with the exact persisted identity. */
+    public PreparedItem create(
+            CommandSender viewer,
+            SignedItemData data,
+            ProductBatch batch
+    ) {
+        Objects.requireNonNull(data, "data");
+        Objects.requireNonNull(batch, "batch");
+        if (!data.itemType().batchBound()
+                || !Objects.equals(data.batchId(), batch.batchId())
+                || !Objects.equals(data.ownerUuid(), batch.ownerUuid())) {
+            throw new IllegalArgumentException(
+                    "Signed item identity does not match product batch");
+        }
+        return create(viewer, data, ItemDisplayContext.batch(batch, strains));
+    }
+
+    private PreparedItem create(
+            CommandSender viewer,
+            CustomItemType type,
+            UUID owner,
+            UUID batchId,
+            ItemDisplayContext context
+    ) {
+        String configKey = configKey(type);
         SignedItemData data = new SignedItemData(
                 type,
                 configKey,
                 UUID.randomUUID(),
                 batchId,
                 owner,
-                quality,
-                strain == null ? "" : strain,
+                context.quality(),
+                context.strainId(),
                 Instant.now(),
                 1
         );
+        return create(viewer, data, context);
+    }
+
+    private PreparedItem create(
+            CommandSender viewer,
+            SignedItemData data,
+            ItemDisplayContext context
+    ) {
+        if (!org.bukkit.Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException("Signed item rendering requires the server thread");
+        }
+        Objects.requireNonNull(viewer, "viewer");
+        Objects.requireNonNull(data, "data");
+        Objects.requireNonNull(context, "context");
+        CustomItemType type = data.itemType();
+        String configKey = configKey(type);
+        if (!configKey.equals(data.itemId())) {
+            throw new IllegalArgumentException("Item id does not match item type");
+        }
+        YamlConfiguration items = configs.get("items.yml");
+        ConfigurationSection section = items.getConfigurationSection(configKey);
+        Material material = material(section, type);
+        ItemStack stack = new ItemStack(material);
+        ItemMeta meta = stack.getItemMeta();
+        String translationBase = "item." + configKey.replace('-', '_');
+        Map<String, Object> placeholders = new java.util.LinkedHashMap<>(context.placeholders(type));
+        if (!context.state().isBlank()) {
+            placeholders.put("state", translations.plain(
+                    viewer, "item.states." + context.state().toLowerCase(java.util.Locale.ROOT)));
+        }
+        if (!context.qualityGrade().isBlank()) {
+            placeholders.put("quality_grade", translations.plain(
+                    viewer, "item.quality_grades."
+                            + context.qualityGrade().toLowerCase(java.util.Locale.ROOT)
+                            .replace('_', '-')));
+        }
+        placeholders.put("duration", PlainTextComponentSerializer.plainText().serialize(
+                translations.component(viewer, "common.minutes",
+                        Map.of("minutes", Math.max(0L, context.duration().toMinutes())))));
+        Component displayName = translations.component(
+                viewer, translationBase + ".name", placeholders);
+        Component description = translations.component(
+                viewer, translationBase + ".description", placeholders);
+        rejectUnresolved(displayName, translationBase + ".name");
+        rejectUnresolved(description, translationBase + ".description");
+        meta.displayName(displayName);
+        List<Component> lore = new ArrayList<>();
+        lore.add(description);
+        if (!context.strainId().isBlank()) {
+            lore.add(translations.component(viewer, "item.lore.strain", placeholders));
+        }
+        if (context.quality() > 0.0) {
+            lore.add(translations.component(viewer, "item.lore.quality", placeholders));
+        }
+        meta.lore(lore);
+        if (section == null || section.contains("custom-model-data")) {
+            int model = section == null ? ResourcePackModels.item(type)
+                    : section.getInt("custom-model-data");
+            if (type == CustomItemType.SEED && material == Material.WHEAT_SEEDS) {
+                model = ResourcePackModels.seed(data.strain(), model);
+            }
+            if (model > 0) meta.setCustomModelData(model);
+        }
+        stack.setItemMeta(meta);
+
         signer.sign(stack, data);
         if (section != null && section.contains("durability")) {
             signer.setUsesRemaining(stack, Math.max(1, section.getInt("durability")));
@@ -101,26 +202,27 @@ public final class CustomItemFactory {
         return new PreparedItem(stack, data, signer.payloadHash(data));
     }
 
+    private static void rejectUnresolved(Component rendered, String translationKey) {
+        String plain = PlainTextComponentSerializer.plainText().serialize(rendered);
+        java.util.regex.Matcher matcher = UNRESOLVED.matcher(plain);
+        if (matcher.find()) {
+            throw new IllegalStateException(
+                    "Unresolved item placeholder " + matcher.group() + " in " + translationKey);
+        }
+    }
+
     public boolean damageTool(ItemStack item, int amount) {
-        if (amount < 1) {
-            throw new IllegalArgumentException("amount must be positive");
-        }
+        if (amount < 1) throw new IllegalArgumentException("amount must be positive");
         int remaining = signer.usesRemaining(item);
-        if (remaining <= 0) {
-            return false;
-        }
+        if (remaining <= 0) return false;
         signer.setUsesRemaining(item, Math.max(0, remaining - amount));
         return remaining - amount > 0;
     }
 
     private Material material(ConfigurationSection section, CustomItemType type) {
         String configured = section == null ? null : section.getString("material");
-        Material material = configured == null
-                ? null
-                : Material.matchMaterial(configured);
-        if (material != null && material.isItem()) {
-            return material;
-        }
+        Material material = configured == null ? null : Material.matchMaterial(configured);
+        if (material != null && material.isItem()) return material;
         return switch (type) {
             case SEED -> Material.WHEAT_SEEDS;
             case PLANTING_POT -> Material.DECORATED_POT;
@@ -140,8 +242,7 @@ public final class CustomItemFactory {
             case FRESH_BATCH -> Material.KELP;
             case DRY_BATCH, CURED_BATCH, GROUND_PRODUCT, MIXTURE -> Material.DRIED_KELP;
             case PACKAGE -> Material.BUNDLE;
-            case PLANTATION_CONTRACT -> Material.WRITTEN_BOOK;
-            case GUIDE_BOOK, ADVANCED_BOOK -> Material.WRITTEN_BOOK;
+            case PLANTATION_CONTRACT, GUIDE_BOOK, ADVANCED_BOOK -> Material.WRITTEN_BOOK;
         };
     }
 

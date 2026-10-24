@@ -20,6 +20,7 @@ import com.verdantvice.security.ItemSigner;
 import com.verdantvice.security.SecureItemService;
 import com.verdantvice.strain.Strain;
 import com.verdantvice.strain.StrainRegistry;
+import com.verdantvice.storage.BatchService;
 import com.verdantvice.trade.EconomyService;
 import com.verdantvice.trade.PaperTradeService;
 import com.verdantvice.trade.PreparedSale;
@@ -95,6 +96,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
             SecureItemService secureItems,
             ItemSigner signer,
             ItemRegistryRepository itemRegistry,
+            BatchService batchService,
             TutorialBookService books
     ) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
@@ -106,15 +108,16 @@ public final class HerbalistMarketManager implements AutoCloseable {
         Objects.requireNonNull(database, "database");
         Objects.requireNonNull(secureItems, "secureItems");
         Objects.requireNonNull(itemRegistry, "itemRegistry");
+        Objects.requireNonNull(batchService, "batchService");
         Objects.requireNonNull(books, "books");
 
         herbalists = new HerbalistRepository(database);
         marketRepository = new MarketRepository(database, configs);
         markets = new PaperMarketService(marketRepository, strains, configs);
         tradeRepository = new TradeRepository(
-                database, itemRegistry, marketRepository, strains, configs);
+                database, itemRegistry, marketRepository, strains, configs, batchService);
         trades = new PaperTradeService(signer, tradeRepository);
-        contractRepository = new PaperContractRepository(database, itemRegistry);
+        contractRepository = new PaperContractRepository(database, itemRegistry, batchService);
         contracts = new PaperContractService(
                 contractRepository, markets, strains, configs, signer);
         conversion = new HerbalistConversionService(
@@ -138,6 +141,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
         }
         plugin.getServer().getPluginManager().registerEvents(herbalistListener, plugin);
         plugin.getServer().getPluginManager().registerEvents(menuListener, plugin);
+        conversion.refreshLoadedHerbalists();
         long minutes = Math.max(1L,
                 configs.get("market.yml").getLong("update-minutes", 30L));
         long ticks = Math.multiplyExact(minutes, 60L * 20L);
@@ -185,8 +189,30 @@ public final class HerbalistMarketManager implements AutoCloseable {
         return conversion;
     }
 
+    public void restoreOrRefreshHerbalist(Villager villager) {
+        requireMainThread();
+        conversion.restoreOrRefresh(villager).exceptionally(failure -> {
+            plugin.getLogger().log(
+                    Level.WARNING,
+                    "Could not restore herbalist " + villager.getUniqueId(),
+                    unwrap(failure));
+            return Optional.empty();
+        });
+    }
+
+    public void refreshHerbalistName(Villager villager) {
+        requireMainThread();
+        conversion.refreshName(villager);
+    }
+
+    public void refreshNames() {
+        requireMainThread();
+        conversion.refreshLoadedHerbalists();
+    }
+
     public void handleInteraction(Player player, Villager villager) {
         requireMainThread();
+        if (conversion.isMarkedHerbalist(villager)) conversion.refreshName(villager);
         conversion.evaluate(villager).whenComplete((evaluation, failure) ->
                 runMain(() -> {
                     if (!player.isOnline()) return;
@@ -195,7 +221,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
                         return;
                     }
                     switch (evaluation.status()) {
-                        case CREATED -> {
+                        case CREATED, CREATED_FORCED -> {
                             plugin.getServer().getPluginManager().callEvent(
                                     new VerdantHerbalistCreatedEvent(villager));
                             player.sendMessage(translations.component(player, "herbalist.created"));
@@ -208,6 +234,8 @@ public final class HerbalistMarketManager implements AutoCloseable {
                                 translations.component(player, "herbalist.evaluated-normal"));
                         case VILLAGE_LIMIT -> player.sendMessage(
                                 translations.component(player, "herbalist.village-limit"));
+                        case WORKER -> player.sendMessage(
+                                translations.component(player, "herbalist.worker-conflict"));
                         case NOT_FARMER, INVALID_ENTITY -> player.sendMessage(
                                 translations.component(player, "errors.target-not-found"));
                     }
@@ -230,11 +258,27 @@ public final class HerbalistMarketManager implements AutoCloseable {
                 }));
     }
 
-    public CompletableFuture<HerbalistEvaluation> forceCreate(Villager villager) {
+    public CompletableFuture<HerbalistEvaluation> forceCreate(
+            Villager villager,
+            boolean ignoreVillageLimit,
+            Optional<HerbalistTier> requestedTier
+    ) {
         requireMainThread();
-        return conversion.force(villager).thenApply(evaluation -> {
+        Objects.requireNonNull(requestedTier, "requestedTier");
+        CompletableFuture<HerbalistEvaluation> result;
+        if (ignoreVillageLimit) {
+            result = requestedTier.isPresent()
+                    ? conversion.forceIgnoringVillageLimit(villager, requestedTier.orElseThrow())
+                    : conversion.forceIgnoringVillageLimit(villager);
+        } else {
+            result = requestedTier.isPresent()
+                    ? conversion.force(villager, requestedTier.orElseThrow())
+                    : conversion.force(villager);
+        }
+        return result.thenApply(evaluation -> {
             runMain(() -> {
-                if (evaluation.status() == HerbalistEvaluation.Status.CREATED
+                if ((evaluation.status() == HerbalistEvaluation.Status.CREATED
+                        || evaluation.status() == HerbalistEvaluation.Status.CREATED_FORCED)
                         && villager.isValid()) {
                     plugin.getServer().getPluginManager().callEvent(
                             new VerdantHerbalistCreatedEvent(villager));
@@ -242,6 +286,17 @@ public final class HerbalistMarketManager implements AutoCloseable {
             });
             return evaluation;
         });
+    }
+
+    public CompletableFuture<HerbalistEvaluation> forceCreate(
+            Villager villager,
+            boolean ignoreVillageLimit
+    ) {
+        return forceCreate(villager, ignoreVillageLimit, Optional.empty());
+    }
+
+    public CompletableFuture<HerbalistEvaluation> forceCreate(Villager villager) {
+        return forceCreate(villager, false, Optional.empty());
     }
 
     public void handleMenuAction(
@@ -434,11 +489,24 @@ public final class HerbalistMarketManager implements AutoCloseable {
                         }
                         switch (result.status()) {
                             case PURCHASED -> {
-                                advanceHerbalist(herbalistUuid, 1L, 1);
                                 player.sendMessage(translations.component(
                                         player, "trade.purchase-complete",
                                         Map.of("item", offerName(player, offer),
                                                 "price", offer.emeraldPrice())));
+                                advanceHerbalist(herbalistUuid, 1L, 1)
+                                        .whenComplete((updated, progressFailure) ->
+                                                runMain(() -> {
+                                                    if (progressFailure != null) {
+                                                        plugin.getLogger().log(
+                                                                Level.WARNING,
+                                                                "Herbalist progress update failed",
+                                                                unwrap(progressFailure)
+                                                        );
+                                                    }
+                                                    if (player.isOnline()) {
+                                                        openBuy(player, herbalistUuid);
+                                                    }
+                                                }));
                             }
                             case INSUFFICIENT_FUNDS -> player.sendMessage(
                                     translations.component(player, "errors.insufficient-items"));
@@ -453,10 +521,6 @@ public final class HerbalistMarketManager implements AutoCloseable {
 
     private void prepareSale(Player player, UUID herbalistUuid) {
         ItemStack held = player.getInventory().getItemInMainHand().clone();
-        if (held.getType() == Material.AIR || held.getAmount() != 1) {
-            player.sendMessage(translations.component(player, "trade.authentic-only"));
-            return;
-        }
         trades.prepare(held, player.getUniqueId(), herbalistUuid)
                 .whenComplete((sale, failure) -> runMain(() -> {
                     if (!player.isOnline()) return;
@@ -491,7 +555,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
         Optional<EscrowedItem> escrow = takeSignedItem(player, sale.itemInstanceId());
         if (escrow.isEmpty()) {
             endMutation(player);
-            player.sendMessage(translations.component(player, "trade.authentic-only"));
+            player.sendMessage(translations.component(player, "trade.already-used"));
             return;
         }
         player.closeInventory();
@@ -588,7 +652,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
                 return;
             }
             if (result.newlyCompleted()) {
-                advanceHerbalist(herbalistUuid, 5L, 5);
+                advanceHerbalistSilently(herbalistUuid, 5L, 5);
                 plugin.getServer().getPluginManager().callEvent(
                         new VerdantContractCompleteEvent(
                                 result.contract().contractId(), player.getUniqueId()));
@@ -750,7 +814,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
             boolean newlyCompleted
     ) {
         if (newlyCompleted) {
-            advanceHerbalist(herbalistUuid, 5L, 5);
+            advanceHerbalistSilently(herbalistUuid, 5L, 5);
             plugin.getServer().getPluginManager().callEvent(
                     new VerdantContractCompleteEvent(
                             stored.contract().contractId(), player.getUniqueId()));
@@ -858,15 +922,34 @@ public final class HerbalistMarketManager implements AutoCloseable {
                 player, "item." + offer.id().replace('-', '_') + ".name");
     }
 
-    private void advanceHerbalist(UUID herbalistUuid, long experience, int reputation) {
-        herbalists.addProgress(
-                herbalistUuid, experience, reputation,
-                configs.get("villagers.yml"), Instant.now()
-        ).exceptionally(failure -> {
-            plugin.getLogger().log(
-                    Level.WARNING, "Herbalist progress update failed", unwrap(failure));
-            return null;
-        });
+    private CompletableFuture<HerbalistRecord> advanceHerbalist(
+            UUID herbalistUuid,
+            long experience,
+            int reputation
+    ) {
+        return herbalists.addProgress(
+                herbalistUuid,
+                experience,
+                reputation,
+                configs.get("villagers.yml"),
+                Instant.now()
+        );
+    }
+
+    private void advanceHerbalistSilently(
+            UUID herbalistUuid,
+            long experience,
+            int reputation
+    ) {
+        advanceHerbalist(herbalistUuid, experience, reputation)
+                .exceptionally(failure -> {
+                    plugin.getLogger().log(
+                            Level.WARNING,
+                            "Herbalist progress update failed",
+                            unwrap(failure)
+                    );
+                    return null;
+                });
     }
 
     private String batchName(PreparedSale sale) {
@@ -883,65 +966,90 @@ public final class HerbalistMarketManager implements AutoCloseable {
             FailureContext context
     ) {
         Throwable cause = unwrap(failure);
-        String reason = cause.getMessage();
-        plugin.getLogger().log(Level.WARNING, "Herbalist action failed", cause);
-        if (cause.getClass().getName().contains("Database")
-                || cause instanceof java.sql.SQLException) {
-            player.sendMessage(
-                    translations.component(player, "errors.database-unavailable"));
-        } else {
-            sendReason(player, reason, context);
+        if (cause instanceof com.verdantvice.trade.TradeValidationException validation) {
+            player.sendMessage(translations.component(
+                    player, validation.reason().translationKey()));
+            return;
         }
+        if (cause instanceof com.verdantvice.database.DatabaseUnavailableException
+                || cause instanceof java.sql.SQLException) {
+            plugin.getLogger().log(Level.WARNING, "Herbalist database action failed", cause);
+            player.sendMessage(translations.component(player, "errors.database-unavailable"));
+            return;
+        }
+        String key = reasonKey(cause.getMessage(), context);
+        if (key != null) {
+            Map<String, ?> placeholders = key.equals("contracts.expired")
+                    ? Map.of("contract_id", "")
+                    : Map.of();
+            player.sendMessage(translations.component(player, key, placeholders));
+            return;
+        }
+        String errorId = UUID.randomUUID().toString().substring(0, 8);
+        plugin.getLogger().log(
+                Level.WARNING, "Herbalist action failed [" + errorId + "]", cause);
+        player.sendMessage(translations.component(
+                player, "errors.internal", Map.of("error_id", errorId)));
     }
 
     private void sendReason(Player player, String reason, FailureContext context) {
-        String normalized = reason == null ? "" : reason.toLowerCase(java.util.Locale.ROOT);
-        String key;
-        if (normalized.contains("daily-limit")
-                || normalized.contains("daily limit")
-                || normalized.contains("batch-limit")
-                || normalized.contains("weight-limit")
-                || normalized.contains("payout-limit")) {
-            key = "trade.daily-limit";
-        } else if (normalized.contains("server-budget")) {
-            key = "trade.server-budget";
-        } else if (normalized.contains("dry-only")
-                || normalized.contains("not-tradeable")
-                || normalized.contains("not-deliverable")) {
-            key = "trade.dry-only";
-        } else if (normalized.contains("expired") && context == FailureContext.CONTRACT) {
-            key = "contracts.expired";
-        } else if ((normalized.contains("require")
-                || normalized.contains("quality")
-                || normalized.contains("strain"))
-                && context == FailureContext.CONTRACT) {
-            key = "contracts.item-not-required";
-        } else if (normalized.contains("already-claimed")) {
-            key = "contracts.already-claimed";
-        } else if (normalized.contains("contract-limit")
-                || normalized.contains("busy")) {
-            key = "errors.busy";
-        } else if (normalized.contains("authentic")
-                || normalized.contains("unregistered")
-                || normalized.contains("invalid")
-                || normalized.contains("used")
-                || normalized.contains("owner")
-                || normalized.contains("batch")) {
-            key = "trade.authentic-only";
-        } else if (context == FailureContext.CONTRACT) {
-            key = "contracts.item-not-required";
-        } else if (context == FailureContext.PURCHASE) {
-            key = "errors.insufficient-items";
-        } else {
+        String key = reasonKey(reason, context);
+        if (key == null) {
+            String errorId = UUID.randomUUID().toString().substring(0, 8);
             player.sendMessage(translations.component(
-                    player, "errors.internal",
-                    Map.of("error_id", UUID.randomUUID().toString().substring(0, 8))));
+                    player, "errors.internal", Map.of("error_id", errorId)));
             return;
         }
         Map<String, ?> placeholders = key.equals("contracts.expired")
                 ? Map.of("contract_id", "")
                 : Map.of();
         player.sendMessage(translations.component(player, key, placeholders));
+    }
+
+    static String reasonKey(String reason, FailureContext context) {
+        String normalized = reason == null ? "" : reason.toLowerCase(java.util.Locale.ROOT);
+        if (normalized.contains("daily-limit")
+                || normalized.contains("daily limit")
+                || normalized.contains("batch-limit")
+                || normalized.contains("weight-limit")
+                || normalized.contains("payout-limit")) return "trade.daily-limit";
+        if (normalized.contains("server-budget")) return "trade.server-budget";
+        if (normalized.contains("fresh-batch") || normalized.contains("requires-drying")) {
+            return "trade.fresh-batch-requires-drying";
+        }
+        if (normalized.contains("batch-state") || normalized.contains("unsupported-sale-state")) {
+            return "trade.unsupported-batch-state";
+        }
+        if (normalized.contains("dry-only")
+                || normalized.contains("not-tradeable")
+                || normalized.contains("not-deliverable")) return "trade.dry-only";
+        if (normalized.contains("wrong-owner")) return "errors.wrong-owner";
+        if (normalized.contains("already-used") || normalized.contains("consumed")) {
+            return "trade.already-used";
+        }
+        if (normalized.contains("reserved")) return "trade.item-reserved";
+        if (normalized.contains("unregistered")) return "trade.unregistered-item";
+        if (normalized.contains("missing-batch") || normalized.contains("unknown-batch")) {
+            return "trade.missing-batch";
+        }
+        if (normalized.contains("authentic")
+                || normalized.contains("signature")
+                || normalized.contains("modified")
+                || normalized.contains("invalid-or-used-item")) return "trade.authentic-only";
+        if (normalized.contains("expired") && context == FailureContext.CONTRACT) {
+            return "contracts.expired";
+        }
+        if ((normalized.contains("require")
+                || normalized.contains("quality")
+                || normalized.contains("strain"))
+                && context == FailureContext.CONTRACT) return "contracts.item-not-required";
+        if (normalized.contains("already-claimed")) return "contracts.already-claimed";
+        if (normalized.contains("contract-limit") || normalized.contains("busy")) {
+            return "errors.busy";
+        }
+        if (context == FailureContext.CONTRACT) return "contracts.item-not-required";
+        if (context == FailureContext.PURCHASE) return "errors.insufficient-items";
+        return null;
     }
 
     private void removeExpiredQuotes() {

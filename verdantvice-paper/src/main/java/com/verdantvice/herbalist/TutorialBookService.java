@@ -1,6 +1,8 @@
 package com.verdantvice.herbalist;
 
 import com.verdantvice.i18n.TranslationService;
+import com.verdantvice.config.ConfigManager;
+import com.verdantvice.resourcepack.ResourcePackModels;
 import com.verdantvice.security.CustomItemType;
 import com.verdantvice.security.ItemSigner;
 import com.verdantvice.security.SignedItemData;
@@ -20,10 +22,16 @@ import java.util.UUID;
 public final class TutorialBookService {
     private final TranslationService translations;
     private final ItemSigner signer;
+    private final ConfigManager configs;
 
     public TutorialBookService(TranslationService translations, ItemSigner signer) {
+        this(translations, signer, null);
+    }
+
+    public TutorialBookService(TranslationService translations, ItemSigner signer, ConfigManager configs) {
         this.translations = Objects.requireNonNull(translations, "translations");
         this.signer = Objects.requireNonNull(signer, "signer");
+        this.configs = configs;
     }
 
     public PreparedBook basics(Player player) {
@@ -44,6 +52,7 @@ public final class TutorialBookService {
                 BookType.DRYING_CURING,
                 BookType.ADVANCED_GENETICS,
                 BookType.FARM_MANAGEMENT,
+                BookType.RECIPES,
                 BookType.PERFECT_BATCH
         );
     }
@@ -51,6 +60,13 @@ public final class TutorialBookService {
     private PreparedBook create(Player player, BookType type) {
         ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
         BookMeta meta = (BookMeta) book.getItemMeta();
+        CustomItemType itemType = type == BookType.BASICS
+                ? CustomItemType.GUIDE_BOOK : CustomItemType.ADVANCED_BOOK;
+        String itemKey = type == BookType.BASICS ? "guide-book" : "advanced-book";
+        int model = configs == null ? ResourcePackModels.item(itemType)
+                : configs.get("items.yml").getInt(itemKey + ".custom-model-data",
+                        ResourcePackModels.item(itemType));
+        if (model > 0) meta.setCustomModelData(model);
         String base = "book." + type.slug;
         meta.title(translations.component(player, base + ".title"));
         meta.author(translations.component(player, base + ".author"));
@@ -63,9 +79,7 @@ public final class TutorialBookService {
         book.setItemMeta(meta);
 
         SignedItemData data = new SignedItemData(
-                type == BookType.BASICS
-                        ? CustomItemType.GUIDE_BOOK
-                        : CustomItemType.ADVANCED_BOOK,
+                itemType,
                 "book:" + type.slug,
                 UUID.randomUUID(),
                 null,
@@ -86,6 +100,7 @@ public final class TutorialBookService {
         DRYING_CURING("drying_curing", 3),
         ADVANCED_GENETICS("advanced_genetics", 3),
         FARM_MANAGEMENT("farm_management", 3),
+        RECIPES("recipes", 5),
         PERFECT_BATCH("perfect_batch", 3);
 
         private final String slug;
@@ -98,6 +113,10 @@ public final class TutorialBookService {
 
         public String slug() {
             return slug;
+        }
+
+        public int pages() {
+            return pages;
         }
     }
 

@@ -21,13 +21,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Database-owned product batches. Inventory items are only signed references
  * to these rows and can never override persisted quality or processing state.
  */
-public final class BatchRepository {
+public final class BatchRepository implements BatchPersistence {
     private static final String SELECT = """
             SELECT batch_id, owner_uuid, strain_composition_json,
                    genetic_origin_json, fresh_weight, dry_weight, quality_score,
@@ -38,72 +37,82 @@ public final class BatchRepository {
             """;
 
     private final DatabaseManager database;
-    private final ConcurrentHashMap<UUID, Long> versions = new ConcurrentHashMap<>();
 
     public BatchRepository(DatabaseManager database) {
         this.database = Objects.requireNonNull(database, "database");
     }
 
+    @Override
     public CompletableFuture<List<ProductBatch>> loadAll() {
-        return database.query(SELECT, this::map).thenApply(rows -> {
-            rows.forEach(row -> versions.put(row.batch().batchId(), row.version()));
-            return rows.stream().map(StoredBatch::batch).toList();
-        });
+        return database.query(SELECT, this::map).thenApply(rows ->
+                rows.stream().map(StoredBatch::batch).toList());
     }
 
+    @Override
     public CompletableFuture<Optional<ProductBatch>> find(UUID batchId) {
         return database.queryOne(
                 SELECT + " WHERE batch_id=?",
                 this::map,
                 batchId
-        ).thenApply(row -> row.map(value -> {
-            versions.put(value.batch().batchId(), value.version());
-            return value.batch();
-        }));
+        ).thenApply(row -> row.map(StoredBatch::batch));
     }
 
+    @Override
     public CompletableFuture<Void> create(ProductBatch batch) {
         Objects.requireNonNull(batch, "batch");
         if (batch.signature().isBlank()) {
             return CompletableFuture.failedFuture(
-                    new IllegalArgumentException("A persisted batch must be signed")
-            );
+                    new IllegalArgumentException("A persisted batch must be signed"));
         }
         Instant now = Instant.now();
         return database.transaction(session -> {
-            PlayerDataRepository.ensure(session, batch.ownerUuid(), null, now);
-            session.update(
-                    """
-                    INSERT INTO product_batches (
-                      batch_id, owner_uuid, strain_composition_json,
-                      genetic_origin_json, fresh_weight, dry_weight, quality_score,
-                      quality_grade, contamination, freshness, harvest_timing,
-                      drying_data_json, curing_data_json, batch_state, created_at,
-                      updated_at, signature, schema_version, row_version
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0)
-                    """,
-                    batch.batchId(),
-                    batch.ownerUuid(),
-                    DomainJson.composition(batch.strainComposition()),
-                    DomainJson.uuidSet(batch.geneticOrigin()),
-                    batch.freshWeight(),
-                    batch.dryWeight(),
-                    batch.qualityScore(),
-                    batch.qualityGrade(),
-                    batch.contamination(),
-                    batch.freshness(),
-                    batch.harvestTiming(),
-                    batch.dryingData().map(BatchRepository::dryingJson).orElse(null),
-                    batch.curingData().map(BatchRepository::curingJson).orElse(null),
-                    batch.state(),
-                    batch.createdAt(),
-                    now,
-                    batch.signature()
-            );
+            create(session, batch, now);
             return null;
-        }).thenRun(() -> versions.put(batch.batchId(), 0L));
+        });
     }
 
+    @Override
+    public void create(
+            com.verdantvice.database.SqlSession session,
+            ProductBatch batch,
+            Instant now
+    ) throws SQLException {
+        Objects.requireNonNull(session, "session");
+        Objects.requireNonNull(batch, "batch");
+        Objects.requireNonNull(now, "now");
+        if (batch.signature().isBlank()) {
+            throw new IllegalArgumentException("A persisted batch must be signed");
+        }
+        PlayerDataRepository.ensure(session, batch.ownerUuid(), null, now);
+        session.update("""
+                        INSERT INTO product_batches (
+                          batch_id, owner_uuid, strain_composition_json,
+                          genetic_origin_json, fresh_weight, dry_weight, quality_score,
+                          quality_grade, contamination, freshness, harvest_timing,
+                          drying_data_json, curing_data_json, batch_state, created_at,
+                          updated_at, signature, schema_version, row_version
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0)
+                        """,
+                batch.batchId(),
+                batch.ownerUuid(),
+                DomainJson.composition(batch.strainComposition()),
+                DomainJson.uuidSet(batch.geneticOrigin()),
+                batch.freshWeight(),
+                batch.dryWeight(),
+                batch.qualityScore(),
+                batch.qualityGrade(),
+                batch.contamination(),
+                batch.freshness(),
+                batch.harvestTiming(),
+                batch.dryingData().map(BatchRepository::dryingJson).orElse(null),
+                batch.curingData().map(BatchRepository::curingJson).orElse(null),
+                batch.state(),
+                batch.createdAt(),
+                now,
+                batch.signature());
+    }
+
+    @Override
     public CompletableFuture<Void> save(ProductBatch batch) {
         Objects.requireNonNull(batch, "batch");
         if (batch.signature().isBlank()) {
@@ -111,40 +120,73 @@ public final class BatchRepository {
                     new IllegalArgumentException("A persisted batch must be signed")
             );
         }
-        long expected = versions.getOrDefault(batch.batchId(), 0L);
         return database.transaction(session -> {
-            int changed = session.update(
-                    """
-                    UPDATE product_batches SET
-                      strain_composition_json=?, genetic_origin_json=?,
-                      fresh_weight=?, dry_weight=?, quality_score=?, quality_grade=?,
-                      contamination=?, freshness=?, harvest_timing=?,
-                      drying_data_json=?, curing_data_json=?, batch_state=?,
-                      updated_at=?, signature=?, row_version=row_version+1
-                    WHERE batch_id=? AND row_version=?
-                    """,
-                    DomainJson.composition(batch.strainComposition()),
-                    DomainJson.uuidSet(batch.geneticOrigin()),
-                    batch.freshWeight(),
-                    batch.dryWeight(),
-                    batch.qualityScore(),
-                    batch.qualityGrade(),
-                    batch.contamination(),
-                    batch.freshness(),
-                    batch.harvestTiming(),
-                    batch.dryingData().map(BatchRepository::dryingJson).orElse(null),
-                    batch.curingData().map(BatchRepository::curingJson).orElse(null),
-                    batch.state(),
-                    Instant.now(),
-                    batch.signature(),
-                    batch.batchId(),
-                    expected
-            );
-            if (changed != 1) {
-                throw new SQLException("Concurrent batch modification: " + batch.batchId());
-            }
+            BatchPersistence.StoredBatch current = find(session, batch.batchId(), true)
+                    .orElseThrow(() -> new SQLException(
+                            "Missing product batch: " + batch.batchId()));
+            save(session, current, batch, Instant.now());
             return null;
-        }).thenRun(() -> versions.replace(batch.batchId(), expected, expected + 1L));
+        });
+    }
+
+    @Override
+    public Optional<BatchPersistence.StoredBatch> find(
+            com.verdantvice.database.SqlSession session,
+            UUID batchId,
+            boolean forUpdate
+    ) throws SQLException {
+        Objects.requireNonNull(session, "session");
+        Objects.requireNonNull(batchId, "batchId");
+        String suffix = forUpdate && session.databaseType().isNetworkDatabase()
+                ? " FOR UPDATE" : "";
+        return session.queryOne(
+                SELECT + " WHERE batch_id=?" + suffix,
+                this::map,
+                batchId
+        ).map(value -> new BatchPersistence.StoredBatch(value.batch(), value.version()));
+    }
+
+    @Override
+    public void save(
+            com.verdantvice.database.SqlSession session,
+            BatchPersistence.StoredBatch expected,
+            ProductBatch batch,
+            Instant now
+    ) throws SQLException {
+        Objects.requireNonNull(session, "session");
+        Objects.requireNonNull(expected, "expected");
+        Objects.requireNonNull(batch, "batch");
+        Objects.requireNonNull(now, "now");
+        int changed = session.update(
+                """
+                UPDATE product_batches SET
+                  strain_composition_json=?, genetic_origin_json=?,
+                  fresh_weight=?, dry_weight=?, quality_score=?, quality_grade=?,
+                  contamination=?, freshness=?, harvest_timing=?,
+                  drying_data_json=?, curing_data_json=?, batch_state=?,
+                  updated_at=?, signature=?, row_version=row_version+1
+                WHERE batch_id=? AND row_version=?
+                """,
+                DomainJson.composition(batch.strainComposition()),
+                DomainJson.uuidSet(batch.geneticOrigin()),
+                batch.freshWeight(),
+                batch.dryWeight(),
+                batch.qualityScore(),
+                batch.qualityGrade(),
+                batch.contamination(),
+                batch.freshness(),
+                batch.harvestTiming(),
+                batch.dryingData().map(BatchRepository::dryingJson).orElse(null),
+                batch.curingData().map(BatchRepository::curingJson).orElse(null),
+                batch.state(),
+                now,
+                batch.signature(),
+                batch.batchId(),
+                expected.version()
+        );
+        if (changed != 1) {
+            throw new SQLException("Concurrent batch modification: " + batch.batchId());
+        }
     }
 
     private StoredBatch map(ResultSet result) throws SQLException {

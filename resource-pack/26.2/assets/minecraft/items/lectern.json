@@ -10,11 +10,18 @@
           "type": "minecraft:model",
           "model": "verdantvice:item/farm_manager_table"
         }
+      },
+      {
+        "threshold": 12013,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:block/lectern"
+        }
       }
     ],
     "fallback": {
       "type": "minecraft:model",
-      "model": "minecraft:item/lectern"
+      "model": "minecraft:block/lectern"
     }
   }
 }

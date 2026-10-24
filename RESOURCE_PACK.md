@@ -1,185 +1,193 @@
-# Paczka zasobów VerdantVice
+# VerdantVice resource pack
 
-## Charakter paczki
+A complete 32×32 pixel-art collection: 25 items, 12 seed packets,
+8 generic growth stages, and 96 plant models for 12 strains. Each pack
+variant contains **141 textures and 141 models**. Items have distinctive
+silhouettes, a limited palette, crisp pixels, and transparent backgrounds.
+World plant models consist of two double-sided crossed planes.
 
-Paczka jest opcjonalna. VerdantVice działa bez niej, ponieważ każdy
-niestandardowy przedmiot i display ma materiał vanilla. Paczka zmienia
-wygląd przez `CustomModelData` i dodaje napisy do trzech dźwięków opartych na
-istniejących dźwiękach Minecrafta.
+![All items, seeds, and mature plants on light and dark backgrounds](resource-pack/source/all-items-preview.png)
 
-Repozytorium zawiera dwa techniczne warianty:
+## Versions and ready-to-use archives
 
-| Katalog | Minecraft | Metadane paczki |
+| Source directory | Minecraft client | Metadata |
 |---|---|---|
 | `resource-pack/1.21.4/` | 1.21.4 | `pack_format: 46` |
 | `resource-pack/26.2/` | 26.2 | `min_format: [88, 0]`, `max_format: [88, 0]` |
 
-Nie wysyłaj wariantu 1.21.4 klientowi 26.2 ani odwrotnie. Jeśli serwer
-obsługuje różne protokoły przez proxy, sam VerdantVice nadal udostępnia tylko
-jeden URL z `resourcepack.yml`; dobór paczki per protokół wymaga zewnętrznego
-mechanizmu.
+The normal build creates both ZIPs. To build only the packs:
 
-## Zawartość
-
-Każdy wariant ma:
-
-```text
-pack.mcmeta
-pack.png
-assets/
-├── minecraft/items/*.json
-└── verdantvice/
-    ├── lang/en_us.json
-    ├── models/item/*.json
-    ├── textures/item/*.png
-    └── sounds.json
+```powershell
+.\gradlew.bat :verdantvice-paper:resourcePacks
 ```
 
-Tekstury mają 32×32 piksele. Definicje przedmiotów obejmują numery
-`CustomModelData` `12001..12017` oraz modele etapów roślin
-`12101..12108`. Paczka dostarcza dedykowane grafiki najważniejszych
-przedmiotów i stacji; pozostałe używają fallbacku modelu vanilla.
+Outputs:
 
-`sounds.json` nie zawiera nowych plików audio. Odwołuje się do dźwięków
-vanilla dla gotowej rośliny, użycia narzędzia i zakończenia procesu.
+- `verdantvice-paper/build/resource-packs/VerdantVice-resourcepack-1.21.4.zip`
+- `verdantvice-paper/build/resource-packs/VerdantVice-resourcepack-26.2.zip`
 
-## Zgodność z `items.yml`
+`pack.mcmeta` is at the root of each archive. File ordering and archive
+timestamps are fixed, so the same assets produce a reproducible ZIP.
+Choose the variant matching the client version. The plugin exposes a single
+URL from `resourcepack.yml`; serving different packs to clients using
+different protocols requires a proxy-side mechanism.
 
-Materiał bazowy i numer muszą zgadzać się w trzech miejscach:
+## All items
 
-1. `verdantvice-paper/src/main/resources/items.yml`;
-2. `resource-pack/1.21.4/assets/minecraft/items/<materiał>.json`;
-3. `resource-pack/26.2/assets/minecraft/items/<materiał>.json`.
+The thumbnails below are the exact PNG files used by the game.
 
-Po zmianie jednego z nich przebuduj oba warianty i sprawdź vanilla fallback.
-Nie używaj istniejących numerów VerdantVice dla obcego pluginu.
+| Icon | Item | Configuration ID | CustomModelData |
+|---|---|---|---:|
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed.png) | Seeds — generic variant | `seed` | 12001 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/planting_pot.png) | Planting pot | `planting-pot` | 12002 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/watering_can.png) | Watering can | `watering-can` | 12003 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_scanner.png) | Plant scanner | `plant-scanner` | 12004 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/cleaning_kit.png) | Cleaning kit | `cleaning-kit` | 12005 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/treatment_spray.png) | Treatment spray | `treatment-spray` | 12006 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/nutrient_pack.png) | Nutrient pack | `nutrient-pack` | 12007 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/repair_kit.png) | Repair kit | `repair-kit` | 12008 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/drying_rack.png) | Drying rack | `drying-rack` | 12009 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/curing_container.png) | Curing container | `curing-container` | 12010 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/grinder.png) | Grinder | `grinder` | 12011 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/farm_manager_table.png) | Farm manager table | `farm-manager-table` | 12012 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/selection_wand.png) | Selection wand | `selection-wand` | 12013 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/rolling_paper.png) | Rolling paper | `rolling-paper` | 12014 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/filter.png) | Filter | `filter` | 12015 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/package.png) | Package | `package` | 12016 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/joint.png) | Finished product | `joint` | 12017 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/fresh_batch.png) | Fresh batch | `fresh-batch` | 12018 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/dry_batch.png) | Dried batch | `dry-batch` | 12019 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/cured_batch.png) | Cured batch | `cured-batch` | 12020 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/ground_product.png) | Ground product | `ground-product` | 12021 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/mixture.png) | Mixture | `mixture` | 12022 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/plantation_contract.png) | Contract | `plantation-contract` | 12023 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/guide_book.png) | Guide book | `guide-book` | 12024 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/advanced_book.png) | Advanced guide | `advanced-book` | 12025 |
 
-## Regeneracja z atlasu
+## Strains
 
-Skrypt `resource-pack/tools/build_assets.py` wymaga Pythona 3 i biblioteki
-Pillow:
+Players see real strain names. Internal identifiers are retained for
+compatibility with saved items, plants, and data. The label color, small
+packet code, and flower accent distinguish strains in the interface.
+The illustrations are stylized game graphics.
+
+| Seeds | Plant | In-game name | Stable ID | Seed model |
+|---|---|---|---|---:|
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed_berry_fog.png) | ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_ready_berry_fog.png) | Blueberry | `berry_fog` | 13001 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed_concrete_kush.png) | ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_ready_concrete_kush.png) | Hindu Kush | `concrete_kush` | 13002 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed_lemon_static.png) | ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_ready_lemon_static.png) | Super Lemon Haze | `lemon_static` | 13003 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed_green_alley.png) | ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_ready_green_alley.png) | Skunk #1 | `green_alley` | 13004 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed_neon_haze.png) | ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_ready_neon_haze.png) | Super Silver Haze | `neon_haze` | 13005 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed_night_widow.png) | ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_ready_night_widow.png) | White Widow | `night_widow` | 13006 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed_purple_crash.png) | ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_ready_purple_crash.png) | Purple #1 | `purple_crash` | 13007 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed_velvet_smoke.png) | ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_ready_velvet_smoke.png) | Northern Lights | `velvet_smoke` | 13008 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed_ghost_garden.png) | ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_ready_ghost_garden.png) | AK-47 | `ghost_garden` | 13009 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed_royal_static.png) | ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_ready_royal_static.png) | Jack Herer | `royal_static` | 13010 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed_black_orchard.png) | ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_ready_black_orchard.png) | Black Domina | `black_orchard` | 13011 |
+| ![](resource-pack/26.2/assets/verdantvice/textures/item/seed_verdant_vice.png) | ![](resource-pack/26.2/assets/verdantvice/textures/item/plant_ready_verdant_vice.png) | OG Kush | `verdant_vice` | 13012 |
+
+Every strain has eight stages. Generic models use `12101..12108`.
+Models for strain index `i` use `13101 + i * 10 + stage`, with zero-based
+`i` and stages ordered as `SEED`, `SPROUT`, `SEEDLING`, `VEGETATIVE`,
+`MATURING`, `READY`, `OVERRIPE`, and `SPOILED`. Gaps between ranges retain
+the vanilla appearance.
+
+![All 96 growth-stage variants](resource-pack/source/all-growth-stages-preview.png)
+
+## Editing and rebuilding
+
+All final sprites come from `resource-pack/source/pixel_art.py`. It contains
+editable shapes on a 32×32 grid and a fixed palette. The generator adds no
+noise, blur, or antialiasing. It does not remove dark pixels by guessing the
+background color. `catalog.json` is the generated catalog of models and
+their numbers.
+
+Requirements: Python 3 and Pillow. Run from the project directory:
 
 ```powershell
 python -m pip install Pillow
+python resource-pack/tools/build_assets.py
+python resource-pack/tools/verify_assets.py
 ```
 
-Wejściem jest atlas 4×4 zawierający 16 sprite'ów w kolejności zapisanej w
-`SPRITES`. Skrypt:
+The generator rebuilds both variants, the catalog, models, item definitions,
+pack icons, and both preview sheets. Every texture pixel is fully transparent
+or fully opaque. Previews show the art at native resolution and integer
+nearest-neighbor enlargement.
 
-- usuwa ciemne tło komórek;
-- skaluje sprite'y do 32×32;
-- nadpisuje tekstury, modele, definicje itemów, `sounds.json`, język,
-  `pack.png` i oba `pack.mcmeta`;
-- kopiuje atlas do `resource-pack/source/verdantvice-atlas.png`.
+`source/plant-concept.png` is a silhouette reference. The old
+`source/verdantvice-atlas.png` is retained as historical material; the
+generator does not use it. The visual direction is documented in
+[art-direction.md](resource-pack/source/art-direction.md).
 
-Podaj plik atlasu spoza docelowego `resource-pack/source/`. Skrypt kopiuje
-wejście do tego miejsca, więc użycie dokładnie tego samego pliku jako źródła
-i celu może zakończyć się błędem `SameFileError`.
+After changing a model or material, maintain consistency between `items.yml`,
+`ResourcePackModels`, the art source, and both packs. For seeds, the base
+model `12001` allows the factory to select a strain variant. A custom model
+number explicitly set in the configuration is respected.
 
-Przykład:
+## Automated checks
+
+`verify_assets.py` compares generated files with the editable source. It
+checks completeness, dimensions, palette, alpha, padding, plant geometry,
+number mappings, metadata, previews, and consistency between both versions.
+
+`ResourcePackAssetsTest` runs with the normal Gradle tests and does not
+require Python. It checks all 282 textures across both versions, consistency
+with the plugin's actual model selector and configuration, icon uniqueness,
+all stages, and every integer model number through 13299, including vanilla
+fallback after every reserved range. `verifyDistribution` additionally
+checks the contents of the finished ZIPs.
+
+Vanilla fallbacks preserve the complete item definition from the matching
+official client, including block model paths and dynamic clock, brush,
+bundle, and decorated-pot rendering. The small checked-in references and
+their model fingerprints are documented in
+[vanilla/README.md](resource-pack/source/vanilla/README.md). Custom assets
+remain identical across pack variants; version-specific native item
+definitions may legitimately differ. Tests compare fallbacks to these
+native trees rather than assuming `minecraft:item/<material>` exists.
 
 ```powershell
-Copy-Item .\resource-pack\source\verdantvice-atlas.png `
-  .\verdantvice-atlas-input.png
-
-python .\resource-pack\tools\build_assets.py `
-  .\verdantvice-atlas-input.png `
-  .\resource-pack
-
-Remove-Item .\verdantvice-atlas-input.png
+.\gradlew.bat :verdantvice-paper:test --tests com.verdantvice.resourcepack.ResourcePackAssetsTest
+.\gradlew.bat :verdantvice-paper:verifyDistribution
 ```
 
-Po regeneracji obejrzyj wszystkie 16 tekstur. Automatyczne usuwanie ciemnego
-tła może wyciąć zamierzone bardzo ciemne detale.
+The pack uses three Minecraft sound events. It contains no new audio files;
+Polish and English subtitles are in `assets/verdantvice/lang/`.
+Aliases use `type: event` and event IDs verified against both official asset
+indexes, preserving the native sound choices, pitch, and volume.
 
-## Tworzenie ZIP-a
+## Sending the pack to players
 
-Spakuj zawartość wybranego katalogu, a nie sam katalog nadrzędny. Po
-otwarciu ZIP-a `pack.mcmeta` musi znajdować się w katalogu głównym archiwum.
-
-PowerShell:
+Host the appropriate ZIP at a direct public HTTPS URL that returns the file,
+then calculate the SHA-1 of that exact archive:
 
 ```powershell
-Compress-Archive `
-  -Path .\resource-pack\26.2\* `
-  -DestinationPath .\VerdantVice-resource-pack-26.2.zip `
-  -CompressionLevel Optimal
+(Get-FileHash .\verdantvice-paper\build\resource-packs\VerdantVice-resourcepack-26.2.zip -Algorithm SHA1).Hash.ToLowerInvariant()
 ```
 
-Linux/macOS:
-
-```bash
-cd resource-pack/26.2
-zip -r ../../VerdantVice-resource-pack-26.2.zip .
-```
-
-Analogicznie wybierz katalog `1.21.4` dla starszego klienta.
-
-## Obliczenie SHA-1
-
-Paper wymaga surowych 20 bajtów SHA-1; konfiguracja przyjmuje 40 znaków
-szesnastkowych.
-
-PowerShell:
-
-```powershell
-(Get-FileHash `
-  .\VerdantVice-resource-pack-26.2.zip `
-  -Algorithm SHA1).Hash.ToLowerInvariant()
-```
-
-Linux:
-
-```bash
-sha1sum VerdantVice-resource-pack-26.2.zip
-```
-
-Po każdej zmianie ZIP-a oblicz hash ponownie. Stary SHA-1 przy nowej
-zawartości spowoduje odrzucenie lub użycie cache klienta.
-
-## Hosting
-
-ZIP musi być dostępny klientowi pod publicznym bezpośrednim adresem HTTPS.
-Adres powinien zwracać plik binarny, a nie stronę logowania/podglądu. Sprawdź
-go z sieci spoza hosta serwera.
-
-Przykład `plugins/VerdantVice/resourcepack.yml`:
+Enter your URL and the resulting hash in
+`plugins/VerdantVice/resourcepack.yml`:
 
 ```yaml
 enabled: true
 send-on-join: true
 required: false
-url: "https://cdn.example.net/minecraft/VerdantVice-resource-pack-26.2.zip"
+url: "https://cdn.example.net/minecraft/VerdantVice-resourcepack-26.2.zip"
 sha1: "0123456789abcdef0123456789abcdef01234567"
 prompt-key: resourcepack.prompt
 fallback-without-pack: true
 ```
 
-Następnie:
+The URL and hash above are examples. Recalculate the hash after replacing
+the ZIP. Then run `/vv admin reload` and `/vv resourcepack`.
+`required: true` tells the client that accepting the pack is mandatory.
 
-```text
-/vv admin reload
-/vv resourcepack
-```
+The pack is optional: items and plants have vanilla materials, so gameplay
+remains available without it. `fallback-without-pack` does not select a
+separate runtime path. Download problems are covered in
+[TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
-`required: true` przekazuje do Paper wymóg zaakceptowania paczki.
-`send-on-join` działa tylko przy `enabled: true`. URL pusty, SHA-1 o długości
-innej niż 40 lub znak spoza hex zwracają kontrolowany błąd konfiguracji.
-
-`fallback-without-pack` nie steruje osobną ścieżką wykonawczą w bieżącej
-wersji. Fallback vanilla działa dzięki materiałom itemów niezależnie od tej
-wartości.
-
-## Test akceptacyjny
-
-1. Usuń cache paczek klienta albo zmień nazwę/URL pliku.
-2. Wejdź na serwer i zaakceptuj paczkę.
-3. Sprawdź nasiono, donicę, konewkę, skaner, stacje, opakowanie i produkt
-   końcowy.
-4. Sprawdź każdy etap display rośliny.
-5. Odrzuć paczkę przy `required: false`; rozgrywka ma pozostać czytelna na
-   materiałach vanilla.
-6. Powtórz przy `required: true` na serwerze testowym.
-7. Zweryfikuj osobno 1.21.4 i 26.2.
-
-Typowe problemy opisuje [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+Asset and server tests do not render the Minecraft client. For releases on
+a new client version, in-game visual checks cover item positions, world
+plants, inventories, lighting, and the pack acceptance screen.

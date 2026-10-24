@@ -6,7 +6,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.Inventory;
 
 import java.util.Objects;
@@ -24,11 +23,16 @@ public final class GuiListener implements Listener {
         if (!(top.getHolder(false) instanceof VerdantGuiHolder holder)) {
             return;
         }
+        if (event.getRawSlot() < 0) return;
+        if (event.getRawSlot() >= top.getSize()) {
+            if (event.getAction() == org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+                event.setCancelled(true);
+            }
+            return;
+        }
         event.setCancelled(true);
         if (!(event.getWhoClicked() instanceof Player player)
-                || !holder.ownerUuid().equals(player.getUniqueId())
-                || event.getRawSlot() < 0
-                || event.getRawSlot() >= top.getSize()) {
+                || !holder.ownerUuid().equals(player.getUniqueId())) {
             return;
         }
         guiManager.execute(player, holder, holder.action(event.getRawSlot()));
@@ -36,15 +40,9 @@ public final class GuiListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onDrag(InventoryDragEvent event) {
-        if (event.getView().getTopInventory().getHolder(false) instanceof VerdantGuiHolder) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
-    public void onDrop(PlayerDropItemEvent event) {
-        if (event.getPlayer().getOpenInventory().getTopInventory().getHolder(false)
-                instanceof VerdantGuiHolder) {
+        Inventory top = event.getView().getTopInventory();
+        if (top.getHolder(false) instanceof VerdantGuiHolder
+                && event.getRawSlots().stream().anyMatch(slot -> slot < top.getSize())) {
             event.setCancelled(true);
         }
     }

@@ -1,174 +1,138 @@
 # VerdantVice
 
-VerdantVice to rozbudowany, fabularny symulator fikcyjnych roślin, produkcji,
-plantacji i rynku dla serwerów Paper/Purpur. Rozgrywka obejmuje pielęgnację
-roślin, genetykę, zbiory, suszenie i dojrzewanie partii, mieszanie, minigrę
-skręcania, efekty i tolerancję, zielarzy, kontrakty, dynamiczne ceny oraz
-pracowników plantacji.
+A farm and trading plugin for Paper/Purpur. Players grow plants, process
+harvests, trade with herbalists and manage farms with hired workers.
 
-Wszystkie parametry uprawy i przetwarzania są abstrakcyjnymi wartościami gry.
-Projekt nie jest poradnikiem dotyczącym rzeczywistych roślin ani substancji.
+Growth, processing and effects use fictional game values. This is not a
+guide to real-world cultivation or substance use.
 
-## Najważniejsze funkcje
+## Requirements
 
-- 12 wbudowanych fikcyjnych odmian z odmiennymi cechami, rzadkością, efektami
-  i cenami;
-- wzrost oparty na znacznikach czasu, również po restarcie oraz — zależnie od
-  konfiguracji — poza załadowanym chunkem;
-- stan zdrowia, nawodnienie, odżywienie, czystość, stres, problemy i okno
-  optymalnego zbioru;
-- unikalne profile genetyczne i pochodzenie każdej partii;
-- pełny łańcuch: świeża partia → suszenie → dojrzewanie → mielenie/mieszanie
-  → minigra skręcania;
-- ocena jakości, historia partii i podpis HMAC chroniący przed modyfikacją
-  oraz powielaniem przedmiotów;
-- zielarze, oferty, reputacja, kontrakty i rynek z historią cen oraz
-  wydarzeniami;
-- plantacje z regionem, rolami, magazynami, pracownikami, zadaniami, pensjami
-  i morale;
-- sześć języków: `pl_PL`, `en_US`, `de_DE`, `es_ES`, `cs_CZ`, `uk_UA`;
-- SQLite, MySQL i MariaDB, automatyczne migracje oraz kopie SQLite;
-- opcjonalne integracje z Vault, PlaceholderAPI, WorldGuard,
-  GriefPrevention i Lands;
-- opcjonalna paczka zasobów dla Minecraft 1.21.4 oraz 26.2;
-- publiczne API v1 przez Bukkit `ServicesManager` i 12 zdarzeń Bukkit.
-
-## Wymagania
-
-| Serwer | Java | Artefakt |
+| Server line | Server Java version | Resource pack |
 |---|---:|---|
-| Paper/Purpur 1.21.4 | 21 lub nowsza zgodna z serwerem | `VerdantVice-1.0.0.jar` |
-| Paper/Purpur 26.2 | 25 | ten sam `VerdantVice-1.0.0.jar` |
+| Paper/Purpur 1.21.4 | 21 | 1.21.4 |
+| Paper/Purpur 26.2 | 25 | 26.2 |
 
-Plugin jest kompilowany jako bytecode Java 21 przeciwko API Paper 1.21.4 i
-korzysta ze wspólnego, publicznego API Bukkit/Paper. Nie należy instalować
-pliku z końcówką `-thin.jar`.
+The plugin targets the Paper 1.21.4 API and Java 21 bytecode. The automated
+runtime harness uses Paper 26.2; the compatibility target is not a claim
+that every server build or third-party plugin combination has been tested.
+Folia, Spigot and CraftBukkit are not supported.
 
-## Instalacja
+## Install
 
-1. Zatrzymaj serwer.
-2. Skopiuj `VerdantVice-1.0.0.jar` do katalogu `plugins/`.
-3. Uruchom serwer. VerdantVice utworzy `plugins/VerdantVice/`, konfigurację,
-   języki, bazę SQLite i klucz podpisu.
-4. Zaczekaj na komunikat `Plugin enabled successfully.` w logu VerdantVice.
-5. Wejdź na serwer i użyj `/vv guide` albo `/vv`.
+1. Build the project or download the artifacts from a successful
+   [GitHub Actions run](https://github.com/Obs1dianByte/VerdantVice/actions).
+2. Stop the server and put `VerdantVice-1.0.0.jar` in `plugins/`.
+   Do not install the `-thin.jar` file.
+3. Start the server and wait for `Plugin enabled successfully.`.
+4. Review the files generated in `plugins/VerdantVice/`, then open `/vv`.
+   `/vv guide` provides the in-game introduction.
 
-Szczegółowa procedura, konfiguracja MySQL/MariaDB i aktualizacja:
-[INSTALLATION.md](INSTALLATION.md).
+SQLite and physical emeralds work without additional plugins. See
+[installation](INSTALLATION.md) for database setup and updates.
 
-## Szybki start administratora
+## Start a farm
 
-Poniższy scenariusz korzysta z domyślnej ekonomii opartej na szmaragdach:
+For a quick administrator test with the default configuration:
 
-1. `/vv admin give <gracz> selection-wand`
-2. Zaznacz lewym i prawym kliknięciem dwa narożniki regionu.
-3. `/vv farm create Moja Plantacja`
-4. `/vv admin give <gracz> planting-pot`
-5. `/vv admin seed <gracz> berry_fog`
-6. Postaw donicę i kliknij ją nasionem.
-7. Do testów użyj `/vv admin inspect` oraz `/vv admin setstage READY`,
-   patrząc na roślinę.
-8. Po zbiorze ustaw stacje poleceniem `admin give` i przejdź przez suszenie,
-   dojrzewanie oraz mielenie.
+```text
+/vv admin give <player> selection-wand
+/vv farm create My Farm
+/vv admin give <player> planting-pot
+/vv admin seed <player> berry_fog
+```
 
-Jeśli region nie został zaznaczony, `/vv farm create` tworzy domyślny obszar
-17×33×17 wokół gracza. Region użytkownika może mieć najwyżej 128 bloków na
-każdej osi i 2 000 000 bloków objętości.
+Select both region corners with the wand before creating the farm. Place
+the pot, then click it with the seed. `berry_fog` is a saved identifier for
+Blueberry; see the [strain catalog](STRAINS.md) for names and aliases.
 
-## Najczęstsze komendy
+The processing chain is harvest → drying → optional curing → grinding →
+optional mixing → rolling. Dry batches can also be sold directly. Use
+`/vv recipes` for the recipe guide and `/vv farm` for the farm dashboard.
+Farms include membership roles, linked storage and worker schedules.
 
-- `/vv` — główne GUI;
-- `/vv guide` — lokalizowana książka wprowadzająca;
-- `/vv farm create <nazwa>` — tworzy plantację;
-- `/vv market` — rynek;
-- `/vv contracts` — kontrakty;
-- `/vv workers` — pracownicy;
-- `/vv language <kod>` — zapisuje język gracza;
-- `/vv admin reload` — bezpiecznie przeładowuje konfigurację;
-- `/vv admin database` — stan bazy i kolejki;
-- `/vv admin debug` — zanonimizowany raport diagnostyczny.
+Players can choose `en_US`, `pl_PL`, `de_DE`, `es_ES`, `cs_CZ` or `uk_UA`
+with `/vv language <code>`.
 
-Aliasem `/verdantvice` jest `/vv`. Pełna, zgodna z implementacją lista:
-[COMMANDS.md](COMMANDS.md). Uprawnienia: [PERMISSIONS.md](PERMISSIONS.md).
+## Resource pack
 
-## Zależności i integracje
+The optional pack includes item icons, seed variants and plant growth
+models. Use the ZIP matching the client's Minecraft version. Without the
+pack, the plugin uses vanilla materials.
 
-VerdantVice działa samodzielnie. Domyślna ekonomia pobiera i wypłaca fizyczne
-szmaragdy.
+[Item preview](resource-pack/source/all-items-preview.png) ·
+[Growth-stage preview](resource-pack/source/all-growth-stages-preview.png)
 
-| Plugin | Zastosowanie | Wymagany |
-|---|---|---|
-| Vault + provider ekonomii | saldo zamiast fizycznych szmaragdów | nie |
-| PlaceholderAPI | placeholdery `%verdantvice_*%` | nie |
-| WorldGuard | kontrola prawa budowy | nie |
-| GriefPrevention | kontrola prawa budowy | nie |
-| Lands | kontrola zaufania do terenu | nie |
+Build outputs:
 
-`plugin.yml` deklaruje również miękkie zależności ItemsAdder, Oraxen i
-LuckPerms. W tej wersji nie mają osobnego adaptera wykonawczego; wbudowane
-modele używają `CustomModelData`, a uprawnienia są standardowymi
-uprawnieniami Bukkit.
+```text
+verdantvice-paper/build/resource-packs/VerdantVice-resourcepack-1.21.4.zip
+verdantvice-paper/build/resource-packs/VerdantVice-resourcepack-26.2.zip
+```
 
-## Dane i baza
+Host the selected ZIP over HTTPS and configure its URL and SHA-1 in
+`resourcepack.yml`. [Resource-pack documentation](RESOURCE_PACK.md) covers
+hosting, model IDs and editing the pixel-art sources.
 
-Domyślnie dane znajdują się w
-`plugins/VerdantVice/data/verdantvice.db`. SQLite działa w trybie WAL, ma
-włączone klucze obce i jest obsługiwany przez pojedynczą kolejkę operacji.
-MySQL i MariaDB używają puli HikariCP. Schemat jest migrowany automatycznie
-przed przejściem pluginu do stanu gotowości.
+## Build and test
 
-Kopie SQLite trafiają do `plugins/VerdantVice/backups/`. Własne kopie MySQL
-lub MariaDB wykonuje administrator narzędziami serwera bazy.
+Use JDK 21 or newer and the included Gradle wrapper:
 
-Plik `plugins/VerdantVice/data/signing.key` jest tak samo ważny jak baza.
-Jego utrata unieważnia istniejące przedmioty VerdantVice. Zawsze kopiuj go
-razem z bazą oraz `data/processing-stations.yml`.
+```powershell
+.\gradlew.bat clean build
+```
 
-## Znane ograniczenia
+On Linux/macOS, use `./gradlew clean build`. The distributable is
+`verdantvice-paper/build/libs/VerdantVice-1.0.0.jar`. The build runs the
+JUnit suites and checks the packaged JAR and both resource-pack archives.
 
-- Paczka zasobów jest opcjonalna i musi być hostowana przez administratora
-  pod adresem HTTPS; bez niej używane są materiały vanilla.
-- Zadanie deweloperskie `runServer` jest skonfigurowane wyłącznie dla Paper
-  26.2. Test 1.21.4 wymaga osobnego serwera.
-- Serwis publicznego API jest rejestrowany dopiero po asynchronicznym
-  uruchomieniu bazy. Plugin zależny powinien pobierać usługę leniwie i
-  obsłużyć chwilowy brak usługi podczas startu.
-- Flagi `modules.*`, `security.require-signed-items` oraz wybrane ustawienia
-  integracji ItemsAdder/Oraxen/LuckPerms są obecnie ładowane jako
-  konfiguracja, ale nie wyłączają ani nie zastępują odpowiadających im
-  systemów wykonawczych.
-- Węzły uprawnień zadeklarowane w `plugin.yml` nie zawsze są osobnymi
-  kontrolami dla każdej akcji; dokładny stan opisuje
-  [PERMISSIONS.md](PERMISSIONS.md).
-- Projekt jest przeznaczony dla Paper/Purpur. Nie deklaruje obsługi Folia,
-  Spigot ani CraftBukkit.
+Additional checks are separate:
 
-## Zgłaszanie błędów
+```powershell
+# MySQL and MariaDB; requires Docker
+.\gradlew.bat :verdantvice-paper:networkDatabaseTest
 
-Przed zgłoszeniem:
+# Build plus isolated Paper startup/restart checks; requires JDK 25
+pwsh -File scripts/Verify.ps1
+```
 
-1. wykonaj `/vv admin debug`;
-2. zapisz wersję Paper/Purpur, Minecrafta, Javy i VerdantVice;
-3. dołącz dokładne kroki odtworzenia oraz istotny fragment logu;
-4. podaj używany typ bazy i listę opcjonalnych integracji;
-5. nie publikuj `database.yml`, pliku `signing.key`, pełnego zrzutu bazy ani
-   danych graczy.
+The Paper test requires a cached server and an already accepted EULA. It
+does not use your normal world or database. See [testing](TESTING.md) for
+prerequisites, report locations, client checks and coverage boundaries.
 
-Raport diagnostyczny trafia do
-`plugins/VerdantVice/logs/diagnostic-<czas>.yml` i celowo nie zawiera hasła
-bazy ani klucza podpisu. Przekaż raport i opis opiekunowi projektu w używanym
-przez zespół systemie zgłoszeń.
+## Server operations
 
-## Dokumentacja
+Back up the database, `data/signing.key` and `data/processing-stations.yml`
+together. Losing the signing key invalidates existing signed items. SQLite
+backups are built in; MySQL/MariaDB backups are the administrator's job.
 
-- [Budowanie](BUILDING.md)
-- [Instalacja](INSTALLATION.md)
-- [Konfiguracja](CONFIGURATION.md)
-- [Komendy](COMMANDS.md)
-- [Uprawnienia](PERMISSIONS.md)
-- [Publiczne API](API.md)
-- [Rozwój projektu](DEVELOPMENT.md)
-- [Testowanie](TESTING.md)
-- [Paczka zasobów](RESOURCE_PACK.md)
-- [Migracje i aktualizacje](MIGRATION.md)
-- [Rozwiązywanie problemów](TROUBLESHOOTING.md)
+Use `/vv admin database` for connection and queue status,
+`/vv admin performance` for runtime counters, and `/vv admin debug` for a
+diagnostic report. Never attach credentials, signing keys, database dumps
+or player data to a public issue.
+
+## Integrations and limits
+
+Vault with an economy provider replaces the emerald economy.
+PlaceholderAPI exposes `%verdantvice_*%` placeholders. WorldGuard,
+GriefPrevention and Lands supply region permission checks.
+
+ItemsAdder, Oraxen and LuckPerms are declared as soft dependencies, but have
+no dedicated runtime adapters. Built-in visuals use `CustomModelData`;
+permissions use Bukkit nodes. Some module/integration settings are accepted
+without disabling or replacing runtime systems; see
+[configuration](CONFIGURATION.md) and [permissions](PERMISSIONS.md).
+
+The API becomes available after asynchronous database startup. Plugins
+using it must handle temporary service absence during startup.
+
+## Reference
+
+[Commands](COMMANDS.md) · [Permissions](PERMISSIONS.md) ·
+[Configuration](CONFIGURATION.md) · [Upgrades](MIGRATION.md) ·
+[Troubleshooting](TROUBLESHOOTING.md) · [API](API.md) ·
+[Building](BUILDING.md) · [Development](DEVELOPMENT.md) ·
+[Contributing](CONTRIBUTING.md)
+
+Report reproducible problems through the
+[issue tracker](https://github.com/Obs1dianByte/VerdantVice/issues).

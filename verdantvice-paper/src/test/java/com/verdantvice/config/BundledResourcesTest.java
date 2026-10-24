@@ -129,12 +129,74 @@ class BundledResourcesTest {
                 "verdantvice.worker.hire",
                 "verdantvice.admin",
                 "verdantvice.admin.debug",
-                "verdantvice.admin.database"
+                "verdantvice.admin.database",
+                "verdantvice.admin.spawnherbalist.force"
         )) {
             assertTrue(
                     descriptor.contains("permissions." + permission),
                     "plugin.yml misses " + permission
             );
+        }
+    }
+
+    @Test
+    void recipesRollingForceAndStationMessagesExistInEveryLanguage() throws Exception {
+        for (String locale : LANGUAGES) {
+            YamlConfiguration language = load("languages/" + locale + ".yml");
+            for (String key : List.of(
+                    "commands.roll.description",
+                    "commands.roll.usage",
+                    "rolling.errors.missing-paper",
+                    "rolling.errors.missing-filter",
+                    "rolling.errors.missing-product",
+                    "rolling.errors.busy",
+                    "rolling.errors.wrong-product-state",
+                    "herbalist.force-created",
+                    "herbalist.already-herbalist",
+                    "herbalist.worker-conflict",
+                    "herbalist.force-no-permission",
+                    "herbalist.tier-updated",
+                    "book.recipes.title",
+                    "book.recipes.page_1",
+                    "book.recipes.page_5"
+            )) {
+                assertTrue(language.isString(key), locale + " misses " + key);
+                assertFalse(language.getString(key, "").isBlank(), locale + " has blank " + key);
+            }
+            assertEquals("/vv recipes [roll]", language.getString("commands.recipes.usage"));
+            assertEquals("/vv roll", language.getString("commands.roll.usage"));
+        }
+    }
+
+    @Test
+    void storageAndRuntimeTranslationKeysExistInEveryLanguage() throws Exception {
+        for (String locale : LANGUAGES) {
+            YamlConfiguration language = load("languages/" + locale + ".yml");
+            for (String key : List.of(
+                    "commands.farm.storage.description",
+                    "commands.farm.storage.usage",
+                    "farm.storage.linked",
+                    "farm.storage.unlinked",
+                    "farm.storage.no-owned-farm",
+                    "farm.storage.no-target",
+                    "farm.storage.not-container",
+                    "farm.storage.outside-farm",
+                    "farm.storage.already-linked",
+                    "farm.storage.not-linked",
+                    "farm.storage.salary-exists",
+                    "farm.storage.other-farm",
+                    "farm.storage.invalid-type",
+                    "processing.errors.wrong-batch-state",
+                    "rolling.errors.missing-paper",
+                    "rolling.errors.missing-filter",
+                    "rolling.errors.missing-product",
+                    "rolling.errors.session-active",
+                    "herbalist.force-created"
+            )) {
+                assertTrue(language.isString(key), locale + " misses " + key);
+                assertFalse(language.getString(key, "").isBlank(),
+                        locale + " has blank " + key);
+            }
         }
     }
 

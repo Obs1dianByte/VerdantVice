@@ -38,7 +38,7 @@ public final class DefaultVerdantViceApi implements VerdantViceApi {
     @Override
     public CompletableFuture<PlayerProfile> profile(UUID playerUuid) {
         requireReady();
-        return plugin.profiles().load(playerUuid, "pl_PL");
+        return plugin.profiles().load(playerUuid, plugin.translations().serverLocale());
     }
 
     @Override

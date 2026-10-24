@@ -8,7 +8,7 @@
         "threshold": 12101,
         "model": {
           "type": "minecraft:model",
-          "model": "verdantvice:item/seed"
+          "model": "verdantvice:item/plant_seed"
         }
       },
       {
@@ -36,7 +36,7 @@
         "threshold": 12105,
         "model": {
           "type": "minecraft:model",
-          "model": "verdantvice:item/plant_ready"
+          "model": "verdantvice:item/plant_maturing"
         }
       },
       {
@@ -58,6 +58,769 @@
         "model": {
           "type": "minecraft:model",
           "model": "verdantvice:item/plant_spoiled"
+        }
+      },
+      {
+        "threshold": 12109,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
+        }
+      },
+      {
+        "threshold": 13101,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seed_berry_fog"
+        }
+      },
+      {
+        "threshold": 13102,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout_berry_fog"
+        }
+      },
+      {
+        "threshold": 13103,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling_berry_fog"
+        }
+      },
+      {
+        "threshold": 13104,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative_berry_fog"
+        }
+      },
+      {
+        "threshold": 13105,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_maturing_berry_fog"
+        }
+      },
+      {
+        "threshold": 13106,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready_berry_fog"
+        }
+      },
+      {
+        "threshold": 13107,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe_berry_fog"
+        }
+      },
+      {
+        "threshold": 13108,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled_berry_fog"
+        }
+      },
+      {
+        "threshold": 13109,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
+        }
+      },
+      {
+        "threshold": 13111,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seed_concrete_kush"
+        }
+      },
+      {
+        "threshold": 13112,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout_concrete_kush"
+        }
+      },
+      {
+        "threshold": 13113,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling_concrete_kush"
+        }
+      },
+      {
+        "threshold": 13114,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative_concrete_kush"
+        }
+      },
+      {
+        "threshold": 13115,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_maturing_concrete_kush"
+        }
+      },
+      {
+        "threshold": 13116,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready_concrete_kush"
+        }
+      },
+      {
+        "threshold": 13117,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe_concrete_kush"
+        }
+      },
+      {
+        "threshold": 13118,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled_concrete_kush"
+        }
+      },
+      {
+        "threshold": 13119,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
+        }
+      },
+      {
+        "threshold": 13121,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seed_lemon_static"
+        }
+      },
+      {
+        "threshold": 13122,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout_lemon_static"
+        }
+      },
+      {
+        "threshold": 13123,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling_lemon_static"
+        }
+      },
+      {
+        "threshold": 13124,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative_lemon_static"
+        }
+      },
+      {
+        "threshold": 13125,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_maturing_lemon_static"
+        }
+      },
+      {
+        "threshold": 13126,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready_lemon_static"
+        }
+      },
+      {
+        "threshold": 13127,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe_lemon_static"
+        }
+      },
+      {
+        "threshold": 13128,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled_lemon_static"
+        }
+      },
+      {
+        "threshold": 13129,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
+        }
+      },
+      {
+        "threshold": 13131,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seed_green_alley"
+        }
+      },
+      {
+        "threshold": 13132,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout_green_alley"
+        }
+      },
+      {
+        "threshold": 13133,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling_green_alley"
+        }
+      },
+      {
+        "threshold": 13134,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative_green_alley"
+        }
+      },
+      {
+        "threshold": 13135,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_maturing_green_alley"
+        }
+      },
+      {
+        "threshold": 13136,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready_green_alley"
+        }
+      },
+      {
+        "threshold": 13137,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe_green_alley"
+        }
+      },
+      {
+        "threshold": 13138,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled_green_alley"
+        }
+      },
+      {
+        "threshold": 13139,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
+        }
+      },
+      {
+        "threshold": 13141,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seed_neon_haze"
+        }
+      },
+      {
+        "threshold": 13142,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout_neon_haze"
+        }
+      },
+      {
+        "threshold": 13143,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling_neon_haze"
+        }
+      },
+      {
+        "threshold": 13144,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative_neon_haze"
+        }
+      },
+      {
+        "threshold": 13145,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_maturing_neon_haze"
+        }
+      },
+      {
+        "threshold": 13146,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready_neon_haze"
+        }
+      },
+      {
+        "threshold": 13147,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe_neon_haze"
+        }
+      },
+      {
+        "threshold": 13148,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled_neon_haze"
+        }
+      },
+      {
+        "threshold": 13149,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
+        }
+      },
+      {
+        "threshold": 13151,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seed_night_widow"
+        }
+      },
+      {
+        "threshold": 13152,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout_night_widow"
+        }
+      },
+      {
+        "threshold": 13153,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling_night_widow"
+        }
+      },
+      {
+        "threshold": 13154,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative_night_widow"
+        }
+      },
+      {
+        "threshold": 13155,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_maturing_night_widow"
+        }
+      },
+      {
+        "threshold": 13156,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready_night_widow"
+        }
+      },
+      {
+        "threshold": 13157,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe_night_widow"
+        }
+      },
+      {
+        "threshold": 13158,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled_night_widow"
+        }
+      },
+      {
+        "threshold": 13159,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
+        }
+      },
+      {
+        "threshold": 13161,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seed_purple_crash"
+        }
+      },
+      {
+        "threshold": 13162,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout_purple_crash"
+        }
+      },
+      {
+        "threshold": 13163,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling_purple_crash"
+        }
+      },
+      {
+        "threshold": 13164,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative_purple_crash"
+        }
+      },
+      {
+        "threshold": 13165,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_maturing_purple_crash"
+        }
+      },
+      {
+        "threshold": 13166,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready_purple_crash"
+        }
+      },
+      {
+        "threshold": 13167,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe_purple_crash"
+        }
+      },
+      {
+        "threshold": 13168,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled_purple_crash"
+        }
+      },
+      {
+        "threshold": 13169,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
+        }
+      },
+      {
+        "threshold": 13171,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seed_velvet_smoke"
+        }
+      },
+      {
+        "threshold": 13172,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout_velvet_smoke"
+        }
+      },
+      {
+        "threshold": 13173,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling_velvet_smoke"
+        }
+      },
+      {
+        "threshold": 13174,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative_velvet_smoke"
+        }
+      },
+      {
+        "threshold": 13175,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_maturing_velvet_smoke"
+        }
+      },
+      {
+        "threshold": 13176,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready_velvet_smoke"
+        }
+      },
+      {
+        "threshold": 13177,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe_velvet_smoke"
+        }
+      },
+      {
+        "threshold": 13178,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled_velvet_smoke"
+        }
+      },
+      {
+        "threshold": 13179,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
+        }
+      },
+      {
+        "threshold": 13181,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seed_ghost_garden"
+        }
+      },
+      {
+        "threshold": 13182,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout_ghost_garden"
+        }
+      },
+      {
+        "threshold": 13183,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling_ghost_garden"
+        }
+      },
+      {
+        "threshold": 13184,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative_ghost_garden"
+        }
+      },
+      {
+        "threshold": 13185,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_maturing_ghost_garden"
+        }
+      },
+      {
+        "threshold": 13186,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready_ghost_garden"
+        }
+      },
+      {
+        "threshold": 13187,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe_ghost_garden"
+        }
+      },
+      {
+        "threshold": 13188,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled_ghost_garden"
+        }
+      },
+      {
+        "threshold": 13189,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
+        }
+      },
+      {
+        "threshold": 13191,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seed_royal_static"
+        }
+      },
+      {
+        "threshold": 13192,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout_royal_static"
+        }
+      },
+      {
+        "threshold": 13193,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling_royal_static"
+        }
+      },
+      {
+        "threshold": 13194,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative_royal_static"
+        }
+      },
+      {
+        "threshold": 13195,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_maturing_royal_static"
+        }
+      },
+      {
+        "threshold": 13196,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready_royal_static"
+        }
+      },
+      {
+        "threshold": 13197,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe_royal_static"
+        }
+      },
+      {
+        "threshold": 13198,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled_royal_static"
+        }
+      },
+      {
+        "threshold": 13199,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
+        }
+      },
+      {
+        "threshold": 13201,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seed_black_orchard"
+        }
+      },
+      {
+        "threshold": 13202,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout_black_orchard"
+        }
+      },
+      {
+        "threshold": 13203,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling_black_orchard"
+        }
+      },
+      {
+        "threshold": 13204,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative_black_orchard"
+        }
+      },
+      {
+        "threshold": 13205,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_maturing_black_orchard"
+        }
+      },
+      {
+        "threshold": 13206,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready_black_orchard"
+        }
+      },
+      {
+        "threshold": 13207,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe_black_orchard"
+        }
+      },
+      {
+        "threshold": 13208,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled_black_orchard"
+        }
+      },
+      {
+        "threshold": 13209,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
+        }
+      },
+      {
+        "threshold": 13211,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seed_verdant_vice"
+        }
+      },
+      {
+        "threshold": 13212,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_sprout_verdant_vice"
+        }
+      },
+      {
+        "threshold": 13213,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_seedling_verdant_vice"
+        }
+      },
+      {
+        "threshold": 13214,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_vegetative_verdant_vice"
+        }
+      },
+      {
+        "threshold": 13215,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_maturing_verdant_vice"
+        }
+      },
+      {
+        "threshold": 13216,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_ready_verdant_vice"
+        }
+      },
+      {
+        "threshold": 13217,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_overripe_verdant_vice"
+        }
+      },
+      {
+        "threshold": 13218,
+        "model": {
+          "type": "minecraft:model",
+          "model": "verdantvice:item/plant_spoiled_verdant_vice"
+        }
+      },
+      {
+        "threshold": 13219,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/amethyst_shard"
         }
       }
     ],

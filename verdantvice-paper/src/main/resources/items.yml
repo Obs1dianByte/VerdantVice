@@ -16,4 +16,12 @@ rolling-paper: { material: PAPER, custom-model-data: 12014 }
 filter: { material: STICK, custom-model-data: 12015 }
 package: { material: BUNDLE, custom-model-data: 12016 }
 joint: { material: STICK, custom-model-data: 12017 }
+fresh-batch: { material: KELP, custom-model-data: 12018 }
+dry-batch: { material: DRIED_KELP, custom-model-data: 12019 }
+cured-batch: { material: DRIED_KELP, custom-model-data: 12020 }
+ground-product: { material: DRIED_KELP, custom-model-data: 12021 }
+mixture: { material: DRIED_KELP, custom-model-data: 12022 }
+plantation-contract: { material: WRITTEN_BOOK, custom-model-data: 12023 }
+guide-book: { material: WRITTEN_BOOK, custom-model-data: 12024 }
+advanced-book: { material: WRITTEN_BOOK, custom-model-data: 12025 }
 maximum-lore-lines: 20

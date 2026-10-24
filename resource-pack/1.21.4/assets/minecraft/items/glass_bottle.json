@@ -10,6 +10,13 @@
           "type": "minecraft:model",
           "model": "verdantvice:item/watering_can"
         }
+      },
+      {
+        "threshold": 12004,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/glass_bottle"
+        }
       }
     ],
     "fallback": {

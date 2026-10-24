@@ -82,6 +82,7 @@ errors:
   no-space: "<red>There is not enough clear space here.</red>"
   too-far: "<red>You are too far away.</red>"
 
+  operation-cancelled: <yellow>The operation was cancelled.</yellow>
 success:
   reload: "<green>Reloaded safe configuration, translations, and catalogs.</green>"
   save: "<green>Queued all dirty data for saving.</green>"
@@ -123,11 +124,14 @@ commands:
     description: "Open your four skill trees."
     usage: "/vv skills"
   strains:
-    description: "Browse discovered fictional strains."
+    description: "Browse discovered strains."
     usage: "/vv strains [strain]"
   recipes:
     description: "View unlocked processing recipes."
-    usage: "/vv recipes"
+    usage: "/vv recipes [roll]"
+  roll:
+    description: "Start the authenticated rolling minigame."
+    usage: "/vv roll"
   market:
     description: "View current demand and prices."
     usage: "/vv market [strain]"
@@ -149,6 +153,9 @@ commands:
     remove:
       description: "Remove a member from your farm."
       usage: "/vv farm remove <player>"
+    storage:
+      description: Link or unlink the container you are looking at.
+      usage: /vv farm storage <seed-storage|tool-storage|fresh-harvest-storage|dry-product-storage|packaged-product-storage|salary-storage|water-storage|general-storage|unlink>
   workers:
     description: "Open worker management."
     usage: "/vv workers"
@@ -161,7 +168,7 @@ commands:
   resourcepack:
     description: "Request the optional VerdantVice resource pack."
     usage: "/vv resourcepack"
-  genetics: { description: "Creates a custom line from two signed seeds.", usage: "/vv genetics <name>" }
+  genetics: {description: "Creates a custom line from two signed seeds.", usage: "/vv genetics <name>"}
   admin:
     description: "VerdantVice administration tools."
     usage: "/vv admin <subcommand>"
@@ -188,7 +195,7 @@ commands:
       usage: "/vv admin setquality <grade>"
     spawnherbalist:
       description: "Spawn a registered herbalist."
-      usage: "/vv admin spawnherbalist [tier]"
+      usage: "/vv admin spawnherbalist [tier] [--force]"
     hireworker:
       description: "Hire the targeted herbalist for a farm."
       usage: "/vv admin hireworker <farm>"
@@ -234,7 +241,7 @@ gui:
       description: "<gray>Tasks, morale, schedules, and salaries.</gray>"
     strains:
       name: "<light_purple>Strains</light_purple>"
-      description: "<gray>Browse fictional strains and discoveries.</gray>"
+      description: "<gray>Browse strains and discoveries.</gray>"
     genetics:
       name: "<aqua>Genetics</aqua>"
       description: "<gray>Profiles, crossings, and custom lines.</gray>"
@@ -297,6 +304,207 @@ gui:
     income: "<gray>Recent income:</gray> <green><income></green>"
     missing-tools: "<gray>Missing tools:</gray> <red><count></red>"
     recent-problems: "<gray>Recent problems:</gray> <white><count></white>"
+  navigation:
+    refresh: <green>Refresh</green>
+  empty:
+    generic: <gray>There is nothing to display.</gray>
+  farm-panel:
+    common:
+      'yes': 'Yes'
+      'no': 'No'
+      enabled: Enabled
+      disabled: Disabled
+      unavailable: "Unavailable"
+      position: <gray>Position:</gray> <world> <x>, <y>, <z>
+    errors:
+      no-access: <red>You do not have access to this farm screen.</red>
+      no-context: <red>The farm context is no longer available.</red>
+    empty:
+      no-farm: <yellow>No accessible farm was found.</yellow>
+      plants: <gray>This farm has no active plants.</gray>
+      workers: <gray>This farm has no workers.</gray>
+      storages: <gray>No storages are linked.</gray>
+      drying: <gray>No drying racks are assigned to this farm.</gray>
+      curing: <gray>No curing containers are assigned to this farm.</gray>
+      priorities: <gray>No worker currently has an active priority.</gray>
+      permissions: <gray>No farm members are available.</gray>
+    dashboard:
+      plants-limit: <gray>Plants:</gray> <count>/<limit>
+      plants-ready: <gray>Ready:</gray> <ready>
+      plants-sick: <gray>Sick:</gray> <sick>
+      plants-water: <gray>Need water:</gray> <count>
+      plants-treatment: <gray>Need treatment:</gray> <count>
+      plants-cleaning: <gray>Need cleaning:</gray> <count>
+      workers-limit: <gray>Workers:</gray> <count>/<limit>
+      workers-working: <gray>Working:</gray> <count>
+      workers-idle: <gray>Without a task:</gray> <count>
+      workers-unpaid: <gray>Unpaid:</gray> <count>
+      workers-morale: <gray>Average morale:</gray> <morale>
+      workers-blocked: <gray>Blocked or refusing:</gray> <count>
+      storage-total: <gray>Storages:</gray> <count>
+      storage-type: <gray><type>:</gray> <count>
+      storage-salary: <gray>Salary storage:</gray> <state>
+      storage-unavailable: <gray>Unavailable containers:</gray> <count>
+      processing-total: <gray>Stations:</gray> <count>
+      processing-active: <gray>Processing:</gray> <count>
+      processing-ready: <gray>Ready:</gray> <count>
+      processing-free: <gray>Free:</gray> <count>
+      priorities: <gray>Active worker priorities:</gray> <count>
+      owner: <gray>Owner:</gray> <owner>
+      members: <gray>Members:</gray> <count>
+      salary-storage: <gray>Salary storage:</gray> <state>
+      salary-emeralds: <gray>Emeralds available:</gray> <count>
+      salary-cost: <gray>Next payroll cost:</gray> <count>
+      salary-paid: <gray>Paid workers:</gray> <count>
+      salary-unpaid: <gray>Unpaid workers:</gray> <count>
+      statistics-current: <gray>Shows current, persisted and runtime data only.</gray>
+      notifications: <gray>Configure each farm alert.</gray>
+    plants:
+      disease: <gray>Condition:</gray> <condition>
+      healthy: <green>Healthy</green>
+      diseased: '<red>Disease: <disease></red>'
+      pests: '<yellow>Pests: <level></yellow>'
+      ready-time: <gray>Ready in:</gray> <time>
+      ready-now: <green>READY</green>
+      owner: <gray>Owner:</gray> <owner>
+    storages:
+      title: Farm Storages
+      entry-title: <yellow><type></yellow>
+      type: <gray>Type:</gray> <type>
+      exists: <gray>Container exists:</gray> <state>
+      slots: <gray>Occupied slots:</gray> <used>/<total>
+      slots-unavailable: "<gray>Occupied slots:</gray> unavailable"
+      worker-access: <gray>Worker access:</gray> <state>
+      salary: <gray>Salary storage:</gray> <state>
+      unlink-hint: <yellow>Click to unlink safely.</yellow>
+    storage-confirm:
+      title: <red>Unlink Storage</red>
+      confirm: <red>Confirm unlink</red>
+      warning: <gray>The container and all of its contents will remain untouched.</gray>
+      cancel: <green>Cancel</green>
+    processing:
+      entry-title: <status>
+      status: <gray>Status:</gray> <status>
+      exists: <gray>Station exists:</gray> <state>
+      batch: <gray>Batch:</gray> <batch>
+      strain: <gray>Strain:</gray> <strain>
+      weight: <gray>Weight:</gray> <weight>
+      quality: <gray>Quality:</gray> <quality> (<grade>)
+      remaining: <gray>Remaining:</gray> <time>
+      owner: <gray>Process owner:</gray> <owner>
+      statuses:
+        free: Free
+        processing: Processing
+        ready: Ready
+    worker:
+      state: <gray>State:</gray> <state>
+      salary: <gray>Salary:</gray> <salary> emeralds
+      entity: <gray>Entity loaded:</gray> <state>
+      last-task: <gray>Last completed task:</gray> <task>
+      no-task: No task
+      states:
+        idle: Idle
+        resting: Resting
+        searching-task: Searching for Task
+        reserving-task: Reserving Task
+        walking-to-storage: Walking to Storage
+        collecting-resource: Collecting Resource
+        walking-to-target: Walking to Target
+        inspecting-plant: Inspecting Plant
+        watering: Watering
+        treating: Treating
+        planting: Planting
+        harvesting: Harvesting
+        moving-batch: Moving Batch
+        loading-dryer: Loading Dryer
+        unloading-dryer: Unloading Dryer
+        packaging: Packaging
+        returning-home: Returning Home
+        sleeping: Sleeping
+        waiting-for-payment: Waiting for Payment
+        blocked: Blocked
+      specializations:
+        grower: Grower
+        harvester: Harvester
+        drying-master: Drying Master
+        geneticist: Geneticist
+        packager: Packager
+        foreman: Foreman
+      tasks:
+        save-dying-plants: Save Dying Plants
+        treat-disease: Treat Problems
+        water: Water
+        harvest: Harvest
+        load-drying-rack: Load Drying Rack
+        unload-drying-rack: Unload Drying Rack
+        plant: Plant
+        package: Package
+        clean: Clean
+        inspect: Inspect
+        move-batch: Move Batch
+    priorities:
+      title: Worker Priorities
+      entry-title: <aqua><worker></aqua>
+      value: <gray>Priority:</gray> <priority>
+    permissions:
+      title: Farm Permissions
+      entry-title: <blue><member></blue>
+      role: <gray>Role:</gray> <role>
+      effective: <gray>Effective permissions:</gray> <permissions>
+      roles:
+        owner: Owner
+        manager: Manager
+        member: Member
+        viewer: Viewer
+      values:
+        view: View
+        plant: Plant
+        water: Water
+        harvest: Harvest
+        process: Process
+        access-storage: Access storage
+        manage-storage: Manage storage
+        manage-workers: Manage workers
+        manage-members: Manage members
+        manage-settings: Manage settings
+        delete: Delete
+    salary:
+      title: Farm Salaries
+      summary-title: <green>Next Payroll</green>
+    statistics:
+      title: Farm Statistics
+      current-title: <white>Current Farm Snapshot</white>
+      level: <gray>Farm level:</gray> <level>
+      active-plants: <gray>Active plants:</gray> <count>
+      average-quality: <gray>Average plant quality potential:</gray> <quality>
+      workers: <gray>Workers:</gray> <count>
+      storages: <gray>Storages:</gray> <count>
+      processes: <gray>Active processes:</gray> <count>
+    notifications:
+      title: Farm Notifications
+      state: <gray>State:</gray> <state>
+      types:
+        plant-ready: Plant ready
+        disease: Plant disease
+        low-water: Low water
+        drying-complete: Drying complete
+        curing-complete: Curing complete
+        unpaid-worker: Unpaid worker
+        blocked-worker: Blocked worker
+        contract-complete: Contract complete
+        market-change: Market change
+    upgrades:
+      title: Farm Upgrades
+      unavailable: <yellow>This feature is unavailable in this version.</yellow>
+    storage-types:
+      seed-storage: Seed Storage
+      tool-storage: Tool Storage
+      fresh-harvest-storage: Fresh Harvest Storage
+      dry-product-storage: Dry Product Storage
+      packaged-product-storage: Packaged Product Storage
+      salary-storage: Salary Storage
+      water-storage: Water Storage
+      general-storage: General Storage
   plants:
     title: "<green>Plants</green>"
     details-title: "<green><strain></green> <dark_gray>•</dark_gray> <stage>"
@@ -462,29 +670,29 @@ item:
     name: "<light_purple>Cosmetic Additive</light_purple>"
     description: "<gray>An optional visual modifier with no real-world meaning.</gray>"
   package:
-    name: "<gold>Product Package</gold>"
-    description: "<gray>A tamper-checked package linked to one registered batch.</gray>"
+    name: "<gold>Product Package • <strain_name></gold>"
+    description: "<gray>Weight: <weight> • Grade: <quality_grade> • Batch: <batch_id></gray>"
   plantation_contract:
     name: "<gold>Plantation Contract</gold>"
     description: "<gray>Sign it to employ an eligible Verdant Expert.</gray>"
   fresh_batch:
-    name: "<green>Fresh Batch • <strain></green>"
-    description: "<gray>Fresh weight: <weight> • Quality potential: <quality></gray>"
+    name: "<green>Fresh Batch • <strain_name></green>"
+    description: "<gray>Fresh weight: <fresh_weight> • Quality: <quality> • State: <state></gray>"
   dry_batch:
-    name: "<gold>Dried Batch • <strain></gold>"
-    description: "<gray>Dry weight: <weight> • Grade: <quality></gray>"
+    name: "<gold>Dried Batch • <strain_name></gold>"
+    description: "<gray>Dry weight: <dry_weight> • Grade: <quality_grade> • State: <state></gray>"
   cured_batch:
-    name: "<light_purple>Refined Batch • <strain></light_purple>"
-    description: "<gray>Refined for <duration> • Grade: <quality></gray>"
+    name: "<light_purple>Refined Batch • <strain_name></light_purple>"
+    description: "<gray>Dry weight: <dry_weight> • Grade: <quality_grade> • Refined for <duration></gray>"
   ground_product:
-    name: "<yellow>Ground Product • <strain></yellow>"
-    description: "<gray>Traceable material from batch <batch_id>.</gray>"
+    name: "<yellow>Ground Product • <strain_name></yellow>"
+    description: "<gray>Weight: <weight> • Grade: <quality_grade> • Batch: <batch_id></gray>"
   mixture:
-    name: "<aqua>Verdant Mixture</aqua>"
-    description: "<gray>A precise blend of <components> fictional strains.</gray>"
+    name: "<aqua>Verdant Mixture • <strain_name></aqua>"
+    description: "<gray>Weight: <weight> • <components> strains • State: <state></gray>"
   joint:
     name: "<green>Verdant Roll • <quality></green>"
-    description: "<gray>A minigame product linked to batch <batch_id>.</gray>"
+    description: "<gray>Weight: <weight> • State: <state> • Batch: <batch_id></gray>"
   basics_book:
     name: "<gold>VerdantVice Basics</gold>"
     description: "<gray>A complete 16-step introduction to the game systems.</gray>"
@@ -515,6 +723,26 @@ item:
   lore:
     strain: "<gray>Strain:</gray> <white><strain></white>"
     quality: "<gray>Quality:</gray> <white><quality></white>"
+  states:
+    fresh: "Fresh"
+    drying: "Drying"
+    dried: "Dried"
+    curing: "Curing"
+    cured: "Cured"
+    ground: "Ground"
+    mixed: "Mixed"
+    rolled: "Rolled"
+    spoiled: "Spoiled"
+  quality_grades:
+    spoiled: "Spoiled"
+    very-poor: "Very Poor"
+    street: "Street"
+    common: "Common"
+    good: "Good"
+    premium: "Premium"
+    top-shelf: "Top Shelf"
+    perfect-batch: "Perfect Batch"
+    verdant-grade: "Verdant Grade"
 
 plant:
   stages:
@@ -669,48 +897,58 @@ curing:
 
 rolling:
   results:
-    failed: "<dark_red>Failed</dark_red>"
-    spilled: "<red>Spilled</red>"
-    crooked: "<gold>Crooked</gold>"
-    loose: "<yellow>Loose</yellow>"
-    normal: "<white>Normal</white>"
-    good: "<green>Good</green>"
-    perfect: "<light_purple>Perfect</light_purple>"
-    overfilled: "<red>Overfilled</red>"
+    failed: <dark_red>Failed</dark_red>
+    spilled: <red>Spilled</red>
+    crooked: <gold>Crooked</gold>
+    loose: <yellow>Loose</yellow>
+    normal: <white>Normal</white>
+    good: <green>Good</green>
+    perfect: <light_purple>Perfect</light_purple>
+    overfilled: <red>Overfilled</red>
   steps:
-    place-paper: "Place the paper"
-    add-filter: "Set the filter"
-    add-product: "Add the ground product"
-    distribute: "Distribute the filling"
-    finish-roll: "Finish the roll"
-  complete: "<green>Rolling complete:</green> <result>"
-  aborted: "<yellow>The minigame ended safely; recoverable inputs were returned.</yellow>"
-
+    place-paper: Place the paper
+    add-filter: Set the filter
+    add-product: Add the ground product
+    distribute: Distribute the filling
+    finish-roll: Finish the roll
+  complete: <green>Rolling complete:</green> <result>
+  aborted: <yellow>The minigame ended safely; recoverable inputs were returned.</yellow>
+  errors:
+    missing-paper: <red>You need one authentic Rolling Paper.</red>
+    missing-filter: <red>You need one authentic Filter.</red>
+    missing-product: <red>You need an authentic Ground Product or Mixture.</red>
+    busy: <yellow>You already have a rolling session starting or open.</yellow>
+    session-active: "<yellow>You already have a rolling session starting or open.</yellow>"
+    wrong-product-state: <red>This product is not in a state that can be rolled.</red>
 herbalist:
-  title: "<dark_green>Herbalist</dark_green>"
-  created: "<green>This farmer has discovered the Verdant herbalist trade.</green>"
-  evaluated-normal: "<gray>This farmer is not a Verdant herbalist.</gray>"
-  village-limit: "<yellow>This settlement already has the maximum number of herbalists.</yellow>"
-  reputation-up: "<green>Your herbalist reputation increased by <amount>.</green>"
+  title: <dark_green>Herbalist</dark_green>
+  created: <green>This farmer has discovered the Verdant herbalist trade.</green>
+  evaluated-normal: <gray>This farmer is not a Verdant herbalist.</gray>
+  village-limit: <yellow>This settlement already has the maximum number of herbalists.</yellow>
+  reputation-up: <green>Your herbalist reputation increased by <amount>.</green>
   tiers:
-    novice: "Novice"
-    apprentice: "Apprentice"
-    journeyman: "Journeyman"
-    expert: "Expert"
-    master: "Master"
-    verdant-expert: "Verdant Expert"
+    novice: Novice
+    apprentice: Apprentice
+    journeyman: Journeyman
+    expert: Expert
+    master: Master
+    verdant-expert: Verdant Expert
   specializations:
-    seeds: "Seed Merchant"
-    tools: "Equipment Supplier"
-    buyer: "Quality Buyer"
-    contracts: "Contract Broker"
+    seeds: Seed Merchant
+    tools: Equipment Supplier
+    buyer: Quality Buyer
+    contracts: Contract Broker
   hire:
-    unavailable: "<red>Only a Verdant Expert can be hired.</red>"
-    already-employed: "<red>This herbalist is already employed.</red>"
-    contract-required: "<yellow>You need a valid Plantation Contract.</yellow>"
-    signed: "<green><worker> signed the contract for farm <farm>.</green>"
-    dismissed: "<yellow><worker> was released from employment.</yellow>"
-
+    unavailable: <red>Only a Verdant Expert can be hired.</red>
+    already-employed: <red>This herbalist is already employed.</red>
+    contract-required: <yellow>You need a valid Plantation Contract.</yellow>
+    signed: <green><worker> signed the contract for farm <farm>.</green>
+    dismissed: <yellow><worker> was released from employment.</yellow>
+  force-created: <green>The herbalist was created despite the settlement limit.</green>
+  already-herbalist: <yellow>This entity is already a registered herbalist.</yellow>
+  worker-conflict: <red>This villager is already registered as a worker.</red>
+  force-no-permission: <red>You do not have permission to bypass the settlement limit.</red>
+  tier-updated: <green>Herbalist tier set to <tier> with <experience> experience.</green>
 trade:
   authentic-only: "<red>The herbalist accepts only authentic, registered batches.</red>"
   dry-only: "<red>The herbalist buys only properly dried or refined batches.</red>"
@@ -722,6 +960,15 @@ trade:
   sale-complete: "<green>Sold <item> for <price>.</green>"
   price-changed: "<yellow>The quote changed from <old_price> to <new_price>; review the trade.</yellow>"
 
+  empty-hand: "<red>Hold one registered batch in your main hand.</red>"
+  invalid-amount: "<red>Only one unique batch can be sold at a time.</red>"
+  unregistered-item: "<red>This signed item is not registered.</red>"
+  already-used: "<red>This batch item has already been used.</red>"
+  item-reserved: "<yellow>This batch is currently reserved by another operation.</yellow>"
+  missing-batch: "<red>The product batch linked to this item no longer exists.</red>"
+  batch-state-mismatch: "<red>The item type does not match the stored batch state.</red>"
+  fresh-batch-requires-drying: "<red>Fresh batches must be dried before they can be sold.</red>"
+  unsupported-batch-state: "<red>The herbalist does not accept this product state.</red>"
 farm:
   roles:
     owner: "Owner"
@@ -756,9 +1003,17 @@ farm:
     too-large: "<red>The selected region exceeds your maximum area of <limit>.</red>"
     expired: "<yellow>Your farm selection expired.</yellow>"
   storage:
-    linked: "<green>Linked this chest as <type>.</green>"
-    unlinked: "<yellow>Storage link removed.</yellow>"
-    already-linked: "<red>This chest is already assigned to a farm.</red>"
+    linked: "<green>Storage linked as <type>.</green>"
+    unlinked: "<green>Storage was unlinked.</green>"
+    no-owned-farm: "<red>You do not own a farm.</red>"
+    no-target: "<yellow>Look directly at a chest or another container within 6 blocks.</yellow>"
+    not-container: "<red>That block is not a container.</red>"
+    outside-farm: "<red>The whole container must be inside your farm.</red>"
+    already-linked: "<yellow>This container is already linked.</yellow>"
+    not-linked: "<yellow>This container is not linked to your farm.</yellow>"
+    salary-exists: "<red>Your farm already has a salary storage.</red>"
+    other-farm: "<red>This container belongs to another farm.</red>"
+    invalid-type: "<red>Unknown storage type. Valid values: <types>.</red>"
     protected: "<red>Linked farm storages cannot be broken or moved.</red>"
   delete-warning: "<red>This removes farm membership and links. Plants and locked batches must be resolved first.</red>"
 
@@ -833,6 +1088,7 @@ worker:
     blocked: "<red><worker> is blocked near <position>.</red>"
     no-path: "No safe path"
     missing-resource: "Required resource missing"
+    harvest-storage-full: "Fresh-harvest storage is missing or full"
     target-unavailable: "Target unavailable"
     reservation-expired: "Task reservation expired"
 
@@ -968,13 +1224,13 @@ book:
   basics:
     title: "VerdantVice Basics"
     author: "VerdantVice"
-    page_1: "<dark_green><bold>1. Getting Seeds</bold></dark_green><newline><newline>Find an evaluated Farmer herbalist and open the Verdant trade menu. Basic seeds are offered first; higher herbalist tiers unlock rarer fictional strains. Every seed has a signed, unique genetic profile."
+    page_1: "<dark_green><bold>1. Getting Seeds</bold></dark_green><newline><newline>Find an evaluated Farmer herbalist and open the Verdant trade menu. Basic seeds are offered first; higher herbalist tiers unlock rarer strains. Every seed has a signed, unique genetic profile."
     page_2: "<dark_green><bold>2. Planting</bold></dark_green><newline><newline>Place a Cultivation Pot where you have build and farm permission. Hold a valid seed and interact with the empty station. Farm limits, spacing, ownership, and external region protection are checked before planting."
     page_3: "<dark_green><bold>3. Inspecting</bold></dark_green><newline><newline>Use an empty hand for a simple summary or a Plant Scanner for details. Higher Grower levels and guide books reveal exact health, hydration, stress, harvest windows, and genetics."
     page_4: "<dark_green><bold>4. Watering</bold></dark_green><newline><newline>Use a Watering Can when hydration falls. Water is a fictional game meter: too little slows growth, while repeated use above the preferred range can create Overwatering."
     page_5: "<dark_green><bold>5. Solving Problems</bold></dark_green><newline><newline>Inspect the listed condition, then use the matching Cleaning Kit, Treatment Spray, Nutrient Pack, or Repair Kit. Problems lower potential gradually; they do not destroy a healthy plant instantly."
     page_6: "<dark_green><bold>6. Harvesting</bold></dark_green><newline><newline>Harvest timing ranges from Too Early to Overripe. The highlighted window offers the best weight and quality. Harvesting creates one registered batch with a permanent origin and signature."
-    page_7: "<dark_green><bold>7. Drying</bold></dark_green><newline><newline>Open a clean Drying Rack and load a fresh batch. The batch is stored safely by the plugin and advances by timestamps. Remove it near Ready; waiting too long can produce Overdried or Ruined results."
+    page_7: "<dark_green><bold>7. Drying</bold></dark_green><newline><newline>Open a clean Drying Rack and load a fresh batch. The batch is stored safely by the plugin and advances by timestamps. Remove it near Ready; waiting too long can produce Overdried or Ruined results. The normal sale path is: harvest → fresh batch → Drying Rack → dry batch → herbalist sale."
     page_8: "<dark_green><bold>8. Curing</bold></dark_green><newline><newline>A dry batch may enter a Curing Container. This optional game process can improve quality, value, and stability. You may stop early, but a neglected container can eventually degrade the batch."
     page_9: "<dark_green><bold>9. Quality</bold></dark_green><newline><newline>Final grade combines genetics, care, health, timing, cleanliness, processing, skills, worker performance, and contamination. The scale runs from Spoiled to Verdant Grade."
     page_10: "<dark_green><bold>10. Grinding</bold></dark_green><newline><newline>Load a dry or refined batch into a Grinder. Equipment level and condition affect loss risk. The output keeps its batch lineage and must pass authenticity checks in later menus."
@@ -988,12 +1244,12 @@ book:
     title: "Plant Health and Care"
     author: "VerdantVice"
     page_1: "<green><bold>Reading the Station</bold></green><newline><newline>Health is the long-term condition. Hydration, nutrition, light, stress, and cleanliness are changing game meters. A scanner reveals more precision as Grower knowledge improves."
-    page_2: "<green><bold>Balanced Care</bold></green><newline><newline>Each fictional strain has preferences rather than one universal solution. Keep values near the ranges shown by the scanner; extreme repeated actions create stress instead of instant failure."
+    page_2: "<green><bold>Balanced Care</bold></green><newline><newline>Each strain has preferences rather than one universal solution. Keep values near the ranges shown by the scanner; extreme repeated actions create stress instead of instant failure."
     page_3: "<green><bold>Problems and Recovery</bold></green><newline><newline>Conditions gain severity over time. Clean dirt, repair equipment, and treat only compatible problems. Recovery stops further penalties first; lost potential may not fully return."
   strain_guide:
     title: "Strain Guide"
     author: "VerdantVice"
-    page_1: "<light_purple><bold>Fictional Strains</bold></light_purple><newline><newline>Strains are configurable game definitions. Rarity affects availability and price, while duration, difficulty, yield, resistance, water use, light preference, and stress sensitivity shape play."
+    page_1: "<light_purple><bold>Strain Catalog</bold></light_purple><newline><newline>Strains are configurable game definitions. Rarity affects availability and price, while duration, difficulty, yield, resistance, water use, light preference, and stress sensitivity shape play."
     page_2: "<light_purple><bold>Reading Attributes</bold></light_purple><newline><newline>Base values describe an average seed. A seed's genetic profile modifies them, so two seeds of the same strain may behave differently without changing their identity."
     page_3: "<light_purple><bold>Discovery and Custom Lines</bold></light_purple><newline><newline>Effects remain hidden until discovered. Crossings create named lines with recorded parents, generation, dominant traits, colors, effects, and permanent lineage."
   drying_curing:
@@ -1014,9 +1270,28 @@ book:
     page_1: "<dark_green><bold>Region and Roles</bold></dark_green><newline><newline>A farm is one protected cuboid. Give members only the permissions they need for planting, storage, processing, workers, settings, or upgrades."
     page_2: "<dark_green><bold>Storage and Priorities</bold></dark_green><newline><newline>Link chests by type. Workers use only linked storage. Prioritize plant survival, restrict strains, and protect rare or legendary seeds."
     page_3: "<dark_green><bold>People First</bold></dark_green><newline><newline>Provide a bed, food, safe paths, breaks, tools, and daily salary. Healthy morale improves work; neglect leads to refusal and departure."
+  recipes:
+    title: "Processing Recipes"
+    author: "VerdantVice"
+    page_1: "Fresh Batch → Drying Rack → Dry Batch. Only a verified fresh batch owned by you can start drying."
+    page_2: "Dry Batch → Curing Container → Cured Batch. Curing is optional and keeps the original batch identity."
+    page_3: "Dry or Cured Batch → Grinder → Ground Product. Sneak-right-click the Grinder with two ground products to create a Mixture."
+    page_4: "Two Ground Products → Mixture. Both registered source batches are consumed once and their lineage remains recorded."
+    page_5: "Rolling Paper + Filter + Ground Product or Mixture → Joint. Use /vv roll or /vv recipes roll to start the authenticated minigame."
   perfect_batch:
     title: "Perfect Batch Secrets"
     author: "VerdantVice"
     page_1: "<yellow><bold>No Single Shortcut</bold></yellow><newline><newline>Quality combines many fictional mechanics. Excellent genetics cannot erase poor care, contamination, or badly timed processing."
     page_2: "<yellow><bold>Protect Potential</bold></yellow><newline><newline>Use a stable profile, maintain health and cleanliness, resolve problems early, and harvest inside the best window."
     page_3: "<yellow><bold>Careful, Traceable Processing</bold></yellow><newline><newline>Maintain equipment and match worker skills. Every transformation records losses, lineage, and authenticity; copied lore never changes registered quality."
+
+processing:
+  errors:
+    invalid-signature: "<red>This item has an invalid signature.</red>"
+    unregistered-item: "<red>This signed item is not registered.</red>"
+    item-already-used: "<red>This batch item has already been used.</red>"
+    wrong-owner: "<red>You are not the owner of this batch.</red>"
+    missing-batch: "<red>The product batch linked to this item does not exist.</red>"
+    invalid-batch-signature: "<red>The stored product batch failed authenticity verification.</red>"
+    wrong-batch-state: "<red>This product batch is not fresh and cannot start drying.</red>"
+    station-busy: "<yellow>This processing station is already starting or running a job.</yellow>"

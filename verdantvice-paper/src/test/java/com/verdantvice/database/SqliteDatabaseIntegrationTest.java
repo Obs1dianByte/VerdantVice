@@ -54,6 +54,8 @@ final class SqliteDatabaseIntegrationTest {
             "workers",
             "worker_tasks",
             "worker_payments",
+            "worker_harvest_deliveries",
+            "processing_deliveries",
             "contracts",
             "market_state",
             "trade_history",
@@ -81,8 +83,8 @@ final class SqliteDatabaseIntegrationTest {
         database = new DatabaseManager(config, quietLogger());
 
         MigrationReport firstStart = database.start().toCompletableFuture().get(15, TimeUnit.SECONDS);
-        assertEquals(3, firstStart.currentVersion());
-        assertEquals(java.util.List.of(1, 2, 3), firstStart.appliedVersions());
+        assertEquals(5, firstStart.currentVersion());
+        assertEquals(java.util.List.of(1, 2, 3, 4, 5), firstStart.appliedVersions());
         assertTrue(database.isRunning());
 
         Set<String> tables = Set.copyOf(database.read(session -> session.query(
@@ -99,7 +101,7 @@ final class SqliteDatabaseIntegrationTest {
                 resultSet -> resultSet.getInt(1),
                 1
         ).orElseThrow()).get(15, TimeUnit.SECONDS);
-        assertEquals(3, successfulMigrations);
+        assertEquals(5, successfulMigrations);
 
         ItemRegistryRepository items = new ItemRegistryRepository(database);
         UUID instanceId = UUID.randomUUID();
@@ -213,7 +215,7 @@ final class SqliteDatabaseIntegrationTest {
             statement.setInt(1, 1);
             try (var resultSet = statement.executeQuery()) {
                 assertTrue(resultSet.next());
-                assertEquals(3, resultSet.getInt(1));
+                assertEquals(5, resultSet.getInt(1));
             }
         }
 
@@ -221,7 +223,7 @@ final class SqliteDatabaseIntegrationTest {
         database = new DatabaseManager(config, quietLogger());
         MigrationReport idempotentRestart =
                 database.start().toCompletableFuture().get(15, TimeUnit.SECONDS);
-        assertEquals(3, idempotentRestart.currentVersion());
+        assertEquals(5, idempotentRestart.currentVersion());
         assertTrue(idempotentRestart.appliedVersions().isEmpty());
 
         database.update(

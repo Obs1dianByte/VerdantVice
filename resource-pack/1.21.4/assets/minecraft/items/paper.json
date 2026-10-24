@@ -8,7 +8,14 @@
         "threshold": 12014,
         "model": {
           "type": "minecraft:model",
-          "model": "verdantvice:item/package"
+          "model": "verdantvice:item/rolling_paper"
+        }
+      },
+      {
+        "threshold": 12015,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/paper"
         }
       }
     ],

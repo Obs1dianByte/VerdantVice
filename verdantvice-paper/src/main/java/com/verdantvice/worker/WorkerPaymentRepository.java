@@ -1,6 +1,9 @@
 package com.verdantvice.worker;
 
+import com.verdantvice.database.DatabaseIntegrityException;
 import com.verdantvice.database.DatabaseManager;
+import com.verdantvice.database.DatabaseUnavailableException;
+import com.verdantvice.database.SqlSession;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -10,10 +13,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 /**
- * Idempotent salary ledger. A worker/day pair and an operation id are both
- * unique in the schema.
+ * Idempotent salary ledger. Parent rows are validated in the same transaction
+ * as the insert so a stale runtime cannot repeatedly hit a foreign-key error.
  */
 public final class WorkerPaymentRepository {
     private static final String COLUMNS = """
@@ -30,25 +34,22 @@ public final class WorkerPaymentRepository {
     public CompletableFuture<PaymentRecord> createPending(
             UUID workerUuid,
             UUID payerUuid,
+            UUID farmId,
             long amount,
             long minecraftDay,
             Instant now
     ) {
         Objects.requireNonNull(workerUuid, "workerUuid");
         Objects.requireNonNull(payerUuid, "payerUuid");
+        Objects.requireNonNull(farmId, "farmId");
         Objects.requireNonNull(now, "now");
         if (amount < 1L) {
             throw new IllegalArgumentException("Payment amount must be positive");
         }
         String period = periodKey(minecraftDay);
-        return database.transaction(session -> {
-            Optional<PaymentRecord> existing = session.queryOne(
-                    "SELECT " + COLUMNS
-                            + " FROM worker_payments WHERE worker_uuid=? AND period_key=?",
-                    WorkerPaymentRepository::map,
-                    workerUuid,
-                    period
-            );
+        CompletableFuture<PaymentRecord> created = database.transaction(session -> {
+            validateParents(session, workerUuid, payerUuid, farmId);
+            Optional<PaymentRecord> existing = findForPeriod(session, workerUuid, period);
             if (existing.isPresent()) {
                 return existing.get();
             }
@@ -60,26 +61,65 @@ public final class WorkerPaymentRepository {
                               period_key, payment_status, operation_id, created_at, paid_at
                             ) VALUES (?, ?, ?, ?, 'EMERALD', ?, 'PENDING', ?, ?, NULL)
                             """,
-                    paymentId,
-                    workerUuid,
-                    payerUuid,
-                    amount,
-                    period,
-                    operationId,
-                    now
-            );
+                    paymentId, workerUuid, payerUuid, amount, period,
+                    operationId, now);
             return new PaymentRecord(
-                    paymentId,
-                    workerUuid,
-                    payerUuid,
-                    amount,
-                    "EMERALD",
-                    period,
-                    PaymentStatus.PENDING,
-                    operationId,
-                    now,
-                    Optional.empty()
-            );
+                    paymentId, workerUuid, payerUuid, amount, "EMERALD",
+                    period, PaymentStatus.PENDING, operationId, now,
+                    Optional.empty());
+        });
+        return created.exceptionallyCompose(failure -> {
+            Throwable cause = unwrap(failure);
+            if (cause instanceof WorkerPaymentException typed) {
+                return CompletableFuture.failedFuture(typed);
+            }
+            if (cause instanceof DatabaseIntegrityException integrity) {
+                if (integrity.constraintType()
+                        == DatabaseIntegrityException.ConstraintType.UNIQUE) {
+                    return findForDay(workerUuid, minecraftDay)
+                            .thenCompose(existing -> existing
+                                    .map(CompletableFuture::completedFuture)
+                                    .orElseGet(() -> CompletableFuture.failedFuture(
+                                            new WorkerPaymentException(
+                                                    WorkerPaymentFailureReason.CONSTRAINT_VIOLATION,
+                                                    "Salary uniqueness failed without a durable row",
+                                                    integrity))));
+                }
+                return CompletableFuture.failedFuture(new WorkerPaymentException(
+                        WorkerPaymentFailureReason.CONSTRAINT_VIOLATION,
+                        "Salary ledger integrity constraint failed", integrity));
+            }
+            if (cause instanceof DatabaseUnavailableException unavailable) {
+                return CompletableFuture.failedFuture(new WorkerPaymentException(
+                        WorkerPaymentFailureReason.DATABASE_UNAVAILABLE,
+                        "Salary ledger database is unavailable", unavailable));
+            }
+            return CompletableFuture.failedFuture(cause);
+        });
+    }
+
+    public CompletableFuture<ParentValidation> validateParents(
+            UUID workerUuid,
+            UUID payerUuid,
+            UUID farmId
+    ) {
+        Objects.requireNonNull(workerUuid, "workerUuid");
+        Objects.requireNonNull(payerUuid, "payerUuid");
+        Objects.requireNonNull(farmId, "farmId");
+        return database.read(session -> {
+            validateParents(session, workerUuid, payerUuid, farmId);
+            return new ParentValidation(workerUuid, payerUuid, farmId);
+        }).exceptionallyCompose(failure -> {
+            Throwable cause = unwrap(failure);
+            if (cause instanceof WorkerPaymentException typed) {
+                return CompletableFuture.failedFuture(typed);
+            }
+            if (cause instanceof DatabaseUnavailableException unavailable) {
+                return CompletableFuture.failedFuture(new WorkerPaymentException(
+                        WorkerPaymentFailureReason.DATABASE_UNAVAILABLE,
+                        "Could not validate salary parents", unavailable));
+            }
+            return CompletableFuture.failedFuture(cause);
         });
     }
 
@@ -93,8 +133,7 @@ public final class WorkerPaymentRepository {
                         + " FROM worker_payments WHERE worker_uuid=? AND period_key=?",
                 WorkerPaymentRepository::map,
                 workerUuid,
-                periodKey(minecraftDay)
-        );
+                periodKey(minecraftDay));
     }
 
     public CompletableFuture<Optional<PaymentRecord>> findByOperation(
@@ -105,8 +144,15 @@ public final class WorkerPaymentRepository {
                 "SELECT " + COLUMNS
                         + " FROM worker_payments WHERE operation_id=?",
                 WorkerPaymentRepository::map,
-                operation
-        );
+                operation);
+    }
+
+    public CompletableFuture<List<PaymentRecord>> pending() {
+        return database.query(
+                "SELECT " + COLUMNS
+                        + " FROM worker_payments WHERE payment_status='PENDING' "
+                        + "ORDER BY created_at, payment_id",
+                WorkerPaymentRepository::map);
     }
 
     public CompletableFuture<List<PaymentRecord>> history(UUID workerUuid, int limit) {
@@ -142,47 +188,82 @@ public final class WorkerPaymentRepository {
         Objects.requireNonNull(paymentId, "paymentId");
         Objects.requireNonNull(status, "status");
         Objects.requireNonNull(paidAt, "paidAt");
+        Optional<Instant> persistedPaidAt = paidAt.map(value -> Instant.ofEpochMilli(value.toEpochMilli()));
         return database.transaction(session -> {
-            Optional<PaymentRecord> current = session.queryOne(
+            PaymentRecord payment = session.queryOne(
                     "SELECT " + COLUMNS + " FROM worker_payments WHERE payment_id=?",
                     WorkerPaymentRepository::map,
                     paymentId
-            );
-            PaymentRecord payment = current.orElseThrow(
-                    () -> new SQLException("Unknown worker payment " + paymentId)
-            );
+            ).orElseThrow(() -> new SQLException("Unknown worker payment " + paymentId));
             if (payment.status() == status) {
                 return payment;
             }
             if (payment.status() != PaymentStatus.PENDING) {
                 throw new SQLException(
-                        "Worker payment is already terminal: " + payment.status()
-                );
+                        "Worker payment is already terminal: " + payment.status());
             }
             int changed = session.update("""
                             UPDATE worker_payments SET payment_status=?, paid_at=?
                             WHERE payment_id=? AND payment_status='PENDING'
                             """,
-                    status,
-                    paidAt.orElse(null),
-                    paymentId
-            );
+                    status, persistedPaidAt.orElse(null), paymentId);
             if (changed != 1) {
                 throw new SQLException("Worker payment changed concurrently");
             }
             return new PaymentRecord(
-                    payment.paymentId(),
-                    payment.workerUuid(),
-                    payment.payerUuid(),
-                    payment.amount(),
-                    payment.currency(),
-                    payment.periodKey(),
-                    status,
-                    payment.operationId(),
-                    payment.createdAt(),
-                    paidAt
-            );
+                    payment.paymentId(), payment.workerUuid(), payment.payerUuid(),
+                    payment.amount(), payment.currency(), payment.periodKey(), status,
+                    payment.operationId(), payment.createdAt(), persistedPaidAt);
         });
+    }
+
+    private static void validateParents(
+            SqlSession session,
+            UUID workerUuid,
+            UUID payerUuid,
+            UUID farmId
+    ) throws SQLException {
+        Optional<WorkerParent> worker = session.queryOne(
+                "SELECT farm_id, owner_uuid FROM workers WHERE worker_uuid=?",
+                result -> new WorkerParent(
+                        UUID.fromString(result.getString("farm_id")),
+                        UUID.fromString(result.getString("owner_uuid"))),
+                workerUuid);
+        if (worker.isEmpty()) {
+            throw new WorkerPaymentException(
+                    WorkerPaymentFailureReason.MISSING_WORKER_PARENT,
+                    "Worker payment parent is missing: " + workerUuid);
+        }
+        if (!session.exists("SELECT 1 FROM farms WHERE farm_id=?", farmId)) {
+            throw new WorkerPaymentException(
+                    WorkerPaymentFailureReason.MISSING_FARM_PARENT,
+                    "Worker farm parent is missing: " + farmId);
+        }
+        if (!session.exists("SELECT 1 FROM players WHERE player_uuid=?", payerUuid)) {
+            throw new WorkerPaymentException(
+                    WorkerPaymentFailureReason.MISSING_PAYER_PARENT,
+                    "Worker payer parent is missing: " + payerUuid);
+        }
+        WorkerParent persisted = worker.orElseThrow();
+        if (!persisted.farmId().equals(farmId)
+                || !persisted.ownerUuid().equals(payerUuid)) {
+            throw new WorkerPaymentException(
+                    WorkerPaymentFailureReason.STALE_RUNTIME,
+                    "Runtime worker identity does not match persisted parents");
+        }
+    }
+
+    private static Optional<PaymentRecord> findForPeriod(
+            SqlSession session,
+            UUID workerUuid,
+            String period
+    ) throws SQLException {
+        return session.queryOne(
+                "SELECT " + COLUMNS
+                        + " FROM worker_payments WHERE worker_uuid=? AND period_key=?",
+                WorkerPaymentRepository::map,
+                workerUuid,
+                period);
     }
 
     private static PaymentRecord map(ResultSet result) throws SQLException {
@@ -201,11 +282,19 @@ public final class WorkerPaymentRepository {
                     PaymentStatus.valueOf(result.getString("payment_status")),
                     result.getString("operation_id"),
                     Instant.ofEpochMilli(result.getLong("created_at")),
-                    paidAt
-            );
+                    paidAt);
         } catch (IllegalArgumentException exception) {
             throw new SQLException("Invalid worker payment row", exception);
         }
+    }
+
+    public static long minecraftDay(String periodKey) {
+        Objects.requireNonNull(periodKey, "periodKey");
+        String prefix = "minecraft-day:";
+        if (!periodKey.startsWith(prefix)) {
+            throw new IllegalArgumentException("Invalid worker payment period: " + periodKey);
+        }
+        return Long.parseLong(periodKey.substring(prefix.length()));
     }
 
     private static String periodKey(long minecraftDay) {
@@ -216,17 +305,32 @@ public final class WorkerPaymentRepository {
         String normalized = Objects.requireNonNull(operationId, "operationId").strip();
         if (normalized.isEmpty() || normalized.length() > 128) {
             throw new IllegalArgumentException(
-                    "Payment operation id must contain 1 to 128 characters"
-            );
+                    "Payment operation id must contain 1 to 128 characters");
         }
         return normalized;
     }
 
-    public enum PaymentStatus {
-        PENDING,
-        PAID,
-        FAILED
+    private static Throwable unwrap(Throwable failure) {
+        Throwable current = failure;
+        while ((current instanceof CompletionException
+                || current instanceof java.util.concurrent.ExecutionException)
+                && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
     }
+
+    public enum PaymentStatus { PENDING, PAID, FAILED }
+
+    public record ParentValidation(UUID workerUuid, UUID payerUuid, UUID farmId) {
+        public ParentValidation {
+            Objects.requireNonNull(workerUuid, "workerUuid");
+            Objects.requireNonNull(payerUuid, "payerUuid");
+            Objects.requireNonNull(farmId, "farmId");
+        }
+    }
+
+    private record WorkerParent(UUID farmId, UUID ownerUuid) {}
 
     public record PaymentRecord(
             UUID paymentId,
@@ -244,9 +348,7 @@ public final class WorkerPaymentRepository {
             Objects.requireNonNull(paymentId, "paymentId");
             Objects.requireNonNull(workerUuid, "workerUuid");
             Objects.requireNonNull(payerUuid, "payerUuid");
-            if (amount < 1L) {
-                throw new IllegalArgumentException("Payment amount must be positive");
-            }
+            if (amount < 1L) throw new IllegalArgumentException("Payment amount must be positive");
             currency = Objects.requireNonNull(currency, "currency");
             periodKey = Objects.requireNonNull(periodKey, "periodKey");
             Objects.requireNonNull(status, "status");

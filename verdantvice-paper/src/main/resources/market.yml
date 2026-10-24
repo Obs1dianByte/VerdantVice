@@ -19,3 +19,12 @@ events:
     - RARE_SEED_SHORTAGE
     - PREMIUM_PRODUCT_WEEK
     - MARKET_INSPECTION
+
+trade:
+  # Only these signed item types may be sold. FRESH_BATCH can be enabled
+  # explicitly; its payout uses fresh-price-multiplier and the real fresh weight.
+  accepted-item-types:
+    - DRY_BATCH
+    - CURED_BATCH
+    - PACKAGE
+  fresh-price-multiplier: 0.35

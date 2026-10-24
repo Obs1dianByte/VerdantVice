@@ -11,8 +11,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.SQLRecoverableException;
-import java.sql.SQLTransientException;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -251,9 +249,13 @@ public final class DatabaseManager implements AutoCloseable {
                 return transaction ? runTransaction(work) : runAutoCommit(work);
             } catch (SQLException exception) {
                 mostRecent = exception;
-                if (attempt == maximumAttempts || !isTransient(exception)) {
-                    break;
+                if (SqlFailureClassifier.integrity(exception).isPresent()) {
+                    throw SqlFailureClassifier.integrityException(exception);
                 }
+                if (!SqlFailureClassifier.transientFailure(exception)) {
+                    throw new DatabaseException("Permanent database operation failure", exception);
+                }
+                if (attempt == maximumAttempts) break;
                 long delay = retryDelayMillis(attempt);
                 logger.log(Level.WARNING,
                         "Transient database failure; retrying operation ({0}/{1}) in {2} ms: {3}",
@@ -262,8 +264,7 @@ public final class DatabaseManager implements AutoCloseable {
             }
         }
         throw new DatabaseUnavailableException(
-                "Database operation failed after " + maximumAttempts + " attempt(s)",
-                mostRecent);
+                "Database operation failed after " + maximumAttempts + " attempt(s)", mostRecent);
     }
 
     private <T> T runAutoCommit(SqlWork<T> work) throws SQLException {
@@ -476,25 +477,6 @@ public final class DatabaseManager implements AutoCloseable {
             Thread.currentThread().interrupt();
             throw new DatabaseUnavailableException("Database retry was interrupted", exception);
         }
-    }
-
-    private static boolean isTransient(SQLException exception) {
-        for (SQLException current = exception; current != null; current = current.getNextException()) {
-            if (current instanceof SQLTransientException || current instanceof SQLRecoverableException) {
-                return true;
-            }
-            String state = current.getSQLState();
-            if (state != null && (state.startsWith("08")
-                    || state.startsWith("40")
-                    || state.startsWith("HYT"))) {
-                return true;
-            }
-            int code = current.getErrorCode();
-            if (code == 5 || code == 6 || code == 1_205 || code == 1_213) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static Throwable unwrap(Throwable failure) {

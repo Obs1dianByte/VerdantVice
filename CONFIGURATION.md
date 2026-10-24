@@ -1,124 +1,122 @@
-# Konfiguracja VerdantVice
+# Configuring VerdantVice
 
-## Położenie i format
+## Location and format
 
-Wszystkie pliki są kopiowane przy pierwszym starcie do
-`plugins/VerdantVice/`. Plugin ładuje 17 plików YAML oraz sześć plików
-językowych z `plugins/VerdantVice/languages/`. Pliki źródłowe znajdują się w
+All files are copied to `plugins/VerdantVice/` on the first startup. The
+plugin loads 17 YAML files and six language files from
+`plugins/VerdantVice/languages/`. Source files are in
 `verdantvice-paper/src/main/resources/`.
 
-Używaj UTF-8, spacji zamiast tabulatorów i nie zmieniaj wcięć list lub map.
-Wartości czasu mają jednostkę podaną w nazwie klucza (`-ticks`, `-seconds`,
-`-minutes`, `-hours`, `-millis`).
+Use UTF-8 and spaces instead of tabs, and preserve list and map indentation.
+Time values use the unit in their key name (`-ticks`, `-seconds`, `-minutes`,
+`-hours`, `-millis`).
 
-## Przeładowanie
+## Reloading
 
 ```text
 /vv admin reload
 ```
 
-Polecenie atomowo wczytuje i waliduje wszystkie bezpieczne pliki, ponownie
-ładuje języki i katalog odmian oraz ponawia wykrycie ochrony regionów i
-ekonomii. `database.yml` jest celowo pomijany i pojawia się w raporcie jako
-wymagający restartu.
+The command atomically loads and validates all safe files, reloads languages
+and the strain catalog, and redetects region protection and the economy.
+`database.yml` is deliberately skipped and reported as requiring a restart.
 
-Pełnego restartu używaj zawsze po zmianie:
+Always perform a full restart after changing:
 
-- typu bazy, adresu, danych logowania, puli lub kolejki DB;
-- JAR-a pluginu;
-- klucza podpisu (normalnie nie należy go zmieniać);
-- ustawień, których efekt inicjalizuje scheduler, jeśli zmiana nie jest
-  widoczna po bezpiecznym reloadzie.
+- the database type, address, credentials, pool or database queue;
+- the plugin JAR;
+- the signing key, which should not normally be changed;
+- settings whose effects initialize a scheduler, if a safe reload does not
+  apply the change.
 
-Nigdy nie używaj serwerowego `/reload`.
+Never use the server's `/reload` command.
 
-## Walidacja startowa
+## Startup validation
 
-Plugin odrzuca konfigurację, jeśli:
+The plugin rejects configuration when:
 
-- `performance.plants-per-cycle` nie mieści się w `1..10000`;
-- `performance.max-plants-per-chunk` nie mieści się w `1..512`;
-- `performance.database-save-seconds` nie mieści się w `5..86400`;
-- język domyślny nie jest jednym z sześciu obsługiwanych;
-- typ bazy nie jest `SQLITE`, `MYSQL` albo `MARIADB`;
-- ścieżka SQLite lub backupów wychodzi poza katalog VerdantVice;
-- parametry puli, retry lub kolejki bazy są poza zakresem kodu;
-- w wartości tekstowej YAML znajduje się znak NUL.
+- `performance.plants-per-cycle` is outside `1..10000`;
+- `performance.max-plants-per-chunk` is outside `1..512`;
+- `performance.database-save-seconds` is outside `5..86400`;
+- the default language is not one of the six supported languages;
+- the database type is not `SQLITE`, `MYSQL` or `MARIADB`;
+- the SQLite or backup path escapes the VerdantVice directory;
+- database pool, retry or queue settings are outside the code's allowed ranges;
+- a YAML string contains a NUL character.
 
-W razie błędu plugin nie przechodzi do stanu gotowości.
+On validation failure, the plugin does not become ready.
 
-## Mapa plików
+## File map
 
-| Plik | Odpowiedzialność |
+| File | Responsibility |
 |---|---|
-| `config.yml` | język, limity, wydajność, bezpieczeństwo, deklaracje modułów |
-| `database.yml` | SQLite/MySQL/MariaDB, pula, retry i kopie |
-| `plants.yml` | tempo zmian stanu, pielęgnacja, problemy, materiały etapów |
-| `strains.yml` | katalog 12 odmian i ich parametry |
-| `genetics.yml` | katalog progów i ustawień genetyki |
-| `quality.yml` | wagi jakości oraz suszenie, dojrzewanie, mielenie, mieszanie |
-| `effects.yml` | czas, siła, tolerancja, ryzyko i bezpieczne limity efektów |
-| `villagers.yml` | konwersja zielarzy, poziomy, oferty i kontrakt zatrudnienia |
-| `workers.yml` | AI, harmonogram, zadania, pensje i morale |
-| `economy.yml` | szmaragdy/Vault i ograniczenia cen |
-| `market.yml` | aktualizacje, podaż, popyt, historia i wydarzenia |
-| `contracts.yml` | generowanie, terminy, nagrody i limity kontraktów |
-| `gui.yml` | rozmiary, sloty, nawigacja i parametry minigry |
-| `items.yml` | materiały vanilla i `CustomModelData` |
-| `integrations.yml` | opcjonalne integracje i polityka awarii ochrony |
-| `resourcepack.yml` | wysyłanie hostowanej paczki zasobów |
-| `notifications.yml` | typy, kanały i dźwięki powiadomień |
+| `config.yml` | Language, limits, performance, security and module declarations |
+| `database.yml` | SQLite/MySQL/MariaDB, pooling, retries and backups |
+| `plants.yml` | State-change rates, care, problems and stage materials |
+| `strains.yml` | 12 real strain names and gameplay parameters; see the [catalog](STRAINS.md) |
+| `genetics.yml` | Genetics thresholds and settings catalog |
+| `quality.yml` | Quality weights, drying, curing, grinding and mixing |
+| `effects.yml` | Effect duration, strength, tolerance, risk and safe limits |
+| `villagers.yml` | Herbalist conversion, tiers, offers and hiring contracts |
+| `workers.yml` | AI, schedules, tasks, salaries and morale |
+| `economy.yml` | Emeralds/Vault and price limits |
+| `market.yml` | Updates, supply, demand, history and events |
+| `contracts.yml` | Contract generation, deadlines, rewards and limits |
+| `gui.yml` | Sizes, slots, navigation and minigame parameters |
+| `items.yml` | Vanilla materials and `CustomModelData` |
+| `integrations.yml` | Optional integrations and protection-failure policy |
+| `resourcepack.yml` | Delivery of a hosted resource pack |
+| `notifications.yml` | Notification types, channels and sounds |
 
 ## `config.yml`
 
-### Język
+### Language
 
 ```yaml
-default-language: pl_PL
+default-language: en_US
 auto-detect-client-language: true
 debug: false
 ```
 
-Przy włączonym automatycznym wykrywaniu używany jest obsługiwany język
-klienta. Ręczny wybór `/vv language` ma pierwszeństwo i jest zapisywany w
-bazie. Dla konsoli obowiązuje język domyślny.
+With automatic detection enabled, a supported client language is used.
+Manual selection through `/vv language` takes precedence and is saved in
+the database. The console uses the default language.
 
-### Limity
+### Limits
 
-- `limits.plants-per-player` — domyślnie 64;
-- `limits.farms-per-player` — domyślnie 2;
-- `limits.minimum-station-distance` — minimalna odległość stanowisk,
-  domyślnie 2,0.
+- `limits.plants-per-player` — default 64;
+- `limits.farms-per-player` — default 2;
+- `limits.minimum-station-distance` — minimum station spacing, default 2.0.
 
-Administrator z `verdantvice.admin` omija limit roślin i plantacji, ale nie
-wszystkie pozostałe reguły integralności.
+An administrator with `verdantvice.admin` bypasses plant and farm limits,
+but not every other integrity rule.
 
-### Wydajność
+### Performance
 
-- `plant-update-seconds` i `plants-per-cycle` sterują porcjowaniem wzrostu;
-- `worker-update-ticks` steruje taktem maszyny stanów pracowników;
-- `database-save-seconds` określa okres zbiorczego zapisu profili;
-- `offline-growth` i `unloaded-chunk-growth` zezwalają na obliczenie upływu
-  czasu bez aktywnego gracza/chunka;
-- `max-plants-per-chunk`, `max-workers-per-farm` i
-  `max-displays-per-chunk` są twardymi limitami ochronnymi;
-- `emergency-worker-teleport` i `emergency-worker-teleport-seconds`
-  kontrolują opcjonalne awaryjne odblokowanie workera.
+- `plant-update-seconds` and `plants-per-cycle` control growth batching;
+- `worker-update-ticks` controls the worker state-machine interval;
+- `database-save-seconds` sets the batched profile-save interval;
+- `offline-growth` and `unloaded-chunk-growth` allow elapsed-time calculation
+  without an active player or loaded chunk;
+- `max-plants-per-chunk`, `max-workers-per-farm` and `max-displays-per-chunk`
+  are hard protective limits;
+- `emergency-worker-teleport` and `emergency-worker-teleport-seconds` control
+  optional emergency recovery of a stuck worker.
 
-### Bezpieczeństwo i moduły
+### Security and modules
 
-Przedmioty są w tej wersji zawsze podpisywane i sprawdzane przez rejestr DB.
-Wpisy `security.require-signed-items`, `reservation-timeout-seconds` i
-`interaction-cooldown-millis` są załadowanymi ustawieniami katalogowymi, ale
-bieżące ścieżki bezpieczeństwa nie przełączają się na tryb bez podpisu.
+In this version, items are always signed and checked against the database
+registry. `security.require-signed-items`, `reservation-timeout-seconds` and
+`interaction-cooldown-millis` are loaded catalog settings, but current
+security paths do not switch to an unsigned mode.
 
-Sekcja `modules.*` jest raportowana w diagnostyce. Bieżący bootstrap tworzy
-wszystkie podsystemy niezależnie od tych flag; do funkcjonalnego wyłączenia
-efektów lub kontraktów służą ich własne klucze `enabled`.
+The `modules.*` section is reported in diagnostics. The current bootstrap
+creates every subsystem regardless of these flags; use the dedicated
+`enabled` keys to functionally disable effects or contracts.
 
 ## `database.yml`
 
-Domyślny wariant:
+Default configuration:
 
 ```yaml
 type: SQLITE
@@ -128,7 +126,7 @@ sqlite:
   backup-interval-hours: 12
 ```
 
-Kod rozpoznaje również opcjonalne klucze:
+The code also recognizes these optional keys:
 
 ```yaml
 sqlite:
@@ -146,44 +144,43 @@ executor:
 shutdown-timeout-millis: 15000
 ```
 
-SQLite wymusza jedną kolejkę niezależnie od `executor.threads`, używa WAL,
-`synchronous=NORMAL`, kluczy obcych i `busy_timeout`. Kopia startowa jest
-tworzona tylko wtedy, gdy istnieje niepusta baza. Kopie cykliczne można
-wyłączyć wartością `backup-interval-hours: 0`.
+SQLite enforces a single queue regardless of `executor.threads` and uses
+WAL, `synchronous=NORMAL`, foreign keys and `busy_timeout`. A startup backup
+is created only when a nonempty database exists. Disable periodic backups
+with `backup-interval-hours: 0`.
 
-MySQL/MariaDB używają:
+MySQL/MariaDB use:
 
 - `host`, `port`, `database`, `username`, `password`;
-- `parameters` w formacie `klucz=wartość&klucz2=wartość`;
-- puli `minimum-idle`, `maximum-size`, timeoutu połączenia i maksymalnego
-  czasu życia.
+- `parameters` in `key=value&key2=value` format;
+- pool `minimum-idle`, `maximum-size`, connection timeout and maximum lifetime.
 
-Wewnętrzne kopie są dostępne wyłącznie dla SQLite. Szczegóły:
-[MIGRATION.md](MIGRATION.md).
+Built-in backups are available only for SQLite. See
+[MIGRATION.md](MIGRATION.md) for details.
 
 ## `plants.yml`
 
-Sekcja `growth` określa godzinowe straty zdrowia/nawodnienia/odżywienia,
-regenerację stresu, minimalne zdrowie wzrostu, optymalny zakres nawodnienia
-oraz czas przejrzenia i zepsucia.
+The `growth` section defines hourly health/hydration/nutrition loss,
+stress recovery, minimum health for growth, the optimal hydration range,
+and time until overripe and spoiled stages.
 
-Sekcja `care` definiuje siłę konewki, odżywki, zestawu czyszczącego, oprysku i
-naprawy. `problems` ustala szansę problemu na aktualizację, minimalny odstęp i
-listę dopuszczonych problemów. `display.material-by-stage` mapuje osiem
-etapów na materiały vanilla.
+The `care` section defines watering-can, nutrient, cleaning-kit, spray and
+repair strength. `problems` defines problem chance per update, minimum
+spacing and allowed problems. `display.material-by-stage` maps the eight
+stages to vanilla materials.
 
 ## `strains.yml`
 
-Każda pozycja w `strains` zawiera:
+Each entry in `strains` contains:
 
-- nazwę i `rarity`;
-- czas wzrostu, trudność, plon i potencjał jakości;
-- odporność, zużycie wody, preferencję światła, wrażliwość na stres i zapach;
-- dodatni i ujemny profil efektów;
-- cenę nasiona i bazową cenę rynku;
-- identyfikator modelu i profilu cząsteczek.
+- a name and `rarity`;
+- growth time, difficulty, yield and quality potential;
+- resistance, water use, light preference, stress sensitivity and aroma;
+- positive and negative effect profiles;
+- seed price and base market price;
+- model and particle-profile identifiers.
 
-Wbudowane identyfikatory:
+Built-in identifiers:
 
 ```text
 berry_fog, concrete_kush, lemon_static, green_alley,
@@ -191,101 +188,113 @@ neon_haze, night_widow, purple_crash, velvet_smoke,
 ghost_garden, royal_static, black_orchard, verdant_vice
 ```
 
-Identyfikator jest częścią trwałych danych. Nie zmieniaj go po rozpoczęciu
-produkcji. Zmianę nazwy wyświetlanej wykonuj przez `display-name`.
+An identifier is part of persistent data. Do not change it after production
+has started. Change the displayed name through `display-name` instead.
 
 ## `genetics.yml`
 
-Plik zawiera szansę mutacji, karę stabilności krzyżówki, ograniczenia nazwy
-i progi klas od `DAMAGED` do `LEGENDARY`. Jest ładowany oraz walidowany jak
-pozostałe YAML-e, lecz bieżące usługi genetyki domenowej korzystają z
-polityk konstruowanych w kodzie; traktuj te wpisy jako katalog balansu do
-dalszej integracji, a nie jako gwarantowany przełącznik każdego obliczenia.
+This file contains mutation chance, cross stability penalty, name limits
+and grade thresholds from `DAMAGED` to `LEGENDARY`. It is loaded and
+validated like other YAML files, but the current domain genetics services
+use policies constructed in code. Treat these entries as a balance catalog
+for further integration, not a guaranteed switch for every calculation.
 
 ## `quality.yml`
 
-`weights` składają wynik 0–100 z genetyki, opieki, zdrowia, czasu zbioru,
-czystości, suszenia, dojrzewania i umiejętności. `penalties` opisuje
-zanieczyszczenie i zepsucie. `grades` zawiera czytelne progi katalogowe.
+`weights` combines genetics, care, health, harvest timing, cleanliness,
+drying, curing and skills into a 0–100 score. `penalties` describes
+contamination and spoilage. `grades` contains human-readable catalog thresholds.
 
-Sekcja `processing` jest używana przy:
+The `processing` section is used for:
 
-- aktualizacji pracy poza załadowanym chunkem;
-- okresie aktualizacji;
-- czasie, pojemności, czystości, stabilności i prędkości suszenia;
-- czasie, pojemności, czystości i stabilności dojrzewania;
-- wydajności i ryzyku mielenia;
-- maksymalnej liczbie partii mieszanki;
-- czasie rundy i zielonym oknie pięcioetapowej minigry.
+- updating jobs outside loaded chunks;
+- the update interval;
+- drying time, capacity, cleanliness, stability and speed;
+- curing time, capacity, cleanliness and stability;
+- grinding yield and risk;
+- the maximum number of batches in a mixture;
+- round time and the green window in the five-stage minigame.
 
-Enum domenowy klasyfikuje wynik według własnych progów. Zmiana samej mapy
-`grades` nie zmienia automatycznie wartości `QualityGrade.fromScore`.
+The domain enum classifies scores using its own thresholds. Changing only
+the `grades` map does not automatically change `QualityGrade.fromScore`.
 
 ## `effects.yml`
 
-`enabled` wyłącza używanie produktów efektowych. Pozostałe sekcje ograniczają
-czas, wzmacniacz, ryzyko efektów ujemnych, blokadę silnego efektu oraz przyrost
-i rzeczywisty czas zaniku tolerancji. `safe-limits.minimum-health` zapobiega
-zastosowaniu efektu przy zbyt małym zdrowiu.
+`enabled` disables use of effect products. Other sections limit duration,
+amplifier, negative-effect risk, strong-effect blocking, and tolerance gain
+and real-time decay. `safe-limits.minimum-health` prevents applying an
+effect when health is too low.
 
 ## `villagers.yml`
 
-- `herbalist.conversion-chance` jest jednorazowym losowaniem farmera;
-- `max-per-village` obowiązuje w promieniu `village-radius`;
-- `daily-buy-limit` ogranicza sprzedaż;
-- progi `levels` wyznaczają poziomy zielarza;
-- `hiring-contract` określa koszt kontraktu zatrudnienia w szmaragdach,
-  książkach i blokach złota.
+- `herbalist.conversion-chance` is a one-time random check for a farmer;
+- `max-per-village` applies within `village-radius`;
+- `daily-buy-limit` limits sales;
+- `levels` thresholds define herbalist tiers;
+- `hiring-contract` defines the hiring-contract cost in emeralds, books
+  and gold blocks.
 
-Kod rozpoznaje także opcjonalne `offer-prices.<id>` i
-`offer-prices.book-<id>`.
+The code also recognizes optional `offer-prices.<id>` and
+`offer-prices.book-<id>` entries.
 
 ## `workers.yml`
 
-Plik steruje liczbą roślin na pracownika, czasem rezerwacji, próbami i
-timeoutem ścieżki, harmonogramem dnia, pensją, progami zaległości, morale i
-priorytetami typów zadań. Czas harmonogramu jest czasem świata Minecraft
-`0..23999`.
+This file controls plants per worker, reservation time, pathfinding attempts
+and timeout, the daily schedule, salary, arrears thresholds, morale and task
+type priorities. Schedule time is Minecraft world time, `0..23999`.
 
-Nie ustawiaj `task-reservation-seconds` krócej niż realny czas dojścia do
-najdalszego celu. Awaryjny teleport jest osobnym ustawieniem w `config.yml`.
+Do not set `task-reservation-seconds` shorter than the actual time needed
+to reach the most distant target. Emergency teleportation is a separate
+setting in `config.yml`.
 
 ## `economy.yml`
 
-`provider: EMERALD` nie wymaga zależności. Wypłata przepełniająca ekwipunek
-upuszcza bezpiecznie stosy przy graczu. Dla Vault ustaw `provider: VAULT` lub
-`vault.enabled: true` i zainstaluj Vault oraz provider ekonomii.
+`provider: EMERALD` requires no dependencies. Payments that overflow the
+inventory safely drop stacks near the player. For Vault, set
+`provider: VAULT` or `vault.enabled: true` and install Vault and an economy
+provider. `integrations.yml` must also allow `vault: true`. If the hook is
+disabled, absent or has no registered economy service, Emerald remains the
+provider; diagnostics report the provider actually in use.
 
-Mnożniki kupna/sprzedaży oraz minimalna/maksymalna cena są używane przy
-ofertach, kontraktach i transakcjach.
+Buy/sell multipliers and minimum/maximum prices are used for offers,
+contracts and transactions.
 
-## `market.yml` i `contracts.yml`
+## `market.yml` and `contracts.yml`
 
-Rynek aktualizuje się domyślnie co 30 minut. Ceny są ograniczone przez
-minimalny i maksymalny mnożnik; wpływają na nie podaż, popyt, powrót do ceny
-bazowej, powtarzalna sprzedaż i losowe wydarzenia.
+The market updates every 30 minutes by default. Prices are bounded by
+minimum and maximum multipliers and affected by supply, demand, reversion
+to the base price, repeated sales and random events.
 
-Kontrakty można wyłączyć przez `enabled: false`. Plik określa dopuszczone
-typy, minimalny/maksymalny termin, mnożnik i reputację nagrody oraz limit
-aktywnych kontraktów.
+Disable contracts with `enabled: false`. The file defines allowed types,
+minimum/maximum deadlines, reward multiplier and reputation, and the active
+contract limit.
+
+### Accepted sale states
+
+`market.yml` contains `trade.accepted-item-types`. By default, an herbalist
+accepts `DRY_BATCH`, `CURED_BATCH` and `PACKAGE`. Administrators can
+deliberately add `FRESH_BATCH`; its price then uses the actual `freshWeight`
+and `trade.fresh-price-multiplier`. The signature, item registry, owner,
+`ProductBatch` record and batch state are still checked before an offer
+is created.
 
 ## `gui.yml`
 
-Rozmiar GUI musi być poprawnym rozmiarem ekwipunku; kod normalizuje go do
-wielokrotności 9. Sloty muszą mieścić się w danym GUI. `page-size` ogranicza
-liczbę wpisów strony. Minigra korzysta z ustawień `rolling` w tym pliku oraz
-szczegółowych wartości `processing.rolling` w `quality.yml`.
+GUI size must be a valid inventory size; the code normalizes it to a
+multiple of 9. Slots must fit within their GUI. `page-size` limits entries
+per page. The minigame uses `rolling` settings in this file and detailed
+`processing.rolling` values in `quality.yml`.
 
 ## `items.yml`
 
-Materiały są fallbackiem vanilla, a `custom-model-data` wiąże przedmiot z
-paczką zasobów. Wbudowany zakres to `12001..12017`. Zmiana materiału lub
-numeru wymaga równoległej zmiany definicji w obu wariantach paczki. Istniejące
-podpisane przedmioty zachowują zapisane dane PDC.
+Materials provide the vanilla fallback, while `custom-model-data` links an
+item to the resource pack. The built-in item range is `12001..12025`.
+Changing a material or number requires a corresponding definition change
+in both pack variants. Existing signed items retain their saved PDC data.
 
 ## `integrations.yml`
 
-Wykonywalne adaptery tej wersji:
+Runtime adapters in this version:
 
 - `vault`;
 - `placeholderapi`;
@@ -293,53 +302,87 @@ Wykonywalne adaptery tej wersji:
 - `griefprevention`;
 - `lands`.
 
-`region-protection-fallback: DENY_IF_UNKNOWN` jest trybem fail-closed. Każda
-inna wartość nie blokuje wyłącznie z powodu odpowiedzi `UNKNOWN`, lecz jawna
-odmowa integracji nadal blokuje akcję.
+These hooks require both their installed dependency and an enabled flag
+(the default is `true`). Vault also requires the economy setting described
+above. Vault and region hooks are detected again by `/vv admin reload`.
+The PlaceholderAPI expansion is registered at startup: restart the server
+after changing `placeholderapi` to enable or disable its registration.
 
-Flagi `itemsadder`, `oraxen` i `luckperms` są zarezerwowane i nie uruchamiają
-osobnego adaptera w tej wersji.
+WorldGuard checks its build permission and explicit session bypass.
+GriefPrevention checks build permission in the claim at the target location.
+Lands checks the world's `BLOCK_PLACE` role flag, including subareas and
+wilderness restrictions, rather than treating land-level trust as permission.
+
+`region-protection-fallback: DENY_IF_UNKNOWN` is fail-closed. Any other
+value does not block solely because a response is `UNKNOWN`, but an
+explicit integration denial still blocks the action.
+
+The `itemsadder`, `oraxen` and `luckperms` flags are reserved and do not
+start separate adapters in this version.
 
 ## `resourcepack.yml`
 
-Paczka jest wysyłana tylko, gdy `enabled: true`, URL nie jest pusty, a `sha1`
-ma dokładnie 40 cyfr szesnastkowych. `required` jest przekazywane do Paper,
-`send-on-join` wysyła paczkę po wejściu, a `prompt-key` wskazuje klucz
-MiniMessage.
+The pack is sent only when `enabled: true`, the URL is nonempty and `sha1`
+contains exactly 40 hexadecimal digits. `required` is passed to Paper,
+`send-on-join` sends the pack after joining, and `prompt-key` identifies
+the MiniMessage message key.
 
-`fallback-without-pack` jest obecnie wpisem informacyjnym; vanilla fallback
-wynika z materiałów przedmiotów niezależnie od tej flagi.
+`fallback-without-pack` is currently informational; the vanilla fallback
+comes from item materials independently of this flag.
 
 ## `notifications.yml`
 
-Obsługiwane typy:
+Supported types:
 
 ```text
 PLANT_READY, DISEASE, LOW_WATER, DRYING_COMPLETE, CURING_COMPLETE,
 UNPAID_WORKER, BLOCKED_WORKER, CONTRACT_COMPLETE, MARKET_CHANGE
 ```
 
-Kanały konfigurowane w pliku to m.in. `CHAT`, `ACTION_BAR`, `TITLE` i
-`BOSS_BAR`. Gracz może włączyć lub wyłączyć konkretny typ poleceniem.
-Nazwy dźwięków muszą odpowiadać enumom `Sound` bieżącego Paper.
+Configurable channels include `CHAT`, `ACTION_BAR`, `TITLE` and `BOSS_BAR`.
+A player can enable or disable individual types with a command. Sound
+names must match `Sound` enum values in the current Paper version.
 
-## Języki
+## Languages
 
-Pliki w `languages/` używają MiniMessage. Łańcuch fallbacku to:
+Files in `languages/` use MiniMessage. The fallback chain is:
 
-1. język gracza;
+1. the player's language;
 2. `default-language`;
 3. `en_US`;
-4. czerwony znacznik brakującego klucza.
+4. a red missing-key marker.
 
-`en_US.yml` jest wymaganym wzorcem. Każdy inny język musi zawierać wszystkie
-jego klucze tekstowe, inaczej start/reload zakończy się błędem. Placeholdery
-takie jak `<player>` są wstawiane jako tekst nieinterpretowany, ale znaczniki
-formatowania MiniMessage w samym szablonie są aktywne.
+The player's language controls the GUI, books and messages.
+`main.default-language` controls global entity names such as herbalist
+names. Bukkit's `customName` is shared by all players, so it is not
+localized separately for each observer. A safe reload refreshes the names
+of already-loaded, marked herbalists.
 
-## Klucz podpisu
+`en_US.yml` is the required reference. Every other language must contain
+all its text keys, or startup/reload fails. Placeholders such as `<player>`
+are inserted as uninterpreted text, while MiniMessage formatting tags in
+the template itself remain active.
 
-`data/signing.key` jest generowany losowo (256 bitów), zapisywany atomowo i
-w miarę możliwości ograniczany prawami systemu plików do właściciela. Nie
-edytuj, nie regeneruj i nie udostępniaj go. Kopia klucza musi odpowiadać
-kopii bazy; mieszanie klucza z innym stanem powoduje odrzucanie przedmiotów.
+## Signing key
+
+`data/signing.key` is generated randomly (256 bits), saved atomically and,
+where possible, restricted to its owner through filesystem permissions.
+Do not edit, regenerate or share it. A key backup must match the database
+backup; combining a key with an unrelated state causes items to be rejected.
+
+## Worker reliability settings
+
+`workers.yml` contains the bounded salary retry and diagnostic intervals:
+
+```yaml
+salary:
+  retry-initial-seconds: 5
+  retry-maximum-seconds: 60
+  warning-interval-seconds: 60
+state-transition-warning-interval-seconds: 60
+```
+
+Only transient connectivity/locking failures are retried. SQL integrity
+violations are classified as permanent and disable a stale runtime after its
+active task is released. The intervals limit repeated diagnostics; they do not
+suppress the first error.

@@ -9,9 +9,11 @@ public record HerbalistEvaluation(Status status, Optional<HerbalistRecord> herba
 
     public enum Status {
         CREATED,
+        CREATED_FORCED,
         EXISTING,
         NORMAL,
         VILLAGE_LIMIT,
+        WORKER,
         NOT_FARMER,
         INVALID_ENTITY
     }

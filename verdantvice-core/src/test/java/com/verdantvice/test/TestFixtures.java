@@ -30,7 +30,7 @@ public final class TestFixtures {
 
     public static Strain strain() {
         return new Strain(
-                "berry_fog", "Berry Fog", StrainRarity.BASIC, Duration.ofHours(10),
+                "berry_fog", "Blueberry", StrainRarity.BASIC, Duration.ofHours(10),
                 35.0, 50.0, 80.0, 65.0, 1.0, 10.0, 0.8, 45.0,
                 new EffectProfile(Map.of(EffectType.SPEED, 0.8, EffectType.STRESS_RELIEF, 0.5)),
                 new EffectProfile(Map.of(EffectType.HUNGER, 0.25)),

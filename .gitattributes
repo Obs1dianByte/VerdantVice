@@ -1,0 +1,2 @@
+# Vanilla fingerprints are byte hashes; checkouts must preserve canonical LF.
+/resource-pack/source/vanilla/** text eol=lf

@@ -6,6 +6,11 @@ import com.verdantvice.common.BlockPosition;
 import com.verdantvice.database.DatabaseManager;
 import com.verdantvice.database.SqlNull;
 import com.verdantvice.herbalist.HerbalistRecord;
+import com.verdantvice.storage.PlayerDataRepository;
+import com.verdantvice.text.ExternalNameSanitizer;
+import com.verdantvice.security.CustomItemType;
+import com.verdantvice.security.ItemConsumptionGateway;
+import com.verdantvice.security.SecureItemService;
 
 import java.sql.JDBCType;
 import java.sql.ResultSet;
@@ -67,6 +72,57 @@ public final class WorkerRepository {
         );
     }
 
+    public CompletableFuture<Integer> legacyNameCount(String fallbackName) {
+        String fallback = ExternalNameSanitizer.name(fallbackName, "Worker", 64);
+        return database.query(
+                "SELECT worker_uuid, worker_name, row_version FROM workers",
+                WorkerRepository::legacyName
+        ).thenApply(rows -> (int) rows.stream()
+                .filter(row -> !row.name().equals(
+                        ExternalNameSanitizer.name(row.name(), fallback, 64)))
+                .count());
+    }
+
+    /**
+     * Sanitizes only the persisted worker_name column. Identity, wages, morale,
+     * experience, tasks and every other worker field remain unchanged.
+     */
+    public CompletableFuture<Integer> sanitizeLegacyNames(
+            String fallbackName,
+            Instant now
+    ) {
+        String fallback = ExternalNameSanitizer.name(fallbackName, "Worker", 64);
+        Objects.requireNonNull(now, "now");
+        return database.transaction(session -> {
+            List<LegacyNameRow> rows = session.query(
+                    "SELECT worker_uuid, worker_name, row_version FROM workers",
+                    WorkerRepository::legacyName
+            );
+            int changedRows = 0;
+            for (LegacyNameRow row : rows) {
+                String cleaned = ExternalNameSanitizer.name(row.name(), fallback, 64);
+                if (cleaned.equals(row.name())) {
+                    continue;
+                }
+                int changed = session.update(
+                        "UPDATE workers SET worker_name=?, updated_at=?, "
+                                + "row_version=row_version+1 "
+                                + "WHERE worker_uuid=? AND row_version=?",
+                        cleaned,
+                        now,
+                        row.workerUuid(),
+                        row.version()
+                );
+                if (changed != 1) {
+                    throw new SQLException(
+                            "Concurrent worker name migration: " + row.workerUuid());
+                }
+                changedRows++;
+            }
+            return changedRows;
+        });
+    }
+
     /**
      * Claims an existing persisted herbalist and creates its worker row in the
      * same database transaction.
@@ -82,7 +138,31 @@ public final class WorkerRepository {
             WorkerSchedule schedule,
             BlockPosition home,
             int farmWorkerLimit,
+            String ownerLocale,
             Instant now
+    ) {
+        return hireHerbalist(herbalist, ownerUuid, farmId, workerName, specialization,
+                dailyWage, minecraftDay, schedule, home, farmWorkerLimit, ownerLocale,
+                now, null, null, null);
+    }
+
+    /** Claims the villager, creates its worker, and consumes its contract in one transaction. */
+    public CompletableFuture<WorkerRecord> hireHerbalist(
+            HerbalistRecord herbalist,
+            UUID ownerUuid,
+            UUID farmId,
+            String workerName,
+            WorkerSpecialization specialization,
+            int dailyWage,
+            long minecraftDay,
+            WorkerSchedule schedule,
+            BlockPosition home,
+            int farmWorkerLimit,
+            String ownerLocale,
+            Instant now,
+            SecureItemService.ValidatedIdentity contract,
+            ItemConsumptionGateway items,
+            String operationId
     ) {
         Objects.requireNonNull(herbalist, "herbalist");
         Objects.requireNonNull(ownerUuid, "ownerUuid");
@@ -90,7 +170,12 @@ public final class WorkerRepository {
         Objects.requireNonNull(specialization, "specialization");
         Objects.requireNonNull(schedule, "schedule");
         Objects.requireNonNull(home, "home");
+        Objects.requireNonNull(ownerLocale, "ownerLocale");
         Objects.requireNonNull(now, "now");
+        if (contract != null) {
+            Objects.requireNonNull(items, "items");
+            Objects.requireNonNull(operationId, "operationId");
+        }
         String name = requireName(workerName);
         if (dailyWage < 1 || farmWorkerLimit < 1) {
             throw new IllegalArgumentException("Invalid wage or farm worker limit");
@@ -112,6 +197,11 @@ public final class WorkerRepository {
                 Optional.empty()
         );
         return database.transaction(session -> {
+            PlayerDataRepository.ensure(session, ownerUuid, ownerLocale, now);
+            String lock = session.databaseType().isNetworkDatabase() ? " FOR UPDATE" : "";
+            if (!session.exists("SELECT farm_id FROM farms WHERE farm_id=?" + lock, farmId)) {
+                throw new SQLException("unknown_farm");
+            }
             int workers = session.queryOne(
                     "SELECT COUNT(*) AS total FROM workers WHERE farm_id=?",
                     result -> result.getInt("total"),
@@ -176,6 +266,10 @@ public final class WorkerRepository {
                     now,
                     now
             );
+            if (contract != null) {
+                items.consume(session, contract, java.util.Set.of(CustomItemType.PLANTATION_CONTRACT),
+                        ownerUuid, operationId, now);
+            }
             return new WorkerRecord(
                     worker,
                     herbalist.entityUuid(),
@@ -389,11 +483,18 @@ public final class WorkerRepository {
     }
 
     private static String requireName(String name) {
-        String normalized = Objects.requireNonNull(name, "workerName").strip();
-        if (normalized.isEmpty() || normalized.length() > 64) {
-            throw new IllegalArgumentException("Worker name must contain 1 to 64 characters");
-        }
-        return normalized;
+        return ExternalNameSanitizer.name(name, "Worker", 64);
+    }
+
+    private static LegacyNameRow legacyName(ResultSet result) throws SQLException {
+        return new LegacyNameRow(
+                uuid(result, "worker_uuid"),
+                Objects.toString(result.getString("worker_name"), ""),
+                result.getLong("row_version")
+        );
+    }
+
+    private record LegacyNameRow(UUID workerUuid, String name, long version) {
     }
 
     private enum Axis {

@@ -10,11 +10,18 @@
           "type": "minecraft:model",
           "model": "verdantvice:item/drying_rack"
         }
+      },
+      {
+        "threshold": 12010,
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:block/barrel"
+        }
       }
     ],
     "fallback": {
       "type": "minecraft:model",
-      "model": "minecraft:item/barrel"
+      "model": "minecraft:block/barrel"
     }
   }
 }

@@ -1,116 +1,166 @@
-# Komendy VerdantVice
+# VerdantVice commands
 
-Główna komenda to `/verdantvice`, alias `/vv`. Bukkit wymaga do jej użycia
-`verdantvice.use`. Bez argumentów otwiera główne GUI graczowi.
+The main command is `/verdantvice`, with alias `/vv`. Bukkit requires
+`verdantvice.use` to use it. With no arguments, it opens the main GUI for
+the player.
 
-Poniżej opisano zachowanie faktycznego executora. Część tekstów `usage` w
-plikach językowych zawiera przyszłe, szersze warianty argumentów; nie są one
-automatycznie obsługiwane przez bieżący parser.
+This document describes the behavior of the actual command executor. Some
+`usage` messages in language files include broader, future argument
+variants; the current parser does not support them automatically.
 
-## Komendy gracza
+## Player commands
 
-| Komenda | Działanie | Konsola |
+| Command | Action | Console |
 |---|---|---|
-| `/vv` | otwiera główne GUI | nie |
-| `/vv help` | pokazuje dostępne komendy; argument strony nie jest używany | tak |
-| `/vv guide` | wydaje, rejestruje i otwiera podstawową książkę | nie |
-| `/vv profile` | otwiera widok umiejętności bieżącego gracza | nie |
-| `/vv skills` | otwiera widok umiejętności | nie |
-| `/vv strains` | otwiera katalog odmian | nie |
-| `/vv recipes` | próbuje rozpocząć minigrę skręcania z wymaganych przedmiotów | nie |
-| `/vv market` | otwiera widok rynku | nie |
-| `/vv contracts` | otwiera widok kontraktów | nie |
-| `/vv farm` | otwiera zarządzanie plantacją | nie |
-| `/vv workers` | otwiera zarządzanie pracownikami | nie |
-| `/vv language <kod>` | zapisuje język gracza | nie |
-| `/vv notifications` | otwiera ustawienia powiadomień | nie |
-| `/vv notifications <typ> <on\|off>` | przełącza typ powiadomienia | nie |
-| `/vv resourcepack` | ponownie wysyła skonfigurowaną paczkę | nie |
+| `/vv` | Opens the main GUI | No |
+| `/vv help` | Shows available commands; a page argument is not used | Yes |
+| `/vv guide` | Issues, registers and opens the basic guide book | No |
+| `/vv profile` | Opens the current player's skills view | No |
+| `/vv skills` | Opens the skills view | No |
+| `/vv strains` | Opens the strain catalog | No |
+| `/vv recipes` | Opens a localized guide to all processing recipes | No |
+| `/vv recipes roll` | Starts the same minigame as `/vv roll` | No |
+| `/vv roll` | Checks signed paper, a filter and Ground Product/Mixture, then starts the minigame | No |
+| `/vv market` | Opens the market view | No |
+| `/vv contracts` | Opens the contracts view | No |
+| `/vv farm` | Opens farm management | No |
+| `/vv workers` | Opens worker management | No |
+| `/vv language` | Shows a localized, clickable list of supported languages | No |
+| `/vv language <code>` | Saves the player's language | No |
+| `/vv notifications` | Opens notification settings | No |
+| `/vv notifications <type> <on\|off>` | Toggles a notification type | No |
+| `/vv resourcepack` | Resends the configured resource pack | No |
 
-Obsługiwane kody języka:
+Supported language codes:
 
 ```text
 pl_PL, en_US, de_DE, es_ES, cs_CZ, uk_UA
 ```
 
-Typ powiadomienia można podać małymi literami i z łącznikiem, np.
-`plant-ready`, `drying-complete`, `market-change`.
+Notification types can use lowercase letters and hyphens, for example
+`plant-ready`, `drying-complete` and `market-change`.
 
-## Genetyka
+## Genetics
 
-`/vv genetics` otwiera laboratorium i listę własnych linii. Aby utworzyć nową
-linię, trzymaj dwa różne, podpisane nasiona w głównej i pomocniczej ręce, a
-następnie użyj `/vv genetics <nazwa>`. Oba nasiona są oznaczane jako zużyte,
-a po udanym skrzyżowaniu gracz otrzymuje jedno podpisane nasiono nowej linii.
-Nazwa ma 3–24 dozwolone znaki i nie może zawierać słów z `genetics.yml`.
+`/vv genetics` opens the laboratory and the player's custom lines. To create
+a new line, hold two different signed seeds in the main hand and off hand,
+then use `/vv genetics <name>`. Both seeds are marked as consumed, and a
+successful cross gives the player one signed seed of the new line. The name
+must contain 3–24 allowed characters and must not contain words prohibited
+by `genetics.yml`.
 
-## Plantacje
+## Farms
 
-| Komenda | Działanie |
+| Command | Action |
 |---|---|
-| `/vv farm create <nazwa>` | tworzy plantację z bieżącego zaznaczenia albo domyślnego regionu |
-| `/vv farm delete` | natychmiast usuwa plantację należącą do wykonującego |
-| `/vv farm invite <gracz-online>` | dodaje gracza online z rolą `MEMBER` |
-| `/vv farm remove <gracz>` | usuwa członka; działa również dla gracza offline |
+| `/vv farm create <name>` | Creates a farm from the current selection or the default region |
+| `/vv farm delete` | Immediately deletes the farm owned by the sender |
+| `/vv farm invite <online-player>` | Adds an online player with the `MEMBER` role |
+| `/vv farm remove <player>` | Removes a member; also works for an offline player |
+| `/vv farm storage <type>` | Assigns the targeted container as farm storage |
+| `/vv farm storage unlink` | Unlinks the targeted storage without destroying the block or its contents |
 
-Nazwa przy tworzeniu ma 3–48 znaków. `delete` nie ma w executorze dodatkowego
-argumentu ani interaktywnego potwierdzenia, mimo szerszego tekstu w pliku
-językowym. Przed użyciem sprawdź właściwą plantację.
+### Farm dashboard
 
-Zaznaczenie regionu wykonuje się podpisaną `selection-wand`: lewy przycisk
-ustawia pierwszy narożnik, prawy drugi. Brak zaznaczenia tworzy region wokół
-gracza.
+`/vv farm` opens the dashboard of the currently accessible farm. It shows a
+fresh snapshot of plants, workers, storages, drying racks, curing containers,
+salaries, permissions and statistics that are actually available. Submenus
+retain `farmId` while paging, refreshing and navigating back. Storage can be
+safely unlinked from its tile after confirmation; its block and contents are
+not destroyed.
 
-## Komendy administracyjne
+Viewing data requires the domain permission `VIEW`. Storage actions require
+`MANAGE_STORAGE`, worker priorities require `MANAGE_WORKERS`, and the
+permissions list requires `MANAGE_MEMBERS`. Refresh reads the current state
+from manager caches; the GUI does not execute SQL queries on the main thread.
 
-Każda poniższa komenda wymaga najpierw `verdantvice.admin`.
+A new farm name must contain 3–48 characters. Despite the broader language
+file text, the executor accepts no extra argument or interactive confirmation
+for `delete`. Check that the correct farm is selected before using it.
 
-| Komenda | Działanie | Dodatkowe wymaganie |
+Select a region with a signed `selection-wand`: left click sets the first
+corner and right click sets the second. Without a selection, a region is
+created around the player.
+
+Assign storage by looking directly at a `CHEST`, `TRAPPED_CHEST`, `BARREL`
+or any `SHULKER_BOX` from within 6 blocks. The entire container must be
+inside the region. Both halves of a double chest are treated as one physical
+storage with a single record. Argument types:
+
+```text
+seed-storage, tool-storage, fresh-harvest-storage, dry-product-storage,
+packaged-product-storage, salary-storage, water-storage, general-storage
+```
+
+A farm can have several ordinary storages, but exactly one active
+`salary-storage`. Reassigning an existing link does not modify the database.
+`unlink` removes only the association and allows the same container to be
+assigned again later.
+
+## Administrative commands
+
+Every command below first requires `verdantvice.admin`.
+
+| Command | Action | Additional requirement |
 |---|---|---|
-| `/vv admin reload` | bezpiecznie przeładowuje konfigurację i języki poza DB | `verdantvice.admin.reload` |
-| `/vv admin save` | zapisuje wszystkie załadowane profile | — |
-| `/vv admin give <gracz> <typ> [odmiana\|ilość] [ilość]` | wydaje i rejestruje podpisane przedmioty; ilość 1–64 | `verdantvice.admin.give` |
-| `/vv admin seed <gracz> <odmiana>` | skrót wydający jedno podpisane nasiono | `verdantvice.admin.give` |
-| `/vv admin plant <odmiana>` | sadzi na wskazanym z odległości 6 bloków stanowisku | gracz |
-| `/vv admin setstage <etap>` | zmienia etap wskazanej rośliny | gracz |
-| `/vv admin setquality <klasa>` | zastępuje trzymaną partię wersją o wskazanej jakości | gracz |
-| `/vv admin spawnherbalist [poziom]` | konwertuje villagera wskazanego do 8 bloków lub tworzy farmera nad wskazanym blokiem; domyślnie `NOVICE` | gracz |
-| `/vv admin hireworker` | uruchamia normalne zatrudnienie villagera wskazanego do 8 bloków | gracz |
-| `/vv admin removeplant` | bezpiecznie usuwa wskazaną roślinę | gracz |
-| `/vv admin inspect` | pokazuje dokładny stan wskazanej rośliny | gracz |
-| `/vv admin market` | otwiera GUI rynku | gracz |
-| `/vv admin contract` | otwiera GUI kontraktów | gracz |
-| `/vv admin resetplayer <gracz> confirm` | resetuje profil gracza | — |
-| `/vv admin migrate` | zwraca wynik inicjalizacji/migracji bieżącego managera DB | — |
-| `/vv admin database` | pokazuje typ, stan, aktywne operacje i kolejkę DB | — |
-| `/vv admin debug` | zapisuje zanonimizowany raport w `logs/` | — |
-| `/vv admin performance` | pokazuje liczbę roślin, plantacji i kolejkę DB | — |
+| `/vv admin reload` | Safely reloads configuration and languages, excluding the database | `verdantvice.admin.reload` |
+| `/vv admin save` | Saves all loaded profiles | — |
+| `/vv admin give <player> <type> [strain\|amount] [amount]` | Issues and registers signed items; amount 1–64 | `verdantvice.admin.give` |
+| `/vv admin seed <player> <strain>` | Shortcut issuing one signed seed | `verdantvice.admin.give` |
+| `/vv admin plant <strain>` | Plants at the targeted station within 6 blocks | Player |
+| `/vv admin setstage <stage>` | Changes the targeted plant's stage | Player |
+| `/vv admin setquality <grade>` | Replaces the held batch with a version of the requested quality | Player |
+| `/vv admin spawnherbalist [tier] [--force]` | Converts a villager targeted within 8 blocks or spawns a farmer; `--force` bypasses only the village limit | Player; force requires `verdantvice.admin.spawnherbalist.force` |
+| `/vv admin hireworker` | Starts normal hiring for a villager targeted within 8 blocks | Player |
+| `/vv admin removeplant` | Safely removes the targeted plant | Player |
+| `/vv admin inspect` | Shows the targeted plant's exact state | Player |
+| `/vv admin market` | Opens the market GUI | Player |
+| `/vv admin contract` | Opens the contracts GUI | Player |
+| `/vv admin resetplayer <player> confirm` | Resets the player's profile | — |
+| `/vv admin migrate` | Returns the current database manager's initialization/migration result | — |
+| `/vv admin database` | Shows the database type, state, active operations and queue | — |
+| `/vv admin debug` | Saves an anonymized report in `logs/` | — |
+| `/vv admin performance` | Shows plant and farm counts and the database queue | — |
 
-`/vv admin migrate` nie zastępuje restartu po instalacji nowszego JAR-a.
-Manager bazy przechowuje wynik startu, a właściwe oczekujące migracje są
-wykonywane przed gotowością pluginu.
+`/vv admin migrate` does not replace a restart after installing a newer JAR.
+The database manager retains its startup result, and actual pending
+migrations run before the plugin becomes ready.
 
-`spawnherbalist` przyjmuje:
+`spawnherbalist` accepts:
 
 ```text
 NOVICE, APPRENTICE, JOURNEYMAN, EXPERT, MASTER, VERDANT_EXPERT
 ```
 
-Jeżeli cel jest villagerem, komenda ustawia mu profesję `FARMER` i wymusza
-rejestrację. Bez celu tworzy nowego farmera nad blokiem wskazanym do 8
-bloków, a gdy bloku nie ma — przy graczu. Nadal obowiązuje limit zielarzy w
-promieniu wioski; nieudane tworzenie usuwa nowo przywołaną encję.
+If the target is a villager, the command preserves an existing herbalist and
+its UUID, reputation, experience and offers. An ordinary villager undergoes
+a controlled conversion; a worker cannot be converted. With no entity target,
+a new farmer is spawned above the targeted block or near the player. Without
+`--force`, `herbalist.max-per-village` applies. Explicit `--force` bypasses
+only that limit and the random conversion check; entity, world, uniqueness
+and database checks still apply. Supplying a tier raises experience to at
+least the `levels.<TIER>` threshold in `villagers.yml`, without resetting
+higher values. A save failure removes only a newly spawned entity.
 
-`hireworker` nie omija zasad zatrudnienia tylko dlatego, że wywołano je jako
-komendę admina. Cel musi być zarejestrowanym zielarzem poziomu
-`VERDANT_EXPERT`, gracz musi trzymać w głównej ręce poprawnie podpisany
-`PLANTATION_CONTRACT`, a manager musi znaleźć jego plantację z wolnym
-miejscem. Kontrakt jest atomowo zużywany dopiero w udanej operacji.
+`hireworker` does not bypass hiring rules merely because it is an admin
+command. The target must be a registered `VERDANT_EXPERT` herbalist, the player
+must hold a correctly signed `PLANTATION_CONTRACT` in the main hand, and the
+manager must find that player's farm with available capacity. The contract
+is consumed atomically only when the operation succeeds.
 
-## Identyfikatory dla `admin give`
+## Processing stations
 
-Parser ignoruje wielkość liter i zamienia łącznik na podkreślenie. Dostępne
-typy:
+Only right click opens the drying-rack, curing-container or grinder GUI.
+Left click starts a normal break attempt. An idle station is reserved while
+its signed item is issued; its block is then removed without a vanilla drop,
+`processing-stations.yml` is updated, and the player receives exactly one
+signed item. With a full inventory, the item drops beside the block. An
+active process or a second concurrent attempt returns `errors.busy`.
+Shift + right click on a grinder still starts mixing.
+
+## Identifiers for `admin give`
+
+The parser ignores case and converts hyphens to underscores. Available types:
 
 ```text
 seed
@@ -140,39 +190,39 @@ guide-book
 advanced-book
 ```
 
-Dla `seed` wymagany jest poprawny identyfikator odmiany:
+`seed` requires a valid strain identifier:
 
 ```text
-/vv admin give Ala seed berry_fog 8
-/vv admin seed Ala berry_fog
+/vv admin give Alex seed berry_fog 8
+/vv admin seed Alex berry_fog
 ```
 
-Wydawanie stanowych produktów (`fresh-batch`, `joint` itd.) samą komendą nie
-tworzy odpowiadającej im pełnej historii produkcji. Do testów integralności
-preferuj przedmioty powstałe przez normalny proces.
+Issuing stateful products (`fresh-batch`, `joint`, etc.) through the command
+alone does not create their complete corresponding production history. For
+integrity tests, prefer items produced through the normal workflow.
 
-## Etapy i jakości
+## Stages and quality grades
 
-Etapy rośliny:
+Plant stages:
 
 ```text
 SEED, SPROUT, SEEDLING, VEGETATIVE, MATURING, READY, OVERRIPE, SPOILED
 ```
 
-Klasy jakości:
+Quality grades:
 
 ```text
 SPOILED, VERY_POOR, STREET, COMMON, GOOD, PREMIUM,
 TOP_SHELF, PERFECT_BATCH, VERDANT_GRADE
 ```
 
-## Uzupełnianie i błędy
+## Completion and errors
 
-Tab-completion podpowiada główne komendy, operacje plantacji, języki, typy
-powiadomień, komendy admina, graczy online, etapy, jakości, typy przedmiotów
-i odmiany.
+Tab completion suggests main commands, farm operations, languages,
+notification types, admin commands, online players, stages, grades, item
+types and strains.
 
-Podczas asynchronicznego startu komendy odpowiadają komunikatem
-`not ready`. Błąd bazy lub operacji ma bezpieczny, lokalizowany komunikat, a
-szczegóły trafiają do logu serwera. Akcje administracyjne są logowane z nazwą
-wykonującego.
+During asynchronous startup, commands respond with a `not ready` message.
+Database or operation failures show a safe, localized message, while details
+go to the server log. Administrative actions are logged with the sender's
+name.

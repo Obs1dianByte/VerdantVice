@@ -78,7 +78,7 @@ public final class PlayerDataRepository {
         });
     }
 
-    static void ensure(
+    public static void ensure(
             SqlSession session,
             UUID playerUuid,
             String locale,
