@@ -57,6 +57,7 @@ final class GameplayScenario {
     private final BiConsumer<Boolean, String> check;
     private final BiConsumer<String, Throwable> failure;
     private final Consumer<String> event;
+    private final SurvivalShopAcceptance shop;
     private final UUID bootId = UUID.randomUUID();
     private final List<UUID> plants = new ArrayList<>();
     private final List<UUID> batches = new ArrayList<>();
@@ -74,6 +75,7 @@ final class GameplayScenario {
     private double hydration;
     private double tolerance;
     private int wateringInteractions;
+    private int productAirInteractions;
     private final List<Integer> actualRollingSlots = new ArrayList<>();
     private final Map<String, Object> originalProcessing = new LinkedHashMap<>();
     private Object originalPlantPeriod;
@@ -86,6 +88,7 @@ final class GameplayScenario {
         this.check = check;
         this.failure = failure;
         this.event = event;
+        this.shop = new SurvivalShopAcceptance(probe, target, check, event);
     }
 
     boolean started() { return phase > 0 || busy; }
@@ -164,7 +167,19 @@ final class GameplayScenario {
         }
         player.teleport(origin.clone().add(0.5, 0, 0.5));
         player.getWorld().setTime(3000);
-        return target.farms().create(player, "Acceptance Farm").thenCompose(created -> main(() -> {
+        require(!player.isOp() && !player.hasPermission("verdantvice.admin")
+                        && player.getGameMode() == org.bukkit.GameMode.SURVIVAL,
+                "full gameplay scenario starts as a non-operator survival player without admin bypasses");
+        event.accept("FIXTURE station blocks and flat terrain are prepared through Bukkit; normal signed tool acquisition is verified separately through the real buy menu");
+        return shop.buy(player, CustomItemType.SELECTION_WAND, "", HerbalistTier.NOVICE)
+                .thenCompose(ignored -> main(() -> shop.buy(player, CustomItemType.FARM_MANAGER_TABLE, "", HerbalistTier.NOVICE))
+                        .thenCompose(future -> future))
+                .thenCompose(ignored -> main(() -> shop.buy(player, CustomItemType.PLANTING_POT, "", HerbalistTier.NOVICE))
+                        .thenCompose(future -> future))
+                .thenCompose(ignored -> main(() -> shop.buy(player, CustomItemType.DRYING_RACK, "", HerbalistTier.NOVICE))
+                        .thenCompose(future -> future))
+                .thenCompose(ignored -> main(() -> target.farms().create(player, "Acceptance Farm"))
+                        .thenCompose(future -> future)).thenCompose(created -> main(() -> {
             farm = created;
             require(farm.ownerUuid().equals(player.getUniqueId()), "actual player owns the persisted farm");
             for (int index = 0; index < 4; index++) {
@@ -183,10 +198,10 @@ final class GameplayScenario {
             CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
             for (int index = 0; index < 4; index++) {
                 final int current = index;
-                chain = chain.thenCompose(nothing -> main(() -> target.secureItems().issue(player,
-                        CustomItemType.SEED, player.getUniqueId(), current % 2 == 0 ? "berry_fog" : "concrete_kush"))
+                chain = chain.thenCompose(nothing -> main(() -> shop.buy(player,
+                        CustomItemType.SEED, current % 2 == 0 ? "berry_fog" : "concrete_kush", HerbalistTier.NOVICE))
                         .thenCompose(future -> future)).thenCompose(seed -> main(() -> {
-                    player.getInventory().addItem(seed);
+                    player.closeInventory();
                     Block pot = origin.clone().add(-6 + current * 3, 0, -4).getBlock();
                     pot.setType(Material.DECORATED_POT, false);
                     target.plants().markStation(pot);
@@ -200,9 +215,10 @@ final class GameplayScenario {
                 }));
             }
             return chain;
-        }).thenCompose(ignored -> main(() -> target.secureItems().issue(player, CustomItemType.WATERING_CAN,
-                player.getUniqueId(), "")).thenCompose(future -> future)).thenCompose(can -> main(() -> {
-            player.getInventory().setItem(0, can);
+        }).thenCompose(ignored -> main(() -> shop.buy(player, CustomItemType.WATERING_CAN,
+                "", HerbalistTier.NOVICE)).thenCompose(future -> future)).thenCompose(can -> main(() -> {
+            player.closeInventory();
+            moveTo(player, can, 0);
             player.getInventory().setHeldItemSlot(0);
             hydration = target.plants().plant(plants.getFirst()).orElseThrow().hydration();
             Location feet = origin.clone().add(-5.5, 0, -1);
@@ -278,12 +294,11 @@ final class GameplayScenario {
                 }).thenCompose(future -> future)).thenCompose(ignored -> main(() -> {
                     require(items(player, CustomItemType.MIXTURE).size() == 1,
                             "mixing delivered one authenticated mixture to the actual player");
-                    return target.secureItems().issue(player, CustomItemType.ROLLING_PAPER, player.getUniqueId(), "");
+                    return shop.buy(player, CustomItemType.ROLLING_PAPER, "", HerbalistTier.JOURNEYMAN);
                 }).thenCompose(future -> future)).thenCompose(paper -> main(() -> {
-                    player.getInventory().addItem(paper);
-                    return target.secureItems().issue(player, CustomItemType.FILTER, player.getUniqueId(), "");
+                    return shop.buy(player, CustomItemType.FILTER, "", HerbalistTier.JOURNEYMAN);
                 }).thenCompose(future -> future)).thenCompose(filter -> main(() -> {
-                    player.getInventory().addItem(filter);
+                    player.closeInventory();
                     // Hide the two reserve batches from ingredient selection by putting the mixture first.
                     moveTo(player, items(player, CustomItemType.MIXTURE).getFirst(), 0);
                     event.accept("SERVER_API startRolling; the next five clicks must come from the real Minecraft client");
@@ -341,13 +356,18 @@ final class GameplayScenario {
         moveTo(player, stack, 0);
         player.getInventory().setHeldItemSlot(0);
         player.closeInventory();
+        Location airUseLocation = player.getLocation().clone();
+        airUseLocation.setPitch(-60);
+        player.teleport(airUseLocation);
         phase = 3;
-        message(player, "Rolling PASS. Physically right-click with the rolled item, wait two seconds, then /vvclient scenario used.");
+        message(player, "Rolling PASS. Camera now aims into empty sky. Physically right-click AIR with the rolled item, wait two seconds, then /vvclient scenario used.");
         return CompletableFuture.completedFuture(null);
     }
 
     private CompletableFuture<Void> used(Player player) {
         require(phase == 3, "product use follows real-client rolling");
+        require(productAirInteractions > 0,
+                "actual Minecraft client sent a physical RIGHT_CLICK_AIR for product use");
         require(findInstance(player, joint) == null, "actual-client product use removed its exact signed identity");
         require(target.profiles().require(player.getUniqueId()).tolerance().level() > tolerance,
                 "production effect use increased and persisted the actual player's tolerance");
@@ -538,6 +558,10 @@ final class GameplayScenario {
     }
 
     void actualInteraction(Player player, String type) {
+        if (phase == 3 && "RIGHT_CLICK_AIR".equals(type)) {
+            productAirInteractions++;
+            event.accept("ACTUAL_CLIENT_INTERACTION RIGHT_CLICK_AIR during signed-product use");
+        }
         if (phase != 1) return;
         var held = target.itemSigner().verify(player.getInventory().getItemInMainHand());
         if (held.valid() && held.data().itemType() == CustomItemType.WATERING_CAN) {

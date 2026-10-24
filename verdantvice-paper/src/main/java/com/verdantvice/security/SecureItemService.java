@@ -27,9 +27,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 /**
- * Couples PDC signatures with the database registry. Stateful inputs are
- * consumed with compare-and-set transitions, so copied inventory data cannot
- * be accepted twice on two server threads or after a restart.
+ * Couples authenticated PDC data with durable consumption bookkeeping.
+ * Optional duplicate policing is controlled independently by ItemUsePolicy;
+ * compare-and-set transitions still protect each transaction in either mode.
  */
 public final class SecureItemService implements ItemConsumptionGateway {
     private final CustomItemFactory factory;
@@ -39,6 +39,7 @@ public final class SecureItemService implements ItemConsumptionGateway {
     private final ProcessingItemValidator processingValidator = new ProcessingItemValidator();
     private final JavaPlugin plugin;
     private final DatabaseManager database;
+    private final ItemUsePolicy itemUsePolicy;
     private final Set<UUID> pendingDeliveries = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public SecureItemService(
@@ -49,15 +50,28 @@ public final class SecureItemService implements ItemConsumptionGateway {
             ItemRegistryRepository registry,
             Duration reservationDuration
     ) {
+        this(plugin, database, factory, signer, registry, reservationDuration, new ItemUsePolicy(true));
+    }
+
+    public SecureItemService(
+            JavaPlugin plugin, DatabaseManager database, CustomItemFactory factory,
+            ItemSigner signer, ItemRegistryRepository registry, Duration reservationDuration,
+            ItemUsePolicy itemUsePolicy
+    ) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.database = Objects.requireNonNull(database, "database");
         this.factory = Objects.requireNonNull(factory, "factory");
         this.signer = Objects.requireNonNull(signer, "signer");
         this.registry = Objects.requireNonNull(registry, "registry");
         this.reservationDuration = Objects.requireNonNull(reservationDuration, "reservationDuration");
+        this.itemUsePolicy = Objects.requireNonNull(itemUsePolicy, "itemUsePolicy");
         if (reservationDuration.isNegative() || reservationDuration.isZero()) {
             throw new IllegalArgumentException("reservationDuration must be positive");
         }
+    }
+
+    public ItemUsePolicy itemUsePolicy() {
+        return itemUsePolicy;
     }
 
     /** Prepares on the server thread; the caller owns the registry transaction. */
@@ -263,9 +277,7 @@ public final class SecureItemService implements ItemConsumptionGateway {
             processingValidator.validateData(data, acceptedSnapshot, actor);
             return new ValidatedItem(snapshot, data, signer.payloadHash(data));
         }).thenCompose(validated -> registry.find(validated.data().uniqueInstanceId()).thenApply(optional -> {
-            ItemRegistryRecord record = optional.orElseThrow(() -> new ProcessingFailureException(
-                    ProcessingFailureReason.UNREGISTERED_ITEM));
-            processingValidator.validateRecord(record, validated.data(), validated.payloadHash(), actor);
+            itemUsePolicy.validateRecord(optional.orElse(null), validated.data(), validated.payloadHash(), actor);
             return validated;
         }));
     }
@@ -287,10 +299,8 @@ public final class SecureItemService implements ItemConsumptionGateway {
         Objects.requireNonNull(now, "now");
         SignedItemData data = validated.data();
         processingValidator.validateData(data, accepted, actor);
-        ItemRegistryRecord record = registry.find(
-                session, data.uniqueInstanceId(), true).orElseThrow(() ->
-                new ProcessingFailureException(ProcessingFailureReason.UNREGISTERED_ITEM));
-        processingValidator.validateRecord(record, data, validated.payloadHash(), actor);
+        ItemRegistryRecord record = itemUsePolicy.prepareConsumption(
+                session, registry, data, validated.payloadHash(), actor, now);
         UUID reservation = UUID.randomUUID();
         ItemCasResult reserved = registry.reserve(
                 session, record.instanceId(), record.version(), validated.payloadHash(),

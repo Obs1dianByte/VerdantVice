@@ -19,11 +19,13 @@ import com.verdantvice.processing.BatchState;
 import com.verdantvice.processing.ProductBatch;
 import com.verdantvice.processing.QualityGrade;
 import com.verdantvice.security.CustomItemType;
+import com.verdantvice.security.ItemUsePolicy;
 import com.verdantvice.security.SignedItemData;
 import com.verdantvice.storage.DomainJson;
 import com.verdantvice.storage.BatchService;
 import com.verdantvice.strain.Strain;
 import com.verdantvice.strain.StrainRegistry;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -42,14 +44,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 public final class TradeRepository {
     private final DatabaseManager database;
     private final ItemRegistryRepository itemRegistry;
     private final MarketRepository markets;
     private final StrainRegistry strains;
-    private final ConfigManager configs;
+    private final Function<String, YamlConfiguration> configuration;
     private final BatchService batchService;
+    private final ItemUsePolicy itemUsePolicy;
     private final MarketPricingService pricing = new MarketPricingService();
     private final TradeLimitService limits = new TradeLimitService();
     private final SaleItemPolicy saleItems = new SaleItemPolicy();
@@ -62,12 +66,38 @@ public final class TradeRepository {
             ConfigManager configs,
             BatchService batchService
     ) {
+        this(database, itemRegistry, markets, strains, configs, batchService, new ItemUsePolicy(true));
+    }
+
+    public TradeRepository(
+            DatabaseManager database,
+            ItemRegistryRepository itemRegistry,
+            MarketRepository markets,
+            StrainRegistry strains,
+            ConfigManager configs,
+            BatchService batchService,
+            ItemUsePolicy itemUsePolicy
+    ) {
+        this(database, itemRegistry, markets, strains,
+                Objects.requireNonNull(configs, "configs")::get, batchService, itemUsePolicy);
+    }
+
+    public TradeRepository(
+            DatabaseManager database,
+            ItemRegistryRepository itemRegistry,
+            MarketRepository markets,
+            StrainRegistry strains,
+            Function<String, YamlConfiguration> configuration,
+            BatchService batchService,
+            ItemUsePolicy itemUsePolicy
+    ) {
         this.database = Objects.requireNonNull(database, "database");
         this.itemRegistry = Objects.requireNonNull(itemRegistry, "itemRegistry");
         this.markets = Objects.requireNonNull(markets, "markets");
         this.strains = Objects.requireNonNull(strains, "strains");
-        this.configs = Objects.requireNonNull(configs, "configs");
+        this.configuration = Objects.requireNonNull(configuration, "configuration");
         this.batchService = Objects.requireNonNull(batchService, "batchService");
+        this.itemUsePolicy = Objects.requireNonNull(itemUsePolicy, "itemUsePolicy");
     }
 
     public CompletableFuture<PreparedSale> prepareSale(
@@ -78,8 +108,13 @@ public final class TradeRepository {
             Instant now
     ) {
         validateIdentity(data, payloadHash, playerUuid);
-        return database.read(session -> buildQuote(
-                session, data, payloadHash, playerUuid, herbalistUuid, now, false))
+        // Genetics can add a variety after startup. Initialize only this
+        // verified batch's components; INSERT IGNORE preserves live prices.
+        return database.read(session -> requireBatch(session, data, playerUuid, false))
+                .thenCompose(batch -> markets.initialize(batch.strainComposition().keySet()
+                        .stream().map(strains::require).toList()))
+                .thenCompose(ignored -> database.read(session -> buildQuote(
+                        session, data, payloadHash, playerUuid, herbalistUuid, now, false)))
                 .thenApply(quote -> {
                     batchService.remember(quote.batch());
                     return quote;
@@ -113,8 +148,9 @@ public final class TradeRepository {
                         current.payout(), "price-changed");
             }
 
-            ItemRegistryRecord registered = itemRegistry.find(session, quote.itemInstanceId(), true)
-                    .orElseThrow(() -> new IllegalStateException("unregistered-item"));
+            ItemRegistryRecord registered = itemUsePolicy.prepareConsumption(
+                    session, itemRegistry, quote.itemData(), quote.itemPayloadHash(),
+                    quote.playerUuid(), now);
             if (registered.state() != ItemRegistryState.ACTIVE
                     || !constantEquals(registered.signature(), quote.itemPayloadHash())
                     || !Objects.equals(registered.batchId(), quote.batch().batchId())) {
@@ -170,7 +206,7 @@ public final class TradeRepository {
             ).orElseThrow(() -> new SQLException("Unknown herbalist " + quote.herbalistUuid()));
             long resultingExperience = Math.addExact(currentExperience, 1L);
             HerbalistTier resultingTier = HerbalistTier.forExperience(
-                    resultingExperience, configs.get("villagers.yml"));
+                    resultingExperience, configuration.apply("villagers.yml"));
             session.update("""
                             UPDATE herbalists
                             SET experience=?, reputation=CASE
@@ -209,39 +245,32 @@ public final class TradeRepository {
             Instant now,
             boolean forUpdate
     ) throws SQLException {
+        boolean enforce = itemUsePolicy.antiDupeEnabled();
         ItemRegistryRecord registered = itemRegistry.find(session, data.uniqueInstanceId(), forUpdate)
-                .orElseThrow(() -> failure(TradeFailureReason.UNREGISTERED_ITEM));
-        if (registered.state() == ItemRegistryState.CONSUMED) {
+                .orElse(null);
+        if (enforce && registered == null) {
+            throw failure(TradeFailureReason.UNREGISTERED_ITEM);
+        }
+        if (enforce && registered.state() == ItemRegistryState.CONSUMED) {
             throw failure(TradeFailureReason.ITEM_ALREADY_CONSUMED);
         }
-        if (registered.state() == ItemRegistryState.RESERVED) {
+        if (enforce && registered.state() == ItemRegistryState.RESERVED) {
             throw failure(TradeFailureReason.ITEM_RESERVED);
         }
-        if (!constantEquals(registered.signature(), payloadHash)
+        if (registered != null && (!constantEquals(registered.signature(), payloadHash)
                 || !registered.itemType().equals(data.itemType().name())
-                || !Objects.equals(registered.batchId(), data.batchId())) {
+                || !registered.itemId().equals(data.itemId())
+                || !Objects.equals(registered.batchId(), data.batchId()))) {
             throw failure(TradeFailureReason.SIGNATURE_REGISTRY_MISMATCH);
         }
-        if (!Objects.equals(registered.ownerUuid(), playerUuid)
+        if ((registered != null && !Objects.equals(registered.ownerUuid(), playerUuid))
                 || !Objects.equals(data.ownerUuid(), playerUuid)) {
             throw failure(TradeFailureReason.WRONG_OWNER);
         }
         if (data.batchId() == null) {
             throw failure(TradeFailureReason.MISSING_BATCH);
         }
-        ProductBatch batch;
-        try {
-            batch = batchService.require(
-                    session, data.batchId(), playerUuid,
-                    java.util.EnumSet.allOf(BatchState.class), forUpdate).batch();
-        } catch (com.verdantvice.storage.BatchAccessException access) {
-            throw switch (access.reason()) {
-                case MISSING_BATCH -> failure(TradeFailureReason.MISSING_BATCH);
-                case WRONG_OWNER -> failure(TradeFailureReason.WRONG_OWNER);
-                case INVALID_BATCH_SIGNATURE -> failure(TradeFailureReason.INVALID_SIGNATURE);
-                case WRONG_BATCH_STATE -> failure(TradeFailureReason.BATCH_STATE_MISMATCH);
-            };
-        }
+        ProductBatch batch = requireBatch(session, data, playerUuid, forUpdate);
         TradeFailureReason rejection = saleItems.rejectionReason(
                 data.itemType(), batch.state(), acceptedItemTypes());
         if (rejection != null) throw failure(rejection);
@@ -264,27 +293,27 @@ public final class TradeRepository {
             weightedPrice += componentQuote.unitPrice() * component.getValue();
             versions.put(component.getKey(), market.version());
         }
-        double sellMultiplier = configs.get("economy.yml").getDouble("sell-price-multiplier", 0.85);
+        double sellMultiplier = configuration.apply("economy.yml").getDouble("sell-price-multiplier", 0.85);
         if (data.itemType() == CustomItemType.FRESH_BATCH) {
-            sellMultiplier *= Math.max(0.0, Math.min(1.0, configs.get("market.yml")
+            sellMultiplier *= Math.max(0.0, Math.min(1.0, configuration.apply("market.yml")
                     .getDouble("trade.fresh-price-multiplier", 0.35)));
         }
         int minimum = Math.max(1,
-                configs.get("economy.yml").getInt("minimum-transaction-price", 1));
+                configuration.apply("economy.yml").getInt("minimum-transaction-price", 1));
         int maximum = Math.max(minimum,
-                configs.get("economy.yml").getInt("maximum-transaction-price", 4096));
+                configuration.apply("economy.yml").getInt("maximum-transaction-price", 4096));
         LocalDate day = LocalDate.ofInstant(now, ZoneOffset.UTC);
         TradeLedger ledger = ledger(session, playerUuid, day);
         double repeatPenalty = Math.max(0.0,
-                configs.get("market.yml").getDouble("repeat-sale-penalty", 0.025));
+                configuration.apply("market.yml").getDouble("repeat-sale-penalty", 0.025));
         double minimumRepeat = Math.max(0.0, Math.min(1.0,
-                configs.get("market.yml").getDouble("minimum-repeat-multiplier", 0.35)));
+                configuration.apply("market.yml").getDouble("minimum-repeat-multiplier", 0.35)));
         double repeatMultiplier = Math.max(
                 minimumRepeat, 1.0 - ledger.soldBatches() * repeatPenalty);
         int payout = (int) Math.max(minimum, Math.min(maximum,
                 Math.floor(weightedPrice * quantity * sellMultiplier * repeatMultiplier)));
         int dailyLimit = Math.max(1,
-                configs.get("villagers.yml").getInt("herbalist.daily-buy-limit", 64));
+                configuration.apply("villagers.yml").getInt("herbalist.daily-buy-limit", 64));
         TradeLimits configuredLimits = new TradeLimits(
                 dailyLimit, dailyLimit, (double) dailyLimit * maximum);
         TradeDecision decision = limits.evaluate(
@@ -292,8 +321,28 @@ public final class TradeRepository {
         if (!decision.accepted()) throw new IllegalArgumentException(decision.reasonCode());
         return new PreparedSale(
                 UUID.randomUUID(), playerUuid, herbalistUuid, data,
-                registered.instanceId(), payloadHash, batch, quantity, weightedPrice, payout,
+                data.uniqueInstanceId(), payloadHash, batch, quantity, weightedPrice, payout,
                 versions, now, now.plus(Duration.ofSeconds(30)));
+    }
+
+    private ProductBatch requireBatch(
+            SqlSession session,
+            SignedItemData data,
+            UUID playerUuid,
+            boolean forUpdate
+    ) throws SQLException {
+        try {
+            return batchService.require(
+                    session, data.batchId(), playerUuid,
+                    java.util.EnumSet.allOf(BatchState.class), forUpdate).batch();
+        } catch (com.verdantvice.storage.BatchAccessException access) {
+            throw switch (access.reason()) {
+                case MISSING_BATCH -> failure(TradeFailureReason.MISSING_BATCH);
+                case WRONG_OWNER -> failure(TradeFailureReason.WRONG_OWNER);
+                case INVALID_BATCH_SIGNATURE -> failure(TradeFailureReason.INVALID_SIGNATURE);
+                case WRONG_BATCH_STATE -> failure(TradeFailureReason.BATCH_STATE_MISMATCH);
+            };
+        }
     }
 
     private TradeLedger ledger(SqlSession session, UUID playerUuid, LocalDate day) throws SQLException {
@@ -331,9 +380,9 @@ public final class TradeRepository {
             double weight = quantity * component.getValue();
             MarketState decayed = pricing.recordSale(current.state(), weight, now);
             double configuredSupply = Math.max(0.0,
-                    configs.get("market.yml").getDouble("supply-impact", 0.015));
+                    configuration.apply("market.yml").getDouble("supply-impact", 0.015));
             double configuredDemand = Math.max(0.0,
-                    configs.get("market.yml").getDouble("demand-impact", 0.020));
+                    configuration.apply("market.yml").getDouble("demand-impact", 0.020));
             double defaultSupply = 0.01;
             double defaultDemand = 0.002;
             MarketState changed = new MarketState(
@@ -370,7 +419,7 @@ public final class TradeRepository {
     }
 
     private Set<CustomItemType> acceptedItemTypes() {
-        List<String> configured = configs.get("market.yml")
+        List<String> configured = configuration.apply("market.yml")
                 .getStringList("trade.accepted-item-types");
         if (configured.isEmpty()) {
             return Set.of(CustomItemType.DRY_BATCH, CustomItemType.CURED_BATCH,

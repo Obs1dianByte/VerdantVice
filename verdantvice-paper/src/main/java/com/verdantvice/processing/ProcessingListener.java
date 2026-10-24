@@ -242,7 +242,7 @@ public final class ProcessingListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onMove(InventoryMoveItemEvent event) {
-        if (signer.verify(event.getItem()).valid()) {
+        if (secureItems.itemUsePolicy().antiDupeEnabled() && signer.verify(event.getItem()).valid()) {
             event.setCancelled(true);
         }
     }

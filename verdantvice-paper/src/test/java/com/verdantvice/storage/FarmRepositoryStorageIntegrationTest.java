@@ -56,6 +56,44 @@ final class FarmRepositoryStorageIntegrationTest {
     }
 
     @Test
+    void placedManagerTableKeepsItsExactPositionAfterDatabaseRestart() throws Exception {
+        Farm farm = farm();
+        BlockPosition table = position(farm, 2, 70, 8);
+        repository.create(farm, table).get(15, TimeUnit.SECONDS);
+        assertEquals(table, repository.loadAll().get(15, TimeUnit.SECONDS)
+                .tablePositions().get(farm.farmId()));
+
+        database.close();
+        database = new DatabaseManager(config, quietLogger());
+        database.start().toCompletableFuture().get(15, TimeUnit.SECONDS);
+        repository = new FarmRepository(database);
+        FarmRepository.FarmSnapshot restarted = repository.loadAll().get(15, TimeUnit.SECONDS);
+        assertEquals(table, restarted.tablePositions().get(farm.farmId()));
+        assertEquals(farm.region(), restarted.farms().getFirst().region());
+    }
+
+    @Test
+    void managerTableOutsideSelectedFarmNeverCreatesAPartialFarm() throws Exception {
+        Farm farm = farm();
+        BlockPosition outside = position(farm, 11, 70, 8);
+        CompletionException failure = assertThrows(CompletionException.class,
+                () -> repository.create(farm, outside).join());
+        assertInstanceOf(IllegalArgumentException.class, failure.getCause());
+        assertEquals("manager_table_outside_farm", failure.getCause().getMessage());
+        assertTrue(repository.loadAll().get(15, TimeUnit.SECONDS).farms().isEmpty());
+    }
+
+    @Test
+    void managerTableInAnotherWorldNeverCreatesAPartialFarm() throws Exception {
+        Farm farm = farm();
+        BlockPosition wrongWorld = new BlockPosition(UUID.randomUUID(), 2, 70, 8);
+        CompletionException failure = assertThrows(CompletionException.class,
+                () -> repository.create(farm, wrongWorld).join());
+        assertInstanceOf(IllegalArgumentException.class, failure.getCause());
+        assertTrue(repository.loadAll().get(15, TimeUnit.SECONDS).farms().isEmpty());
+    }
+
+    @Test
     void linkRestartUnlinkAndRelinkRemainExactAndAtomic() throws Exception {
         Farm farm = farm();
         repository.create(farm).get(15, TimeUnit.SECONDS);

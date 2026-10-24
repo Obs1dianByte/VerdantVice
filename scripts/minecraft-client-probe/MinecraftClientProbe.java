@@ -75,6 +75,9 @@ public final class MinecraftClientProbe extends JavaPlugin implements Listener {
     public void onEnable() {
         try {
             require("127.0.0.1".equals(Bukkit.getIp()), "server binds exclusively to IPv4 loopback");
+            require(getServer().getWorldContainer().toPath().toAbsolutePath().normalize().toString()
+                            .replace('\\', '/').contains("/build/minecraft-client/"),
+                    "client probe can mutate only its disposable acceptance world");
             require(Bukkit.getPluginManager().getPlugin("VerdantVice") instanceof VerdantVicePlugin,
                     "production VerdantVice plugin is loaded");
             target = (VerdantVicePlugin) Bukkit.getPluginManager().getPlugin("VerdantVice");
@@ -116,9 +119,22 @@ public final class MinecraftClientProbe extends JavaPlugin implements Listener {
                     "connected player is the actual CraftPlayer implementation");
             playerUuid = player.getUniqueId();
             clientLocale = player.locale().toString();
-            player.setOp(true);
-            player.setGameMode(GameMode.CREATIVE);
-            events.add("JOIN " + playerUuid + " class=" + playerClass + " locale=" + clientLocale);
+            player.setOp(false);
+            player.setGameMode(GameMode.SURVIVAL);
+            player.getWorld().setDifficulty(org.bukkit.Difficulty.PEACEFUL);
+            events.add("FIXTURE difficulty=PEACEFUL prevents hostile-mob interruptions; non-operator Survival permissions remain unchanged");
+            require(!player.isOp() && player.getGameMode() == GameMode.SURVIVAL,
+                    "actual Minecraft participant is a non-operator survival player");
+            require(!player.hasPermission("verdantvice.admin")
+                            && !player.hasPermission("verdantvice.admin.give"),
+                    "actual survival participant cannot use administrative item grants or bypasses");
+            for (String permission : List.of("use", "guide", "plant", "harvest", "process", "trade",
+                    "genetics", "farm.create", "farm.manage", "farm.member", "worker.hire", "worker.manage")) {
+                require(player.hasPermission("verdantvice." + permission),
+                        "actual non-operator has default progression permission: " + permission);
+            }
+            events.add("JOIN " + playerUuid + " class=" + playerClass + " locale=" + clientLocale
+                    + " op=" + player.isOp() + " gameMode=" + player.getGameMode());
             player.sendMessage(Component.text("Client probe ready. Use /vvclient check, then /vvclient menu MAIN."));
             writeReport("IN_PROGRESS");
         } catch (Throwable failure) {

@@ -3,6 +3,7 @@ package com.verdantvice.market;
 import com.verdantvice.config.ConfigManager;
 import com.verdantvice.strain.Strain;
 import com.verdantvice.strain.StrainRegistry;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -15,18 +16,27 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 
 public final class PaperMarketService {
     private final MarketRepository repository;
     private final StrainRegistry strains;
-    private final ConfigManager configs;
+    private final Function<String, YamlConfiguration> configuration;
     private final MarketPricingService pricing = new MarketPricingService();
     private final Map<String, Double> currentPrices = new ConcurrentHashMap<>();
 
     public PaperMarketService(MarketRepository repository, StrainRegistry strains, ConfigManager configs) {
+        this(repository, strains, Objects.requireNonNull(configs, "configs")::get);
+    }
+
+    PaperMarketService(
+            MarketRepository repository,
+            StrainRegistry strains,
+            Function<String, YamlConfiguration> configuration
+    ) {
         this.repository = Objects.requireNonNull(repository, "repository");
         this.strains = Objects.requireNonNull(strains, "strains");
-        this.configs = Objects.requireNonNull(configs, "configs");
+        this.configuration = Objects.requireNonNull(configuration, "configuration");
     }
 
     public CompletableFuture<Void> initialize() {
@@ -43,9 +53,7 @@ public final class PaperMarketService {
             double reputation
     ) {
         Strain strain = strains.require(strainId);
-        return repository.find(strain.id()).thenApply(optional -> {
-            PaperMarketRecord record = optional.orElseThrow(() ->
-                    new IllegalStateException("Missing market row for " + strain.id()));
+        return repository.findOrInitialize(strain).thenApply(record -> {
             currentPrices.put(record.strainId(), record.currentPrice());
             return pricing.quote(strain, record.state(), quality, freshness, reputation);
         });
@@ -96,13 +104,13 @@ public final class PaperMarketService {
     }
 
     private List<MarketUpdateProposal> proposals(List<PaperMarketRecord> records, Instant now) {
-        double reversion = clamp(configs.get("market.yml").getDouble("demand-reversion", 0.08), 0.0, 1.0);
-        double eventChance = clamp(configs.get("market.yml").getDouble("events.chance-per-update", 0.15),
+        double reversion = clamp(configuration.apply("market.yml").getDouble("demand-reversion", 0.08), 0.0, 1.0);
+        double eventChance = clamp(configuration.apply("market.yml").getDouble("events.chance-per-update", 0.15),
                 0.0, 1.0);
         long eventMinutes = Math.max(1L,
-                configs.get("market.yml").getLong("events.duration-minutes", 120L));
-        double eventMin = configs.get("market.yml").getDouble("events.multiplier-min", 0.75);
-        double eventMax = configs.get("market.yml").getDouble("events.multiplier-max", 1.40);
+                configuration.apply("market.yml").getLong("events.duration-minutes", 120L));
+        double eventMin = configuration.apply("market.yml").getDouble("events.multiplier-min", 0.75);
+        double eventMax = configuration.apply("market.yml").getDouble("events.multiplier-max", 1.40);
         boolean startEvent = !records.isEmpty() && ThreadLocalRandom.current().nextDouble() < eventChance;
         MarketEventType selectedEvent = startEvent ? randomEvent() : MarketEventType.NONE;
         int selected = startEvent ? eventTarget(records, selectedEvent) : -1;
@@ -166,7 +174,7 @@ public final class PaperMarketService {
     }
 
     private MarketEventType randomEvent() {
-        List<String> configured = configs.get("market.yml").getStringList("events.types");
+        List<String> configured = configuration.apply("market.yml").getStringList("events.types");
         if (configured.isEmpty()) {
             return MarketEventType.HIGH_DEMAND;
         }

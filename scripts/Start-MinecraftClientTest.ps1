@@ -68,7 +68,8 @@ spawn-protection=0
 view-distance=3
 simulation-distance=2
 pause-when-empty-seconds=-1
-gamemode=creative
+gamemode=survival
+difficulty=peaceful
 sync-chunk-writes=true
 motd=VerdantVice isolated client verification
 "@)

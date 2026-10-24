@@ -60,8 +60,15 @@ public final class ProcessingItemValidator {
         if (record.state() != ItemRegistryState.ACTIVE && !expiredReservation) {
             throw new ProcessingFailureException(ProcessingFailureReason.ITEM_ALREADY_USED);
         }
+        validateIdentity(record, data, payloadHash, actor);
+    }
+
+    public void validateIdentity(
+            ItemRegistryRecord record, SignedItemData data, String payloadHash, UUID actor
+    ) {
         if (!constantEquals(record.signature(), payloadHash)
                 || !record.itemType().equals(data.itemType().name())
+                || !record.itemId().equals(data.itemId())
                 || !Objects.equals(record.batchId(), data.batchId())) {
             throw new ProcessingFailureException(ProcessingFailureReason.INVALID_SIGNATURE);
         }

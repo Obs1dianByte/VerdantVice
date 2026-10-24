@@ -62,6 +62,22 @@ final class GeneticsTransactionIntegrationTest {
     }
 
     @Test
+    void disabledAntiDupeAcceptsPhysicalCopiesWhileKeepingChildReceipts() throws Exception {
+        var permissive = new CustomStrainRepository(database, new com.verdantvice.security.ItemUsePolicy(false));
+        CustomStrainRecord firstLine = line("custom_permissive_first");
+        CustomStrainRecord secondLine = line("custom_permissive_second");
+        ItemRegistration firstChild = child(firstLine.strainId());
+        ItemRegistration secondChild = child(secondLine.strainId());
+        await(permissive.cross(firstLine, first, second, firstChild));
+        await(permissive.cross(secondLine, first, second, secondChild));
+        assertEquals(2, await(permissive.pendingSeeds(OWNER)).size());
+        assertEquals("genetics:" + secondLine.strainId(),
+                await(items.find(FIRST)).orElseThrow().consumedByOperation());
+        assertTrue(await(permissive.find(firstLine.strainId())).isPresent());
+        assertTrue(await(permissive.find(secondLine.strainId())).isPresent());
+    }
+
+    @Test
     void commitsParentsLineChildAndReceiptTogetherAndReplaysAfterRestart() throws Exception {
         CustomStrainRecord line = line("custom_success");
         ItemRegistration output = child(line.strainId());

@@ -58,6 +58,11 @@ public final class FarmProtectionListener implements Listener {
         }
         event.setCancelled(true);
         Player player = event.getPlayer();
+        if (!player.hasPermission("verdantvice.farm.create")
+                && !player.hasPermission("verdantvice.admin")) {
+            player.sendMessage(translations.component(player, "errors.no-permission"));
+            return;
+        }
         Block table = event.getBlockPlaced();
         UUID instanceId = verification.data().uniqueInstanceId();
         String operationId = "farm-table:" + UUID.randomUUID();

@@ -2,6 +2,7 @@ package com.verdantvice.contract;
 
 import com.verdantvice.config.ConfigManager;
 import com.verdantvice.herbalist.HerbalistRecord;
+import com.verdantvice.herbalist.HerbalistOfferCatalog;
 import com.verdantvice.herbalist.HerbalistTier;
 import com.verdantvice.market.PaperMarketService;
 import com.verdantvice.processing.QualityGrade;
@@ -53,14 +54,15 @@ public final class PaperContractService {
         if (!configs.get("contracts.yml").getBoolean("enabled", true)) {
             return CompletableFuture.failedFuture(new IllegalStateException("contracts-disabled"));
         }
-        List<Strain> available = strains.all().stream().toList();
+        var offers = new HerbalistOfferCatalog(strains, configs).available(herbalist.tier());
+        List<Strain> available = ContractProgression.availableStrains(strains.all(), offers);
         if (available.isEmpty()) {
             return CompletableFuture.failedFuture(new IllegalStateException("no-strains"));
         }
         ContractType selectedType = randomType();
-        CompletableFuture<Optional<UUID>> geneticOrigin =
+        CompletableFuture<Optional<com.verdantvice.processing.ProductBatch>> geneticBatch =
                 selectedType == ContractType.GENETIC_DELIVERY
-                        ? repository.candidateGeneticOrigin(playerUuid)
+                        ? repository.candidateGeneticBatch(playerUuid)
                         : CompletableFuture.completedFuture(Optional.empty());
         double baseWeight = switch (herbalist.tier()) {
             case NOVICE, APPRENTICE -> 4.0;
@@ -73,13 +75,11 @@ public final class PaperContractService {
                 configs.get("contracts.yml").getLong("minimum-deadline-hours", 6));
         long maximumHours = Math.max(minimumHours,
                 configs.get("contracts.yml").getLong("maximum-deadline-hours", 72));
-        return geneticOrigin.thenCompose(origin -> {
-            ContractType type = selectedType == ContractType.GENETIC_DELIVERY
-                    && origin.isEmpty()
-                    ? ContractType.STRAIN_DELIVERY
-                    : selectedType;
-            List<ContractRequirement> requirements = requirements(
-                    type, available, baseWeight, herbalist.tier(), origin);
+        return geneticBatch.thenCompose(candidate -> {
+            ContractType type = ContractProgression.playableType(selectedType, offers, candidate.isPresent());
+            List<ContractRequirement> requirements = type == ContractType.GENETIC_DELIVERY
+                    ? List.of(ContractProgression.geneticRequirement(candidate.orElseThrow(), baseWeight))
+                    : requirements(type, available, baseWeight, herbalist.tier(), Optional.empty());
             long hours = type == ContractType.EXPRESS_DELIVERY
                     ? minimumHours
                     : ThreadLocalRandom.current().nextLong(

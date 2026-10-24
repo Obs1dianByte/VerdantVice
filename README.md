@@ -33,18 +33,24 @@ SQLite and physical emeralds work without additional plugins. See
 
 ## Start a farm
 
-For a quick administrator test with the default configuration:
+Ordinary players have the default gameplay permissions; no operator status
+or administrator-issued items are required.
 
-```text
-/vv admin give <player> selection-wand
-/vv farm create My Farm
-/vv admin give <player> planting-pot
-/vv admin seed <player> berry_fog
-```
+1. Use `/vv guide`, collect emeralds and find a farmer. Each farmer has one
+   40% chance to become a herbalist when evaluated.
+2. At a novice herbalist, buy a seed, planting pot, watering can and drying
+   rack. All care tools are available at this tier. Place the pot, plant the
+   seed, care for the plant, harvest and dry the batch before selling it.
+3. Buy a selection wand and manager table from the novice herbalist. Select
+   both corners, then place the table to create the farm. Alternatively,
+   `/vv farm create My Farm` creates the selected farm and its table directly.
+4. Purchases and sales develop the herbalist. Apprentice unlocks curing;
+   journeyman unlocks grinding, rolling paper and filters. A Verdant Expert
+   sells the hiring contract for workers.
 
-Select both region corners with the wand before creating the farm. Place
-the pot, then click it with the seed. `berry_fog` is a saved identifier for
-Blueberry; see the [strain catalog](STRAINS.md) for names and aliases.
+The basic farm setup (Blueberry seed, pot, can, rack, wand and table) costs
+62 emeralds at default prices. Farming can begin before creating a named
+farm. See the [strain catalog](STRAINS.md) for seed names and saved IDs.
 
 The processing chain is harvest → drying → optional curing → grinding →
 optional mixing → rolling. Dry batches can also be sold directly. Use
@@ -105,6 +111,11 @@ prerequisites, report locations, client checks and coverage boundaries.
 Back up the database, `data/signing.key` and `data/processing-stations.yml`
 together. Losing the signing key invalidates existing signed items. SQLite
 backups are built in; MySQL/MariaDB backups are the administrator's job.
+
+Built-in duplicate-item policing is disabled by default
+(`security.anti-dupe-enabled: false`). Signatures, ownership and transaction
+recovery remain active. Other plugins may not prevent copies of these items;
+see [configuration](CONFIGURATION.md#security-and-modules) before enabling it.
 
 Use `/vv admin database` for connection and queue status,
 `/vv admin performance` for runtime counters, and `/vv admin debug` for a

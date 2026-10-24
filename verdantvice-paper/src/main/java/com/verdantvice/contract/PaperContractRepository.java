@@ -17,6 +17,7 @@ import com.verdantvice.processing.BatchState;
 import com.verdantvice.processing.ProductBatch;
 import com.verdantvice.processing.QualityGrade;
 import com.verdantvice.security.SignedItemData;
+import com.verdantvice.security.ItemUsePolicy;
 import com.verdantvice.storage.DomainJson;
 import com.verdantvice.storage.BatchService;
 
@@ -49,21 +50,33 @@ public final class PaperContractRepository {
     private final ItemRegistryRepository itemRegistry;
     private final ContractService contractService = new ContractService();
     private final BatchService batchService;
+    private final ItemUsePolicy itemUsePolicy;
 
     public PaperContractRepository(
             DatabaseManager database,
             ItemRegistryRepository itemRegistry,
             BatchService batchService
     ) {
+        this(database, itemRegistry, batchService, new ItemUsePolicy(true));
+    }
+
+    public PaperContractRepository(
+            DatabaseManager database,
+            ItemRegistryRepository itemRegistry,
+            BatchService batchService,
+            ItemUsePolicy itemUsePolicy
+    ) {
         this.database = Objects.requireNonNull(database, "database");
         this.itemRegistry = Objects.requireNonNull(itemRegistry, "itemRegistry");
         this.batchService = Objects.requireNonNull(batchService, "batchService");
+        this.itemUsePolicy = Objects.requireNonNull(itemUsePolicy, "itemUsePolicy");
     }
 
     public CompletableFuture<StoredContract> create(Contract contract, int maximumActive) {
         Objects.requireNonNull(contract, "contract");
         return database.transaction(session -> {
             lockPlayer(session, contract.ownerUuid());
+            expireOverdue(session, contract.ownerUuid(), Instant.now());
             int active = session.queryOne("""
                             SELECT COUNT(*) AS total FROM contracts
                             WHERE owner_uuid=? AND contract_status IN ('ACTIVE', 'COMPLETED')
@@ -90,10 +103,18 @@ public final class PaperContractRepository {
     }
 
     public CompletableFuture<List<StoredContract>> list(UUID ownerUuid) {
-        return database.query(
-                "SELECT " + COLUMNS + " FROM contracts WHERE owner_uuid=? ORDER BY created_at DESC",
-                PaperContractRepository::map,
-                ownerUuid);
+        Objects.requireNonNull(ownerUuid, "ownerUuid");
+        return database.transaction(session -> {
+            String suffix = session.databaseType().isNetworkDatabase() ? " FOR UPDATE" : "";
+            if (!session.exists("SELECT player_uuid FROM players WHERE player_uuid=?" + suffix, ownerUuid)) {
+                return List.of();
+            }
+            expireOverdue(session, ownerUuid, Instant.now());
+            return session.query(
+                    "SELECT " + COLUMNS + " FROM contracts WHERE owner_uuid=? ORDER BY created_at DESC",
+                    PaperContractRepository::map,
+                    ownerUuid);
+        });
     }
 
     public CompletableFuture<Optional<StoredContract>> find(UUID contractId) {
@@ -104,30 +125,37 @@ public final class PaperContractRepository {
     }
 
     /**
-     * Genetic contracts are offered only for an origin the player has already
-     * produced, so every generated contract is achievable.
+     * Genetic objectives use a verified owned batch with an unconsumed output,
+     * rather than an unrelated strain or an already sold genetic origin.
      */
     public CompletableFuture<Optional<UUID>> candidateGeneticOrigin(UUID ownerUuid) {
+        return candidateGeneticBatch(ownerUuid).thenApply(batch -> batch.flatMap(value ->
+                value.geneticOrigin().stream().sorted().findFirst()));
+    }
+
+    public CompletableFuture<Optional<ProductBatch>> candidateGeneticBatch(UUID ownerUuid) {
         Objects.requireNonNull(ownerUuid, "ownerUuid");
-        return database.queryOne("""
-                        SELECT genetic_origin_json FROM product_batches
-                        WHERE owner_uuid=? AND batch_state IN ('DRIED', 'CURED')
-                        ORDER BY created_at DESC LIMIT 1
-                        """,
-                result -> DomainJson.uuidSet(result.getString("genetic_origin_json"))
-                        .stream().findFirst()
-                        .orElseThrow(() -> new SQLException(
-                                "Product batch has no genetic origin")),
-                ownerUuid);
+        return database.read(session -> {
+            List<UUID> candidates = session.query("""
+                    SELECT batch_id FROM product_batches batch
+                    WHERE owner_uuid=? AND batch_state IN ('DRIED', 'CURED') AND dry_weight>0
+                      AND EXISTS (SELECT 1 FROM item_registry item
+                          WHERE item.batch_id=batch.batch_id AND item.owner_uuid=batch.owner_uuid
+                            AND item.registry_state='ACTIVE'
+                            AND item.item_type IN ('DRY_BATCH', 'CURED_BATCH', 'PACKAGE'))
+                    ORDER BY created_at DESC LIMIT 1
+                    """, row -> UUID.fromString(row.getString("batch_id")), ownerUuid);
+            if (candidates.isEmpty()) return Optional.empty();
+            return Optional.of(batchService.require(session, candidates.get(0), ownerUuid,
+                    Set.of(BatchState.DRIED, BatchState.CURED), false).batch());
+        });
     }
 
     public CompletableFuture<Boolean> deliveryApplied(UUID instanceId, String operationId) {
         Objects.requireNonNull(instanceId, "instanceId");
         Objects.requireNonNull(operationId, "operationId");
-        return database.read(session -> session.exists(
-                "SELECT instance_id FROM item_registry "
-                        + "WHERE instance_id=? AND consumed_by_operation=?",
-                instanceId, operationId));
+        return database.read(session -> itemUsePolicy.consumptionRecorded(
+                session, itemRegistry, instanceId, operationId));
     }
 
     public CompletableFuture<ContractDeliveryResult> deliver(
@@ -139,14 +167,11 @@ public final class PaperContractRepository {
             Instant now
     ) {
         return database.transaction(session -> {
-            Optional<String> previous = session.queryOne(
-                    "SELECT consumed_by_operation FROM item_registry "
-                            + "WHERE instance_id=? AND consumed_by_operation=?",
-                    result -> result.getString("consumed_by_operation"),
-                    data.uniqueInstanceId(), operationId);
+            boolean previous = itemUsePolicy.consumptionRecorded(
+                    session, itemRegistry, data.uniqueInstanceId(), operationId);
             StoredContract stored = find(session, contractId, true)
                     .orElseThrow(() -> new IllegalArgumentException("unknown-contract"));
-            if (previous.isPresent()) {
+            if (previous) {
                 return new ContractDeliveryResult(
                         ContractDeliveryResult.Status.ALREADY_APPLIED,
                         stored.contract(), "", stored.contract().status() == ContractStatus.COMPLETED);
@@ -154,11 +179,17 @@ public final class PaperContractRepository {
             if (!stored.contract().ownerUuid().equals(playerUuid)) {
                 return rejected(stored.contract(), "not-owner");
             }
+            boolean enforce = itemUsePolicy.antiDupeEnabled();
             ItemRegistryRecord registered = itemRegistry.find(session, data.uniqueInstanceId(), true)
-                    .orElseThrow(() -> new IllegalArgumentException("unregistered-item"));
-            if (registered.state() != ItemRegistryState.ACTIVE
+                    .orElse(null);
+            if (enforce && registered == null) {
+                throw new IllegalArgumentException("unregistered-item");
+            }
+            if (registered != null && ((enforce
+                    && registered.state() != ItemRegistryState.ACTIVE)
                     || !constantEquals(registered.signature(), payloadHash)
-                    || !Objects.equals(registered.batchId(), data.batchId())) {
+                    || !registered.itemId().equals(data.itemId())
+                    || !Objects.equals(registered.batchId(), data.batchId()))) {
                 return rejected(stored.contract(), "invalid-signature");
             }
             ProductBatch batch = batchService.require(
@@ -170,6 +201,8 @@ public final class PaperContractRepository {
                 saveIfExpired(session, stored, update.contract(), now);
                 return rejected(update.contract(), update.reasonCode());
             }
+            registered = itemUsePolicy.prepareConsumption(
+                    session, itemRegistry, data, payloadHash, playerUuid, now);
             UUID reservation = UUID.randomUUID();
             ItemCasResult reserved = itemRegistry.reserve(
                     session, registered.instanceId(), registered.version(), payloadHash,
@@ -279,6 +312,16 @@ public final class PaperContractRepository {
                 && stored.contract().status() == ContractStatus.ACTIVE) {
             save(session, stored, replacement, false, null, now);
         }
+    }
+
+    private static void expireOverdue(SqlSession session, UUID ownerUuid, Instant now) throws SQLException {
+        // Completion keeps its claimable reward even after the delivery deadline.
+        // Equality is still on time, matching ContractService.deliver's isAfter check.
+        session.update("""
+                        UPDATE contracts SET contract_status='EXPIRED', updated_at=?,
+                            row_version=row_version+1
+                        WHERE owner_uuid=? AND contract_status='ACTIVE' AND deadline<?
+                        """, now, ownerUuid, now);
     }
 
     private static StoredContract map(ResultSet result) throws SQLException {
