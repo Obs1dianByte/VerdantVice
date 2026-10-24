@@ -10,6 +10,9 @@ import com.verdantvice.gui.GuiContext;
 import com.verdantvice.gui.MenuType;
 import com.verdantvice.gui.VerdantGuiHolder;
 import com.verdantvice.herbalist.HerbalistTier;
+import com.verdantvice.herbalist.HerbalistOffer;
+import com.verdantvice.herbalist.HerbalistOfferCatalog;
+import com.verdantvice.herbalist.HerbalistOfferKind;
 import com.verdantvice.plant.GrowthStage;
 import com.verdantvice.plant.Plant;
 import com.verdantvice.plant.PlantDisplayService;
@@ -31,6 +34,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Villager;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -124,6 +129,7 @@ public final class PaperSmokePlugin extends JavaPlugin {
                 "console reload command dispatched");
         checkInventory();
         checkDisplays();
+        checkSurvivalAcquisition();
 
         return checkMigrations().thenCompose(ignored -> api.profile(OWNER))
                 .thenCompose(profile -> {
@@ -160,6 +166,65 @@ public final class PaperSmokePlugin extends JavaPlugin {
                         persisted.setProperty("schema-history", history);
                     }
                 });
+    }
+
+    /** Configuration/reachability checks, not an assertion that a headless server has a player. */
+    private void checkSurvivalAcquisition() {
+        for (String node : List.of("use", "guide", "plant", "harvest", "process", "trade", "genetics",
+                "farm.create", "farm.manage", "farm.member", "worker.hire", "worker.manage",
+                "language", "resourcepack")) {
+            var permission = Bukkit.getPluginManager().getPermission("verdantvice." + node);
+            require(permission != null && permission.getDefault().getValue(false),
+                    "default non-operator permission permits survival progression: " + node);
+        }
+        var admin = Bukkit.getPluginManager().getPermission("verdantvice.admin");
+        require(admin != null && !admin.getDefault().getValue(false),
+                "ordinary progression permissions do not grant administration");
+        var entityListeners = List.of(PlayerInteractEntityEvent.getHandlerList().getRegisteredListeners());
+        var workerInteraction = entityListeners.stream().filter(listener -> listener.getPlugin() == target
+                        && listener.getListener().getClass().getSimpleName().equals("WorkerListener"))
+                .findFirst().orElseThrow(() -> new AssertionError("Production worker interaction listener is missing"));
+        var merchantInteraction = entityListeners.stream().filter(listener -> listener.getPlugin() == target
+                        && listener.getListener().getClass().getSimpleName().equals("HerbalistListener"))
+                .findFirst().orElseThrow(() -> new AssertionError("Production herbalist interaction listener is missing"));
+        require(workerInteraction.getPriority().ordinal() < merchantInteraction.getPriority().ordinal(),
+                "registered hiring interaction runs before the herbalist menu can cancel the same click");
+        var productInteraction = List.of(PlayerInteractEvent.getHandlerList().getRegisteredListeners()).stream()
+                .filter(listener -> listener.getPlugin() == target
+                        && listener.getListener().getClass().getSimpleName().equals("PlayerEffectListener"))
+                .findFirst().orElseThrow(() -> new AssertionError("Production product-use listener is missing"));
+        require(!productInteraction.isIgnoringCancelled(),
+                "registered product-use hook receives native default-cancelled empty-air interactions");
+
+        var catalog = new HerbalistOfferCatalog(target.strains(), target.configs());
+        List<HerbalistOffer> novice = catalog.available(HerbalistTier.NOVICE);
+        for (CustomItemType type : List.of(CustomItemType.SEED, CustomItemType.PLANTING_POT,
+                CustomItemType.WATERING_CAN, CustomItemType.DRYING_RACK,
+                CustomItemType.SELECTION_WAND, CustomItemType.FARM_MANAGER_TABLE)) {
+            require(novice.stream().anyMatch(offer -> offer.itemType() == type),
+                    "novice herbalist sells the complete first harvest/farm prerequisite: " + type);
+        }
+        for (HerbalistTier tier : HerbalistTier.values()) {
+            List<HerbalistOffer> offers = catalog.available(tier);
+            require(offers.size() <= 45,
+                    "every bundled offer fits the actual 45-slot herbalist buy menu: " + tier);
+            require(offers.stream().map(HerbalistOffer::id).distinct().count() == offers.size(),
+                    "survival shop offer identifiers are unique: " + tier);
+            require(offers.stream().allMatch(offer -> offer.requiredTier().ordinal() <= tier.ordinal()
+                            && offer.emeraldPrice() >= 0),
+                    "shop tier requirements and survival prices are valid: " + tier);
+        }
+        List<HerbalistOffer> complete = catalog.available(HerbalistTier.VERDANT_EXPERT);
+        for (CustomItemType type : CustomItemType.values()) {
+            if (type.batchBound()) continue; // Harvest/processing outputs are not shop prerequisites.
+            require(complete.stream().anyMatch(offer -> offer.itemType() == type),
+                    "every signed non-batch prerequisite is obtainable without admin give: " + type);
+        }
+        for (var strain : target.strains().all()) {
+            require(complete.stream().anyMatch(offer -> offer.kind() == HerbalistOfferKind.SEED
+                            && offer.strainId().filter(strain.id()::equals).isPresent()),
+                    "every bundled strain has a survival seed purchase route: " + strain.id());
+        }
     }
 
     private void checkInventory() {
@@ -253,6 +318,8 @@ public final class PaperSmokePlugin extends JavaPlugin {
     }
 
     private CompletableFuture<Void> checkSignedItems() {
+        require(!target.secureItems().itemUsePolicy().antiDupeEnabled(),
+                "anti-dupe policing is disabled by default, including after restart");
         if (phase.equals("second")) {
             try {
                 ItemStack restored = ItemStack.deserializeBytes(Files.readAllBytes(
@@ -301,8 +368,19 @@ public final class PaperSmokePlugin extends JavaPlugin {
                                             Set.of(CustomItemType.SEED), OWNER, "smoke:consume:first")
                                     .thenCompose(consumed -> onMain(() -> expectRejected(target.secureItems().consume(
                                             consumable, Set.of(CustomItemType.SEED), OWNER,
-                                            "smoke:consume:duplicate"), true,
-                                            "consumption rejects a duplicate instance")))));
+                                            "smoke:consume:copy"), false,
+                                            "disabled anti-dupe accepts a present signed copy")))
+                                    .thenCompose(ignored -> onMain(() -> {
+                                        target.configs().main().set("security.anti-dupe-enabled", true);
+                                        require(target.secureItems().itemUsePolicy().antiDupeEnabled(),
+                                                "anti-dupe setting updates the shared live policy");
+                                        return expectRejected(target.secureItems().consume(
+                                                consumable, Set.of(CustomItemType.SEED), OWNER,
+                                                "smoke:consume:strict"), true,
+                                                "explicitly enabled anti-dupe rejects a consumed instance")
+                                                .whenComplete((result, failure) -> target.configs().main()
+                                                        .set("security.anti-dupe-enabled", false));
+                                    }))));
                 }));
     }
 

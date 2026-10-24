@@ -26,7 +26,10 @@ public final class WorkerListener implements Listener {
         this.workers = Objects.requireNonNull(workers, "workers");
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    // The HIGH-priority herbalist menu cancels ordinary villager interactions.
+    // Claim authentic hiring contracts first, while still respecting an event
+    // already cancelled by another protection listener.
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onContractUse(PlayerInteractEntityEvent event) {
         if (event.getHand() != EquipmentSlot.HAND
                 || !(event.getRightClicked() instanceof Villager villager)) {

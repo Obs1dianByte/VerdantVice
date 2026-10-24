@@ -8,6 +8,7 @@ import com.verdantvice.database.DatabaseType;
 import com.verdantvice.database.SqlNull;
 import com.verdantvice.database.SqlSession;
 import com.verdantvice.strain.Strain;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.sql.JDBCType;
 import java.sql.ResultSet;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 public final class MarketRepository {
     private static final String COLUMNS = """
@@ -26,11 +28,15 @@ public final class MarketRepository {
             """.replace('\n', ' ').strip();
 
     private final DatabaseManager database;
-    private final ConfigManager configs;
+    private final Function<String, YamlConfiguration> configuration;
 
     public MarketRepository(DatabaseManager database, ConfigManager configs) {
+        this(database, Objects.requireNonNull(configs, "configs")::get);
+    }
+
+    MarketRepository(DatabaseManager database, Function<String, YamlConfiguration> configuration) {
         this.database = Objects.requireNonNull(database, "database");
-        this.configs = Objects.requireNonNull(configs, "configs");
+        this.configuration = Objects.requireNonNull(configuration, "configuration");
     }
 
     public CompletableFuture<Void> initialize(Collection<Strain> strains) {
@@ -59,6 +65,20 @@ public final class MarketRepository {
                 "SELECT " + COLUMNS + " FROM market_state WHERE strain_id=?",
                 this::map,
                 strainId);
+    }
+
+    /** Adds a newly registered variety without resetting an existing market. */
+    public CompletableFuture<PaperMarketRecord> findOrInitialize(Strain strain) {
+        Objects.requireNonNull(strain, "strain");
+        return find(strain.id()).thenCompose(existing -> {
+            if (existing.isPresent()) {
+                return CompletableFuture.completedFuture(existing.orElseThrow());
+            }
+            return initialize(List.of(strain))
+                    .thenCompose(ignored -> find(strain.id()))
+                    .thenApply(created -> created.orElseThrow(() ->
+                            new IllegalStateException("Missing market row for " + strain.id())));
+        });
     }
 
     public CompletableFuture<List<PaperMarketRecord>> all() {
@@ -148,10 +168,10 @@ public final class MarketRepository {
     }
 
     public double minimumMultiplier() {
-        return configs.get("market.yml").getDouble("minimum-multiplier", 0.45);
+        return configuration.apply("market.yml").getDouble("minimum-multiplier", 0.45);
     }
 
     public double maximumMultiplier() {
-        return configs.get("market.yml").getDouble("maximum-multiplier", 2.25);
+        return configuration.apply("market.yml").getDouble("maximum-multiplier", 2.25);
     }
 }

@@ -37,6 +37,7 @@ public final class FarmManager {
     private final RegionProtectionService regionProtection;
     private final FarmService farmService = new FarmService();
     private final Map<UUID, Farm> farms = new ConcurrentHashMap<>();
+    private final Map<UUID, Farm> pendingFarms = new ConcurrentHashMap<>();
     private final Map<UUID, BlockPosition> managerTables = new ConcurrentHashMap<>();
     private final Map<BlockPosition, FarmStorage> storages = new ConcurrentHashMap<>();
     private final Map<ChunkKey, Set<UUID>> chunkIndex = new ConcurrentHashMap<>();
@@ -90,8 +91,24 @@ public final class FarmManager {
             BlockPosition requestedTable
     ) {
         requireMainThread();
+        try {
+            return prepareCreation(player, requestedName, requestedTable);
+        } catch (RuntimeException failure) {
+            // All validation failures use the same future contract. In
+            // particular, a placed table must reach the listener's refund path.
+            return CompletableFuture.failedFuture(failure);
+        }
+    }
+
+    private CompletableFuture<Farm> prepareCreation(
+            Player player,
+            String requestedName,
+            BlockPosition requestedTable
+    ) {
         String name = sanitizeName(requestedName);
-        long owned = farms.values().stream()
+        List<Farm> claimedRegions = new ArrayList<>(farms.values());
+        claimedRegions.addAll(pendingFarms.values());
+        long owned = claimedRegions.stream()
                 .filter(farm -> farm.ownerUuid().equals(player.getUniqueId()))
                 .count();
         int limit = configs.main().getInt("limits.farms-per-player", 2);
@@ -133,20 +150,31 @@ public final class FarmManager {
                     configs.main().getInt("limits.plants-per-player", 64),
                     configs.main().getInt("performance.max-workers-per-farm", 5),
                     FarmSettings.defaults(),
-                    farms.values(),
+                    claimedRegions,
                     Instant.now()
             );
         } catch (IllegalArgumentException exception) {
             return CompletableFuture.failedFuture(exception);
         }
 
-        return repository.create(farm).thenCompose(ignored -> runOnMain(() -> {
+        // Keep the claim visible while the database is writing so two rapid
+        // requests cannot bypass the limit or claim overlapping regions.
+        pendingFarms.put(farm.farmId(), farm);
+        CompletableFuture<Void> persisted;
+        try {
+            persisted = repository.create(farm, table);
+        } catch (RuntimeException failure) {
+            pendingFarms.remove(farm.farmId());
+            return CompletableFuture.failedFuture(failure);
+        }
+        return persisted.thenCompose(ignored -> runOnMain(() -> {
             block.setType(Material.LECTERN, false);
             farms.put(farm.farmId(), farm);
             managerTables.put(farm.farmId(), table);
             index(farm);
             selections.remove(player.getUniqueId());
-        })).thenApply(ignored -> farm);
+        })).thenApply(ignored -> farm)
+                .whenComplete((ignored, failure) -> pendingFarms.remove(farm.farmId()));
     }
 
     public CompletableFuture<Boolean> delete(Player player, UUID farmId) {
@@ -190,8 +218,9 @@ public final class FarmManager {
         );
         Farm updated = farmService.addMember(farm, member);
         return repository.putMember(farmId, member)
-                .thenCompose(ignored -> runOnMain(() -> farms.put(farmId, updated)))
-                .thenApply(ignored -> updated);
+                .thenCompose(ignored -> runOnMain(() -> farms.computeIfPresent(
+                        farmId, (ignoredId, current) -> farmService.addMember(current, member))))
+                .thenApply(ignored -> farms.getOrDefault(farmId, updated));
     }
 
     public CompletableFuture<Boolean> removeMember(
@@ -209,13 +238,11 @@ public final class FarmManager {
         if (!farm.members().containsKey(playerUuid)) {
             return CompletableFuture.completedFuture(false);
         }
-        Map<UUID, FarmMember> members = new HashMap<>(farm.members());
-        members.remove(playerUuid);
-        Farm updated = copy(farm, members, farm.linkedStorage(), farm.salaryStorage());
         return repository.removeMember(farmId, playerUuid)
                 .thenCompose(removed -> runOnMain(() -> {
                     if (removed) {
-                        farms.put(farmId, updated);
+                        farms.computeIfPresent(farmId, (ignoredId, current) ->
+                                applyMemberRemoval(current, playerUuid));
                     }
                 }).thenApply(ignored -> removed));
     }
@@ -273,7 +300,8 @@ public final class FarmManager {
                     if (failure == null) {
                         return runOnMain(() -> {
                             storages.put(target.anchor(), storage);
-                            farms.put(farmId, updated);
+                            farms.computeIfPresent(farmId, (ignoredId, current) ->
+                                    applyStorageSnapshot(current, updated));
                         }).thenApply(value -> decision);
                     }
                     Throwable cause = unwrap(failure);
@@ -365,7 +393,8 @@ public final class FarmManager {
                     if (failure == null) {
                         return runOnMain(() -> {
                             storages.remove(anchor, storage);
-                            farms.put(farmId, updated);
+                            farms.computeIfPresent(farmId, (ignoredId, current) ->
+                                    applyStorageSnapshot(current, updated));
                         }).thenApply(value -> decision);
                     }
                     Throwable cause = unwrap(failure);
@@ -658,7 +687,21 @@ public final class FarmManager {
         return world == null ? null : new Location(world, position.x(), position.y(), position.z());
     }
 
-    private Farm copy(
+    static Farm applyMemberRemoval(Farm current, UUID playerUuid) {
+        Map<UUID, FarmMember> members = new HashMap<>(current.members());
+        members.remove(playerUuid);
+        return copy(current, members, current.linkedStorage(), current.salaryStorage());
+    }
+
+    static Farm applyStorageSnapshot(Farm current, Farm storageSnapshot) {
+        if (!current.farmId().equals(storageSnapshot.farmId())) {
+            throw new IllegalArgumentException("farm_snapshot_mismatch");
+        }
+        return copy(current, current.members(), storageSnapshot.linkedStorage(),
+                storageSnapshot.salaryStorage());
+    }
+
+    private static Farm copy(
             Farm farm,
             Map<UUID, FarmMember> members,
             Set<UUID> linkedStorage,

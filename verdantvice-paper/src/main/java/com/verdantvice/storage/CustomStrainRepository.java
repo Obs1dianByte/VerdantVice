@@ -14,6 +14,7 @@ import com.verdantvice.genetics.GeneticLine;
 import com.verdantvice.genetics.PendingGeneticsSeed;
 import com.verdantvice.security.CustomItemType;
 import com.verdantvice.security.ProcessingItemValidator;
+import com.verdantvice.security.ItemUsePolicy;
 import com.verdantvice.security.SecureItemService.ValidatedIdentity;
 import com.verdantvice.security.SignedItemData;
 import com.google.gson.JsonObject;
@@ -36,11 +37,17 @@ public final class CustomStrainRepository {
     private static final String PENDING_PREFIX = "{\"geneticsDelivery\":true,";
     private final DatabaseManager database;
     private final ItemRegistryRepository items;
+    private final ItemUsePolicy itemUsePolicy;
     private final ProcessingItemValidator validator = new ProcessingItemValidator();
 
     public CustomStrainRepository(DatabaseManager database) {
+        this(database, new ItemUsePolicy(true));
+    }
+
+    public CustomStrainRepository(DatabaseManager database, ItemUsePolicy itemUsePolicy) {
         this.database = Objects.requireNonNull(database, "database");
         this.items = new ItemRegistryRepository(database);
+        this.itemUsePolicy = Objects.requireNonNull(itemUsePolicy, "itemUsePolicy");
     }
 
     public CompletableFuture<List<CustomStrainRecord>> loadApproved() {
@@ -88,8 +95,10 @@ public final class CustomStrainRepository {
             String operation = "genetics:" + record.strainId();
             for (ValidatedIdentity parent : List.of(first, second)) {
                 ItemRegistryRecord row = items.find(session, parent.data().uniqueInstanceId(), false).orElse(null);
-                if (row == null || row.state() != ItemRegistryState.CONSUMED
-                        || !operation.equals(row.consumedByOperation())) {
+                if (row == null || !record.line().creatorUuid().equals(row.ownerUuid())
+                        || !parent.payloadHash().equals(row.signature())
+                        || !itemUsePolicy.consumptionRecorded(
+                                session, items, parent.data().uniqueInstanceId(), operation)) {
                     return false;
                 }
             }
@@ -196,9 +205,8 @@ public final class CustomStrainRepository {
     private void consume(SqlSession session, ValidatedIdentity identity, UUID owner,
                          String operation, Instant now) throws SQLException {
         validator.validateData(identity.data(), Set.of(CustomItemType.SEED), owner);
-        ItemRegistryRecord row = items.find(session, identity.data().uniqueInstanceId(), true)
-                .orElseThrow(() -> new IllegalStateException("unregistered_item"));
-        validator.validateRecord(row, identity.data(), identity.payloadHash(), owner);
+        ItemRegistryRecord row = itemUsePolicy.prepareConsumption(
+                session, items, identity.data(), identity.payloadHash(), owner, now);
         UUID token = UUID.randomUUID();
         var reserved = items.reserve(session, row.instanceId(), row.version(), identity.payloadHash(),
                 token, owner.toString(), now.plus(Duration.ofMinutes(1)), operation, now);

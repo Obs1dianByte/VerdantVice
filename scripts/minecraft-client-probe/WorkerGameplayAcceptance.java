@@ -10,7 +10,6 @@ import com.verdantvice.herbalist.HerbalistTier;
 import com.verdantvice.plant.Plant;
 import com.verdantvice.security.CustomItemType;
 import com.verdantvice.worker.TaskTarget;
-import com.verdantvice.worker.WorkerManager;
 import com.verdantvice.worker.WorkerPaymentRepository;
 import com.verdantvice.worker.WorkerRecord;
 import com.verdantvice.worker.WorkerState;
@@ -29,6 +28,8 @@ import org.bukkit.entity.Villager;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -158,6 +159,7 @@ final class WorkerGameplayAcceptance {
         private WorkerRecord hired;
         private UUID taskId;
         private double maximumMovement;
+        private boolean actualHireInteraction;
         private long deadline;
         private final Listener taskListener = new Listener() {};
         private final EnumSet<WorkerState> taskEvents = EnumSet.noneOf(WorkerState.class);
@@ -187,6 +189,17 @@ final class WorkerGameplayAcceptance {
                                         taskEvents.add(taskEvent.state());
                                     }
                                 }, probe);
+                        Bukkit.getPluginManager().registerEvent(PlayerInteractEntityEvent.class,
+                                taskListener, EventPriority.MONITOR, (listener, rawEvent) -> {
+                                    PlayerInteractEntityEvent interaction = (PlayerInteractEntityEvent) rawEvent;
+                                    if (villager != null && player.getUniqueId().equals(interaction.getPlayer().getUniqueId())
+                                            && interaction.getRightClicked().getUniqueId().equals(villager.getUniqueId())
+                                            && interaction.getHand() == EquipmentSlot.HAND) {
+                                        actualHireInteraction = true;
+                                        probe.getLogger().info("ACTUAL_CLIENT worker contract interaction received; cancelled="
+                                                + interaction.isCancelled());
+                                    }
+                                }, probe);
                         return target.farms().linkStorage(player, farm.farmId(), salary, StorageType.SALARY_STORAGE);
                     })
                     .thenCompose(future -> future).thenCompose(linked -> main(probe, () -> {
@@ -209,27 +222,34 @@ final class WorkerGameplayAcceptance {
                         villager.setPersistent(true);
                         villager.setRemoveWhenFarAway(false);
                         villager.setInvulnerable(true);
+                        villager.setAware(false);
                         return target.herbalists().forceCreate(villager, true, Optional.of(HerbalistTier.VERDANT_EXPERT));
                     })).thenCompose(future -> future).thenCompose(evaluation -> main(probe, () -> {
                         require(evaluation.herbalist().filter(record -> record.tier() == HerbalistTier.VERDANT_EXPERT).isPresent(),
                                 "Real farmer becomes an eligible expert herbalist before hiring");
-                        return target.secureItems().issue(player, CustomItemType.PLANTATION_CONTRACT, player.getUniqueId(), "");
+                        SurvivalShopAcceptance shop = new SurvivalShopAcceptance(probe, target,
+                                (condition, description) -> { require(condition, description); check.accept(description); },
+                                description -> probe.getLogger().info(description));
+                        return shop.buy(player, CustomItemType.PLANTATION_CONTRACT, "", HerbalistTier.VERDANT_EXPERT);
                     })).thenCompose(future -> future).thenCompose(contract -> main(probe, () -> {
                         contractId = target.secureItems().verify(contract).data().uniqueInstanceId();
-                        ItemStack previous = player.getInventory().getItemInMainHand();
-                        if (!previous.getType().isAir()) {
-                            int empty = player.getInventory().firstEmpty();
-                            require(empty >= 0, "Inventory has space to preserve the item held before hiring");
-                            player.getInventory().setItem(empty, previous.clone());
-                        }
-                        player.getInventory().setItemInMainHand(contract);
-                        return target.workers().hire(player, villager);
-                    })).thenCompose(future -> future).thenCompose(result -> main(probe, () -> {
-                        require(result.status() == WorkerManager.HireStatus.HIRED, "Production worker hire succeeds: " + result.status());
-                        hired = result.worker().orElseThrow();
+                        movePurchasedContractToMainHand(contract);
+                        player.closeInventory();
+                        Location feet = new Location(world, 100.5, pot.getY(), 88.8);
+                        feet.setDirection(villager.getEyeLocation().toVector()
+                                .subtract(feet.clone().add(0, player.getEyeHeight(), 0).toVector()));
+                        player.teleport(feet);
+                        player.setSneaking(false);
+                        player.sendMessage(net.kyori.adventure.text.Component.text(
+                                "Worker acceptance: physically right-click the villager ahead with the purchased contract."));
+                        probe.getLogger().info("ACTUAL_CLIENT_REQUIRED physically right-click the villager ahead with the purchased contract");
+                        return awaitActualHire();
+                    })).thenCompose(future -> future).thenCompose(record -> main(probe, () -> {
+                        require(actualHireInteraction, "Actual Minecraft client sent the worker-contract entity interaction");
+                        hired = record;
                         require(hired.entityUuid().equals(villager.getUniqueId()) && target.workers().isWorker(villager),
                                 "Hired worker retains the real villager UUID and persistent marker");
-                        check.accept("expert herbalist is hired using an authentic signed plantation contract");
+                        check.accept("actual non-OP client interaction hires the expert herbalist using a purchased signed contract");
                         return target.secureItems().registryRecord(contractId);
                     })).thenCompose(future -> future).thenCompose(contract -> main(probe, () -> {
                         require(contract.isPresent() && contract.get().state().name().equals("CONSUMED"), "Hiring consumes the contract registry identity");
@@ -260,6 +280,47 @@ final class WorkerGameplayAcceptance {
                 HandlerList.unregisterAll(taskListener);
                 return null;
             }));
+        }
+
+        private void movePurchasedContractToMainHand(ItemStack contract) {
+            require(instanceCount(player, contractId, target) == 1,
+                    "Exactly one purchased contract exists before the fixture moves it");
+            ItemStack previous = player.getInventory().getItemInMainHand().clone();
+            var previousIdentity = target.secureItems().verify(previous);
+            for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
+                var candidate = target.secureItems().verify(player.getInventory().getItem(slot));
+                if (candidate.valid() && candidate.data().uniqueInstanceId().equals(contractId)) {
+                    player.getInventory().setItem(slot, null);
+                }
+            }
+            player.getInventory().setItemInMainHand(contract.clone());
+            if (!previous.getType().isAir() && (!previousIdentity.valid()
+                    || !previousIdentity.data().uniqueInstanceId().equals(contractId))) {
+                require(player.getInventory().addItem(previous).isEmpty(),
+                        "Moving the purchased contract preserves the previously held item");
+            }
+            require(instanceCount(player, contractId, target) == 1,
+                    "Exactly one physical purchased contract exists before the actual client hiring click");
+            check.accept("fixture moves the existing purchased contract without creating duplicate identities");
+        }
+
+        private CompletableFuture<WorkerRecord> awaitActualHire() {
+            CompletableFuture<WorkerRecord> future = new CompletableFuture<>();
+            long hireDeadline = System.nanoTime() + Duration.ofSeconds(90).toNanos();
+            Runnable pollHire = new Runnable() {
+                @Override public void run() {
+                    try {
+                        var record = target.workers().workers(farm.farmId()).stream()
+                                .filter(worker -> worker.entityUuid().equals(villager.getUniqueId())).findFirst();
+                        if (actualHireInteraction && record.isPresent()) future.complete(record.orElseThrow());
+                        else if (System.nanoTime() > hireDeadline) future.completeExceptionally(
+                                new IllegalStateException("Timed out waiting for actual client contract click and production worker hire"));
+                        else Bukkit.getScheduler().runTaskLater(probe, this, 2L);
+                    } catch (Throwable failure) { future.completeExceptionally(failure); }
+                }
+            };
+            Bukkit.getScheduler().runTask(probe, pollHire);
+            return future;
         }
 
         private void poll(CompletableFuture<Void> finished) {
@@ -321,6 +382,7 @@ final class WorkerGameplayAcceptance {
                 state.set("hydration-before", planted.hydration());
                 state.set("hydration-after", target.plants().plant(planted.uniqueId()).orElseThrow().hydration());
                 state.set("maximum-movement-squared", maximumMovement);
+                state.set("actual-client-hire-interaction", actualHireInteraction);
                 state.set("task-events", taskEvents.stream().map(Enum::name).toList());
                 state.set("completed-utc", Instant.now().toString());
                 player.saveData();
@@ -348,12 +410,17 @@ final class WorkerGameplayAcceptance {
     }
 
     private static boolean contains(Player player, UUID instance, VerdantVicePlugin target) {
+        return instanceCount(player, instance, target) > 0;
+    }
+
+    private static int instanceCount(Player player, UUID instance, VerdantVicePlugin target) {
+        int count = 0;
         for (ItemStack item : player.getInventory().getContents()) {
             if (item == null || item.getType().isAir()) continue;
             var verification = target.secureItems().verify(item);
-            if (verification.valid() && verification.data().uniqueInstanceId().equals(instance)) return true;
+            if (verification.valid() && verification.data().uniqueInstanceId().equals(instance)) count += item.getAmount();
         }
-        return false;
+        return count;
     }
 
     private static int count(Block block, Material material) {

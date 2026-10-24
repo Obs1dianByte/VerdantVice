@@ -145,7 +145,9 @@ public final class VerdantVicePlugin extends JavaPlugin {
             PlayerProfileRepository profileRepository =
                     new PlayerProfileRepository(database);
             ItemRegistryRepository itemRegistry = new ItemRegistryRepository(database);
-            CustomStrainRepository customStrains = new CustomStrainRepository(database);
+            com.verdantvice.security.ItemUsePolicy itemUsePolicy = new com.verdantvice.security.ItemUsePolicy(
+                    () -> configs.main().getBoolean("security.anti-dupe-enabled", false));
+            CustomStrainRepository customStrains = new CustomStrainRepository(database, itemUsePolicy);
 
             translations.setPreferenceWriter(playerData::setLocale);
             CustomItemFactory itemFactory =
@@ -159,7 +161,8 @@ public final class VerdantVicePlugin extends JavaPlugin {
                     Duration.ofSeconds(configs.main().getLong(
                             "security.reservation-timeout-seconds",
                             30L
-                    ))
+                    )),
+                    itemUsePolicy
             );
             regionProtection = new RegionProtectionService(this, configs);
             regionProtection.detect();
@@ -409,7 +412,7 @@ public final class VerdantVicePlugin extends JavaPlugin {
                 notifications
         ), this);
         manager.registerEvents(new PlayerEffectListener(effects, itemSigner), this);
-        manager.registerEvents(new ItemSecurityListener(itemSigner, translations), this);
+        manager.registerEvents(new ItemSecurityListener(itemSigner, translations, secureItems.itemUsePolicy()), this);
         manager.registerEvents(new com.verdantvice.security.PendingDeliveryListener(secureItems), this);
         manager.registerEvents(new ResourcePackListener(resourcePack), this);
         manager.registerEvents(workers.listener(), this);

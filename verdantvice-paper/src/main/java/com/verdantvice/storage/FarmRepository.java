@@ -60,6 +60,23 @@ public final class FarmRepository {
     }
 
     public CompletableFuture<Void> create(Farm farm) {
+        return create(farm, new BlockPosition(
+                farm.region().worldUuid(),
+                farm.region().minimumX()
+                        + (farm.region().maximumX() - farm.region().minimumX()) / 2,
+                farm.region().minimumY(),
+                farm.region().minimumZ()
+                        + (farm.region().maximumZ() - farm.region().minimumZ()) / 2
+        ));
+    }
+
+    public CompletableFuture<Void> create(Farm farm, BlockPosition managerTable) {
+        Objects.requireNonNull(farm, "farm");
+        Objects.requireNonNull(managerTable, "managerTable");
+        if (!farm.region().contains(managerTable)) {
+            return CompletableFuture.failedFuture(
+                    new IllegalArgumentException("manager_table_outside_farm"));
+        }
         return database.transaction(session -> {
             PlayerDataRepository.ensure(
                     session,
@@ -67,9 +84,6 @@ public final class FarmRepository {
                     null,
                     farm.createdAt()
             );
-            int tableX = (farm.region().minimumX() + farm.region().maximumX()) / 2;
-            int tableY = farm.region().minimumY();
-            int tableZ = (farm.region().minimumZ() + farm.region().maximumZ()) / 2;
             session.update(
                     "INSERT INTO farms "
                             + "(farm_id, owner_uuid, farm_name, world_uuid, table_x, table_y, "
@@ -80,9 +94,9 @@ public final class FarmRepository {
                     farm.ownerUuid(),
                     farm.name(),
                     farm.region().worldUuid(),
-                    tableX,
-                    tableY,
-                    tableZ,
+                    managerTable.x(),
+                    managerTable.y(),
+                    managerTable.z(),
                     farm.level(),
                     settings(farm),
                     farm.createdAt(),

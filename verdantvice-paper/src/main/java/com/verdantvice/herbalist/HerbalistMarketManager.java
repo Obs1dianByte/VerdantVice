@@ -115,9 +115,11 @@ public final class HerbalistMarketManager implements AutoCloseable {
         marketRepository = new MarketRepository(database, configs);
         markets = new PaperMarketService(marketRepository, strains, configs);
         tradeRepository = new TradeRepository(
-                database, itemRegistry, marketRepository, strains, configs, batchService);
+                database, itemRegistry, marketRepository, strains, configs, batchService,
+                secureItems.itemUsePolicy());
         trades = new PaperTradeService(signer, tradeRepository);
-        contractRepository = new PaperContractRepository(database, itemRegistry, batchService);
+        contractRepository = new PaperContractRepository(
+                database, itemRegistry, batchService, secureItems.itemUsePolicy());
         contracts = new PaperContractService(
                 contractRepository, markets, strains, configs, signer);
         conversion = new HerbalistConversionService(
@@ -317,6 +319,9 @@ public final class HerbalistMarketManager implements AutoCloseable {
             openRoot(player, holder.herbalistUuid());
         } else if ("open:buy".equals(action)) {
             openBuy(player, holder.herbalistUuid());
+        } else if (action.startsWith("open:buy:")) {
+            buyPageFromAction(action).ifPresent(page ->
+                    openBuy(player, holder.herbalistUuid(), page));
         } else if ("open:market".equals(action)) {
             openMarket(player, holder.herbalistUuid());
         } else if ("open:contracts".equals(action)) {
@@ -406,9 +411,25 @@ public final class HerbalistMarketManager implements AutoCloseable {
     }
 
     private void openBuy(Player player, UUID herbalistUuid) {
+        openBuy(player, herbalistUuid, 0);
+    }
+
+    private void openBuy(Player player, UUID herbalistUuid, int page) {
         loadHerbalist(player, herbalistUuid).thenAccept(optional ->
                 runMain(() -> optional.ifPresent(record ->
-                        menus.openBuy(player, record, offers.available(record.tier())))));
+                        menus.openBuy(player, record, offers.available(record.tier()), page))));
+    }
+
+    static java.util.OptionalInt buyPageFromAction(String action) {
+        if (action == null || !action.startsWith("open:buy:")) {
+            return java.util.OptionalInt.empty();
+        }
+        try {
+            int page = Integer.parseInt(action.substring("open:buy:".length()));
+            return page >= 0 ? java.util.OptionalInt.of(page) : java.util.OptionalInt.empty();
+        } catch (NumberFormatException ignored) {
+            return java.util.OptionalInt.empty();
+        }
     }
 
     private void openMarket(Player player, UUID herbalistUuid) {
@@ -472,7 +493,8 @@ public final class HerbalistMarketManager implements AutoCloseable {
                 player.sendMessage(translations.component(player, "errors.target-not-found"));
                 return;
             }
-            Optional<HerbalistOffer> selected = offers.available(record.tier()).stream()
+            List<HerbalistOffer> available = offers.available(record.tier());
+            Optional<HerbalistOffer> selected = available.stream()
                     .filter(offer -> offer.id().equals(offerId))
                     .findFirst();
             if (selected.isEmpty()) {
@@ -480,6 +502,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
                 return;
             }
             HerbalistOffer offer = selected.orElseThrow();
+            int purchasedPage = HerbalistMenuService.buyPageForIndex(available.indexOf(offer));
             purchases.purchase(player, offer).whenComplete((result, purchaseFailure) ->
                     runMain(() -> {
                         if (!player.isOnline()) return;
@@ -504,7 +527,7 @@ public final class HerbalistMarketManager implements AutoCloseable {
                                                         );
                                                     }
                                                     if (player.isOnline()) {
-                                                        openBuy(player, herbalistUuid);
+                                                        openBuy(player, herbalistUuid, purchasedPage);
                                                     }
                                                 }));
                             }

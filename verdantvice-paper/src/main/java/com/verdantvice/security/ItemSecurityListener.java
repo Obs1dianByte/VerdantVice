@@ -23,15 +23,22 @@ import java.util.UUID;
 public final class ItemSecurityListener implements Listener {
     private final ItemSigner signer;
     private final TranslationService translations;
+    private final ItemUsePolicy policy;
     private final ItemMovementPolicy movement = new ItemMovementPolicy();
 
     public ItemSecurityListener(ItemSigner signer, TranslationService translations) {
+        this(signer, translations, new ItemUsePolicy(true));
+    }
+
+    public ItemSecurityListener(ItemSigner signer, TranslationService translations, ItemUsePolicy policy) {
         this.signer = Objects.requireNonNull(signer, "signer");
         this.translations = Objects.requireNonNull(translations, "translations");
+        this.policy = Objects.requireNonNull(policy, "policy");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onClick(InventoryClickEvent event) {
+        if (!policy.antiDupeEnabled()) return;
         ItemStack current = event.getCurrentItem();
         ItemStack cursor = event.getCursor();
         ItemStack hotbar = event.getHotbarButton() >= 0
@@ -56,6 +63,7 @@ public final class ItemSecurityListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onCreative(InventoryCreativeEvent event) {
+        if (!policy.antiDupeEnabled()) return;
         ItemStack current = event.getCurrentItem();
         ItemStack cursor = event.getCursor();
         ItemMovementPolicy.Identity currentIdentity = identity(current);
@@ -75,6 +83,7 @@ public final class ItemSecurityListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onDrag(InventoryDragEvent event) {
+        if (!policy.antiDupeEnabled()) return;
         ItemMovementPolicy.Identity old = identity(event.getOldCursor());
         boolean same = event.getNewItems().values().stream().allMatch(item -> {
             ItemMovementPolicy.Identity target = identity(item);
@@ -94,6 +103,7 @@ public final class ItemSecurityListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onPrepareCraft(PrepareItemCraftEvent event) {
+        if (!policy.antiDupeEnabled()) return;
         if (containsCustom(event.getInventory().getMatrix())) {
             event.getInventory().setResult(new ItemStack(Material.AIR));
         }
@@ -101,16 +111,19 @@ public final class ItemSecurityListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onCraft(CraftItemEvent event) {
+        if (!policy.antiDupeEnabled()) return;
         if (containsCustom(event.getInventory().getMatrix())) event.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onAnvil(PrepareAnvilEvent event) {
+        if (!policy.antiDupeEnabled()) return;
         if (containsCustom(event.getInventory().getContents())) event.setResult(null);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onSmithing(PrepareSmithingEvent event) {
+        if (!policy.antiDupeEnabled()) return;
         if (containsCustom(event.getInventory().getContents())) event.setResult(null);
     }
 

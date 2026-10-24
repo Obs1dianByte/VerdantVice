@@ -3,6 +3,36 @@
 Run commands from the repository root. Use isolated worlds and databases;
 never test item corruption or migration failures against production data.
 
+## Local validation: 2026-10-24
+
+Tested production JAR SHA-256:
+`1fac144ff66f19ea7a7ed1c322b8f6c6d123c3b63939dfd24af0dfdecef0a4c8`.
+
+- Build and distribution verification passed; 724 JUnit tests, no failures,
+  errors or skipped tests.
+- Paper 26.2 build 87, Java 25: 500 server assertions passed across a restart.
+- Vanilla 26.2 client, non-operator Survival account: 281 first-boot checks
+  and 91 post-restart checks passed. The scenario covered purchases,
+  planting, watering, processing, rolling, product use, selling, a contract,
+  genetics, physical worker hiring, pathfinding, watering and salary payment.
+  Farm, worker, genetic output and player state survived restart without a
+  second salary or water debit.
+
+The client scenario used supplied vanilla currency, a configured merchant
+tier, prepared terrain, accelerated timers and peaceful difficulty. Real
+client clicks and server-API operations are distinguished in its report.
+This was not a natural levelling run or a multiplayer load test. The rolling
+attempt produced the valid `SPILLED` outcome, not a perfect score.
+
+Local evidence is retained in ignored directories:
+`build/paper-smoke/20261024-171215-719-782dbf2f/summary.json` and
+`build/minecraft-client/20261024-171835-883/plugins/VerdantViceClientProbe/`.
+The latter includes the first-boot checkpoint under `session-reports/` and
+the final `PASS` summary. Both reports identify the same production JAR.
+The restart log contains a Windows OSHI performance-counter error, not a
+VerdantVice exception. Optional providers, Purpur and 1.21.4 were not rerun
+against this artifact; these results do not certify every server setup.
+
 ## Build checks
 
 Windows:
@@ -25,7 +55,17 @@ release check. Install only `VerdantVice-1.0.0.jar`, not `-thin.jar`.
 The suites cover domain gameplay, real SQLite transactions, rollback and
 concurrent item consumption, durable processing/genetics deliveries, worker
 hiring and salaries, configuration migration, translations and pack assets.
+They also cover disabled/enabled anti-dupe policy, reuse of physical copies,
+missing registry rows and preservation of in-flight transaction receipts.
 These tests do not establish client rendering or third-party compatibility.
+
+Survival-progression regressions check obtainable starter items, merchant
+unlock order, contract objectives, exact manager-table persistence, co-op
+membership/storage updates and worker asset ownership. The real-client probe
+uses a non-operator in Survival mode. Its scenario buys starter/rolling items
+through production merchant menus and requires actual air-use and contract
+hire clicks. Test funding, merchant tiers and accelerated timing are explicit
+fixtures, not evidence of a naturally completed long-term economy.
 
 To run only one module:
 

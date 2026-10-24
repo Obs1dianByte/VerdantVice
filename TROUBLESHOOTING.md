@@ -110,17 +110,22 @@ JAR compatible with the database version. See [MIGRATION.md](MIGRATION.md).
 
 ## An item is rejected as invalid or duplicated
 
-VerdantVice checks both the PDC signature and the instance state in
-`item_registry`. An item is rejected after modification, copying, reuse, or
-restoring the database to a different point in time from player inventories.
+VerdantVice always checks the PDC signature and item ownership. Strict
+duplicate-instance checks are optional and disabled by default. Keep
+`security.anti-dupe-enabled: false` and use `/vv reload` if inventory policing
+interferes with another plugin. Missing registry rows and previously consumed
+identities alone do not reject an authentic physical input in this mode.
+Active transaction reservations, pending deliveries and gameplay batch stages
+still protect incomplete operations. An altered signature or a changed signing
+key remains an error in either mode.
 
 Check:
 
 1. Whether `data/signing.key` has changed.
 2. Whether the database and key come from the same backup.
 3. Whether another plugin modifies PDC/`CustomModelData`.
-4. Whether the player is attempting to use an input already consumed by a
-   transaction.
+4. Whether strict anti-dupe was enabled, or the input belongs to an unfinished
+   processing or delivery transaction.
 
 Do not regenerate the key as a fix. Doing so invalidates all remaining
 items.

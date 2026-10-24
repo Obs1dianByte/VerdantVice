@@ -22,6 +22,9 @@ performance:
   max-displays-per-chunk: 48
 
 security:
+  # Optional inventory duplicate policing. Applies to existing installs when this key is absent.
+  # Signatures, ownership and transaction/crash recovery remain active in either mode.
+  anti-dupe-enabled: false
   require-signed-items: true
   reservation-timeout-seconds: 30
   interaction-cooldown-millis: 250

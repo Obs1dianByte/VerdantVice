@@ -24,6 +24,7 @@ import com.verdantvice.database.item.ItemRegistryRecord;
 import com.verdantvice.database.item.ItemRegistryState;
 import com.verdantvice.storage.PlantRepository;
 import com.verdantvice.worker.WorkerHarvestDeliveryRepository;
+import com.verdantvice.worker.WorkerFarmOwnership;
 import com.verdantvice.worker.WorkerRecord;
 import com.verdantvice.worker.WorkerTask;
 import com.verdantvice.worker.WorkerTaskRepository;
@@ -639,7 +640,7 @@ public final class WorkerActionService {
         Block station = target.get().getBlock();
         return plants.plantByWorker(
                         worker.worker().workerUuid(),
-                        worker.worker().ownerUuid(),
+                        farmAssetOwner(worker),
                         worker.worker().farmId(),
                         station,
                         resource.get().item()
@@ -708,6 +709,7 @@ public final class WorkerActionService {
             return CompletableFuture.completedFuture(ActionResult.failure("target-unavailable"));
         }
         Optional<InventoryItem> source = findBatch(task.target().targetId(), worker.worker().farmId());
+        UUID assetOwner = farmAssetOwner(worker);
         Optional<ProcessingManager.Station> station = location(task.target().position().get())
                 .filter(value -> value.getWorld().isChunkLoaded(value.getBlockX() >> 4, value.getBlockZ() >> 4))
                 .flatMap(value -> processing.station(value.getBlock()));
@@ -715,7 +717,7 @@ public final class WorkerActionService {
         boolean loaded = processing.stationSnapshots(
                             farms.get(worker.worker().farmId()).orElseThrow(), ProcessingStationType.DRYING_RACK)
                     .stream().anyMatch(snapshot -> snapshot.batchId().filter(task.target().targetId()::equals)
-                            .isPresent() && snapshot.ownerUuid().filter(worker.worker().ownerUuid()::equals).isPresent());
+                            .isPresent() && snapshot.ownerUuid().filter(assetOwner::equals).isPresent());
         if (loaded) {
             source.ifPresent(selected -> {
                 ItemSigner.Verification old = secureItems.verify(selected.inventory().getItem(selected.slot()));
@@ -736,7 +738,7 @@ public final class WorkerActionService {
             return CompletableFuture.completedFuture(ActionResult.failure("missing-resource"));
         }
         UUID instance = verification.data().uniqueInstanceId();
-        return processing.loadDryingByWorker(input.clone(), worker.worker().ownerUuid(),
+        return processing.loadDryingByWorker(input.clone(), assetOwner,
                         station.get().stationId())
                 .thenCompose(batch -> onMain(() -> {
                     removeStorageInstance(worker.worker().farmId(), instance);
@@ -759,7 +761,7 @@ public final class WorkerActionService {
                 return CompletableFuture.completedFuture(ActionResult.failure("target-unavailable"));
             }
             return processing.unloadDryingByWorker(station.get().stationId(), task.target().targetId(),
-                            worker.worker().ownerUuid(), worker.worker().farmId(), destination.get().storageId(), operation)
+                            farmAssetOwner(worker), worker.worker().farmId(), destination.get().storageId(), operation)
                     .thenCompose(delivery -> onMainComposed(() -> deliverProcessingOutput(delivery)));
         }));
     }
@@ -780,10 +782,11 @@ public final class WorkerActionService {
                 return CompletableFuture.completedFuture(ActionResult.failure("missing-resource"));
             }
             UUID instance = verified.data().uniqueInstanceId();
+            UUID assetOwner = farmAssetOwner(worker);
             return secureItems.validateActive(item.clone(), Set.of(CustomItemType.DRY_BATCH, CustomItemType.CURED_BATCH),
-                            worker.worker().ownerUuid())
+                            assetOwner)
                     .thenCompose(input -> processing.transfers().packageBatch(input.identity(),
-                            worker.worker().ownerUuid(), worker.worker().farmId(), destination.get().storageId(),
+                            assetOwner, worker.worker().farmId(), destination.get().storageId(),
                             operation, java.time.Instant.now()))
                     .thenCompose(delivery -> onMainComposed(() -> {
                         removeStorageInstance(worker.worker().farmId(), instance);
@@ -855,6 +858,12 @@ public final class WorkerActionService {
                 .sorted(Comparator.comparing(storage -> storage.storageId().toString()))
                 .filter(storage -> container(storage.position())
                         .map(holder -> holder.getInventory().firstEmpty() >= 0).orElse(false)).findFirst();
+    }
+
+    private UUID farmAssetOwner(WorkerRecord worker) {
+        Farm farm = farms.get(worker.worker().farmId())
+                .orElseThrow(() -> new IllegalArgumentException("unknown_farm"));
+        return WorkerFarmOwnership.assetOwner(farm, worker.worker());
     }
 
     private void removeStorageInstance(UUID farmId, UUID instanceId) {

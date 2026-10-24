@@ -105,10 +105,21 @@ but not every other integrity rule.
 
 ### Security and modules
 
-In this version, items are always signed and checked against the database
-registry. `security.require-signed-items`, `reservation-timeout-seconds` and
-`interaction-cooldown-millis` are loaded catalog settings, but current
-security paths do not switch to an unsigned mode.
+`security.anti-dupe-enabled` defaults to `false`, including when an existing
+configuration has no such key. `/vv reload` applies changes to this switch.
+When disabled, VerdantVice does not scan or cancel inventory actions for
+duplicate identities, and a present, authentic copy is not rejected solely
+because its identity was already consumed or is missing from the registry.
+Other plugins and Minecraft itself do not necessarily protect these items.
+
+Items still require their original signature and owner. Stateful items are
+single units, not stacks. Batch stages, station locks, pending deliveries,
+rolling refunds and transaction receipts remain enforced: disabling duplicate
+policing does not disable gameplay rules or crash recovery. Existing registry
+data is retained. Set the switch to `true` to restore strict duplicate checks.
+`security.require-signed-items` is retained for configuration compatibility;
+it does not select an unsigned mode. `reservation-timeout-seconds` is read at
+startup; `interaction-cooldown-millis` is a catalog setting.
 
 The `modules.*` section is reported in diagnostics. The current bootstrap
 creates every subsystem regardless of these flags; use the dedicated
@@ -237,6 +248,13 @@ effect when health is too low.
 The code also recognizes optional `offer-prices.<id>` and
 `offer-prices.book-<id>` entries.
 
+Novice herbalists sell the first-sale essentials, selection wand, manager
+table and all care tools. Defaults are 4 emeralds for a wand, 16 for a manager
+table and 24 for a drying rack. Curing unlocks at apprentice; grinding and
+rolling supplies unlock at journeyman. Paper and filters cost 1 emerald each.
+Purchases and sales both grant merchant experience. Shop pages keep additional
+custom-strain offers accessible when the catalog exceeds one inventory page.
+
 ## `workers.yml`
 
 This file controls plants per worker, reservation time, pathfinding attempts
@@ -274,9 +292,9 @@ contract limit.
 `market.yml` contains `trade.accepted-item-types`. By default, an herbalist
 accepts `DRY_BATCH`, `CURED_BATCH` and `PACKAGE`. Administrators can
 deliberately add `FRESH_BATCH`; its price then uses the actual `freshWeight`
-and `trade.fresh-price-multiplier`. The signature, item registry, owner,
-`ProductBatch` record and batch state are still checked before an offer
-is created.
+and `trade.fresh-price-multiplier`. The signature, owner, `ProductBatch` record
+and batch state are checked before an offer is created. Strict item-registry
+reuse checks apply only when `security.anti-dupe-enabled` is `true`.
 
 ## `gui.yml`
 

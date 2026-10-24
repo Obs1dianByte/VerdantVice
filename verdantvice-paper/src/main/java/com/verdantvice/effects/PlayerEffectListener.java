@@ -20,11 +20,9 @@ public final class PlayerEffectListener implements Listener {
         this.signer = Objects.requireNonNull(signer, "signer");
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onUse(PlayerInteractEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND
-                || (event.getAction() != Action.RIGHT_CLICK_AIR
-                && event.getAction() != Action.RIGHT_CLICK_BLOCK)) {
+        if (!ProductInteractionPolicy.accepts(event.getAction(), event.getHand(), event.useItemInHand())) {
             return;
         }
         ItemSigner.Verification verification = signer.verify(event.getItem());

@@ -84,19 +84,68 @@ public final class HerbalistMenuService {
     }
 
     public void openBuy(Player player, HerbalistRecord herbalist, List<HerbalistOffer> offers) {
+        openBuy(player, herbalist, offers, 0);
+    }
+
+    public void openBuy(
+            Player player,
+            HerbalistRecord herbalist,
+            List<HerbalistOffer> offers,
+            int requestedPage
+    ) {
+        BuyPage page = buyPage(offers.size(), requestedPage);
         Map<Integer, String> actions = new HashMap<>();
         Inventory inventory = inventory(
                 player, herbalist, HerbalistMenuType.BUY,
                 "gui.trade.title",
                 Map.of("herbalist", translations.plain(player, herbalist.tier().translationKey())),
                 actions);
-        for (int index = 0; index < Math.min(CONTENT.size(), offers.size()); index++) {
+        for (int index = page.fromInclusive(); index < page.toExclusive(); index++) {
             HerbalistOffer offer = offers.get(index);
-            inventory.setItem(CONTENT.get(index), offerItem(player, offer));
-            actions.put(CONTENT.get(index), "purchase:" + offer.id());
+            int slot = CONTENT.get(index - page.fromInclusive());
+            inventory.setItem(slot, offerItem(player, offer));
+            actions.put(slot, "purchase:" + offer.id());
+        }
+        if (page.hasPrevious()) {
+            inventory.setItem(45, item(Material.ARROW,
+                    translations.component(player, "common.previous-page"), List.of()));
+            actions.put(45, "open:buy:" + (page.index() - 1));
+        }
+        if (page.hasNext()) {
+            inventory.setItem(53, item(Material.ARROW,
+                    translations.component(player, "common.next-page"), List.of()));
+            actions.put(53, "open:buy:" + (page.index() + 1));
+        }
+        if (page.pageCount() > 1) {
+            inventory.setItem(48, item(Material.PAPER,
+                    translations.component(player, "common.page", Map.of(
+                            "page", page.index() + 1, "pages", page.pageCount())), List.of()));
         }
         addBack(player, inventory, actions);
         player.openInventory(inventory);
+    }
+
+    static BuyPage buyPage(int offerCount, int requestedPage) {
+        if (offerCount < 0) throw new IllegalArgumentException("offerCount must not be negative");
+        int pageCount = offerCount == 0 ? 1 : 1 + (offerCount - 1) / CONTENT.size();
+        int index = Math.max(0, Math.min(pageCount - 1, requestedPage));
+        int from = index * CONTENT.size();
+        int to = (int) Math.min((long) offerCount, (long) from + CONTENT.size());
+        return new BuyPage(index, from, to, pageCount);
+    }
+
+    static int buyPageForIndex(int index) {
+        return Math.max(0, index) / CONTENT.size();
+    }
+
+    record BuyPage(int index, int fromInclusive, int toExclusive, int pageCount) {
+        boolean hasPrevious() {
+            return index > 0;
+        }
+
+        boolean hasNext() {
+            return index < pageCount - 1;
+        }
     }
 
     public void openMarket(
