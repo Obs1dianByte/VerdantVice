@@ -1,0 +1,30 @@
+name: Publish release candidate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/release-candidate.json']
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: verdantvice-release-candidate
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test release validation
+        run: node --test scripts/publish-release-candidate.test.mjs
+      - name: Publish verified candidate assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/publish-release-candidate.mjs
