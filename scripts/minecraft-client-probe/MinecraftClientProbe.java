@@ -128,11 +128,17 @@ public final class MinecraftClientProbe extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player) || !isParticipant(player)) {
+        Player player = sender instanceof Player connected ? connected
+                : sender instanceof org.bukkit.command.ConsoleCommandSender
+                ? Bukkit.getPlayerExact(PLAYER_NAME) : null;
+        if (player == null || !isParticipant(player)) {
             sender.sendMessage(Component.text("This test command is restricted to VVClientTest on loopback."));
             return true;
         }
         if (finished) return true;
+        if (sender instanceof org.bukkit.command.ConsoleCommandSender) {
+            events.add("SERVER_API_TEST_CONTROL " + String.join(" ", args));
+        }
         try {
             String action = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
             switch (action) {

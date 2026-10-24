@@ -596,13 +596,17 @@ final class GameplayScenario {
     }
 
     private void moveTo(Player player, ItemStack stack, int slot) {
-        ItemStack displaced = player.getInventory().getItem(slot);
+        ItemStack present = player.getInventory().getItem(slot);
+        ItemStack displaced = present == null ? null : present.clone();
         UUID identity = identity(stack).uniqueInstanceId();
         removeInstance(player, identity);
+        player.getInventory().setItem(slot, stack.clone());
         if (displaced != null && !displaced.getType().isAir()
                 && (!target.itemSigner().verify(displaced).valid()
-                || !identity.equals(identity(displaced).uniqueInstanceId()))) player.getInventory().addItem(displaced);
-        player.getInventory().setItem(slot, stack);
+                || !identity.equals(identity(displaced).uniqueInstanceId()))) {
+            require(player.getInventory().addItem(displaced).isEmpty(),
+                    "fixture inventory move preserves the displaced item");
+        }
     }
 
     private void hold(Player player, UUID batch, CustomItemType type) {
